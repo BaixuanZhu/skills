@@ -1,0 +1,25 @@
+{
+  "name": "baixuanzhu-skills",
+  "owner": {
+    "name": "BaixuanZhu",
+    "url": "https://github.com/BaixuanZhu"
+  },
+  "description": "面向中文 Java/Spring 生态的 Agent Skills 套装：编码规范、质量门禁、单元测试、Sa-Token/MyBatis-Plus 开发、敏捷流程、项目初始化。",
+  "plugins": [
+    {
+      "name": "baixuanzhu-skills",
+      "source": "./",
+      "description": "中文 Java/Spring 生态 Agent Skills 套装（编码规范 + 质量门禁 + 单元测试 + Sa-Token + MyBatis-Plus + 敏捷流程 + 项目初始化）。",
+      "category": "engineering",
+      "keywords": [
+        "java",
+        "spring-boot",
+        "sa-token",
+        "mybatis-plus",
+        "coding-standards",
+        "agile",
+        "chinese"
+      ]
+    }
+  ]
+}
