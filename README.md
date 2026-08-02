@@ -8,12 +8,15 @@
 
 ### 方式一：Claude Code（推荐）
 
-作为 Claude Code plugin 安装——托管只读，随插件统一更新：
+每个技能都是独立的 plugin，**可单独安装**你需要的：
 
 ```
 /plugin marketplace add BaixuanZhu/skills
-/plugin install baixuanzhu-skills
+/plugin install repo-init              # 只装你需要的，按技能名
+/plugin install java-coding-guide-pro
 ```
+
+> 技能名见下方「包含的技能」表格。装多个就重复 `/plugin install <技能名>`。
 
 ### 方式二：npx skills（其他 Agent 通用）
 
