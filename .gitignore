@@ -1,3 +1,6 @@
 .DS_Store
 *.pyc
 __pycache__/
+
+# 本地机密：发布备忘（含平台 ID/凭证），禁止提交
+PUBLISH.local.md
