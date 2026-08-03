@@ -17,7 +17,7 @@ description: >-
   工具默认：断言默认用 JUnit 5 原生 Assertions，仅在 3+ 字段断言/集合内容断言时升级到 AssertJ；
   Spring Boot 项目走 spring-boot-starter-test（自带 JUnit5+Mockito）。
   不适用：集成测试/E2E（@SpringBootTest 全量上下文）、性能测试、前端测试。
-version: "1.1.0"
+version: "1.3.1"
 last_verified: "2026-08-03"
 ---
 
