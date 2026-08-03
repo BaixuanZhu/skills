@@ -14,10 +14,10 @@ description: >-
   次级触发信号：只写 happy path、补测试不知道写几个、手写一堆重复 @Test、
   多条件分支只测一两种、有状态对象只测正常流转、@MockBean 用于纯单测、
   不确定测试该写到什么程度。
-  工具默认：断言默认用 JUnit 5 原生 Assertions，仅在 3+ 字段断言/集合内容断言时升级到 AssertJ；
+  工具默认：断言默认用 JUnit 5 原生 Assertions，仅在集合内容断言/字段分组断言（同一逻辑组）时升级到 AssertJ；
   Spring Boot 项目走 spring-boot-starter-test（自带 JUnit5+Mockito）。
   不适用：集成测试/E2E（@SpringBootTest 全量上下文）、性能测试、前端测试。
-version: "1.3.2"
+version: "1.4.0"
 last_verified: "2026-08-03"
 ---
 
@@ -35,19 +35,19 @@ last_verified: "2026-08-03"
 
 **默认用 JUnit 原生 `Assertions`（`assertEquals`/`assertThrows`/`assertTrue` 等）。仅当满足以下任一条件时，升级到 AssertJ：**
 
-- **同一对象需要 3 个及以上字段断言** —— AssertJ 的 `extracting(...).containsExactly(...)` 集中描述。
-- **集合内容断言**（断言元素构成/顺序/提取字段）—— AssertJ 的 `containsExactlyInAnyOrder` / `extracting(...)`。
+- **集合内容断言**（断言 list 元素构成/顺序/提取字段）—— AssertJ 的 `containsExactlyInAnyOrder` / `extracting(...)`。
+- **字段分组断言**（同一逻辑组的多个字段作为一个整体校验，如坐标 x/y/z、时间窗 start/end）—— AssertJ 的 `extracting(...).containsExactly(...)`。
 
-**其余场景（简单值、抛异常、1~2 个字段断言）一律 JUnit 原生，不切换。升级标准可机械执行：数字段数 / 判断是否集合。**
+**其余场景（简单值、抛异常、各列语义独立的逐列断言如表格型 VO）一律 JUnit 原生，不切换。升级标准可机械执行：是否集合？是否同一逻辑组？两条都不是 → 留在原生逐列断言（失败定位准、加列只改一处）。**
 
-- Spring 项目 `spring-boot-starter-test` 已传递 AssertJ，触发阈值时直接用；非 Spring 项目首次触发时按 `references/06` §1 引入 `assertj-core`。
-- 既有代码已用 AssertJ 的不主动改写；新测试默认 JUnit 原生，触发阈值时该测试用 AssertJ，同文件内可混用。
+- Spring 项目 `spring-boot-starter-test` 已传递 AssertJ，触发条件时直接用；非 Spring 项目首次触发时按 `references/06` §1 引入 `assertj-core`。
+- 既有代码已用 AssertJ 的不主动改写；新测试默认 JUnit 原生，触发条件时该测试用 AssertJ，同文件内可混用。
 
 ## 快速入门（第一次用，按这条线走）
 
 | 你想做的 | 看这份 | 读多少 |
 |---|---|---|
-| 不知道测什么 / 测多少 | `references/01` 四维度 + `references/05` 三停止信号 | 各前 30 行 |
+| 不知道测什么 / 测多少 | `references/01` 四维度 + 「DoD 锚点」三停止信号 | 各前 30 行 |
 | 写纯计算/校验方法测试 | `references/02` | 通读（有完整范例） |
 | 写多条件组合 / 状态机测试 | `references/03` / `references/04` | 通读 |
 | 设计好的用例怎么落代码 / Mock 怎么写 | `references/06` | 按需查 |
@@ -75,10 +75,10 @@ last_verified: "2026-08-03"
 | 纯计算/校验（输入→输出） | 等价类划分 + 边界值 | 3~6 | `references/02-equivalence-and-boundary.md` |
 | 多条件组合（促销/费率/权限） | 决策表（列数=用例数） | 决策表列数 | `references/03-decision-table.md` |
 | 有状态对象（状态机） | 状态迁移 | 迁移数 + 非法迁移数 | `references/04-state-transition.md` |
-| **"写到什么程度算够"** | 覆盖率反向校验 + 成本收益 + 停止信号 | 见 05 | `references/05-coverage-and-quantity.md` |
+| **"写到什么程度算够"** | 覆盖率反向校验 + 成本收益 + DoD 锚点 | 覆盖率/成本见 05，判定 checklist 见「DoD 锚点」 | `references/05-coverage-and-quantity.md` |
 | 设计好的用例怎么落代码 | JUnit5/Mockito/Parameterized 映射 | — | `references/06-tools-lean.md` |
 
-> **每次设计完用例后都应回看 `references/05` 的三个停止信号**（回答"测到什么程度算够"）。
+> **每次设计完用例后都应回看下方「测试完成判定（DoD 锚点）」的三个勾选项**（回答"测到什么程度算够"）。
 
 ## 每个方法的四维度（必检清单）
 
@@ -103,7 +103,7 @@ last_verified: "2026-08-03"
 | S | 多条件逻辑只测一两种组合 | 画决策表，**列数=用例数**，不漏不重 |
 | S | 有状态对象只测正常流转，不测非法/不可达转移 | 状态迁移：每条合法迁移+每个非法转移的拒绝 |
 | S | 被测类内部 `new` 的依赖被 mock 掉 | 重构为构造器注入，再 mock 注入的依赖 |
-| S | `@MockBean` 用于纯单元测试 | 纯单测用 `@Mock`+`@InjectMocks`；`@MockBean` 留给切片测试（它会重建 Spring Context，纯单测不该起容器） |
+| S | `@MockBean` 用于纯单元测试 | 纯单测默认 `@Mock`+`@InjectMocks`；**项目既定的 mock 装配模式（如 TestConfig 手写 `@Bean` mock 轻量容器）优先于本默认**——跟随项目，不强加 `@InjectMocks`。`@MockBean` 的红线是"用于纯单测起全量 Spring Context"（会重建 Context），切片测试才用它 |
 | S | `mockStatic` 未包 try-with-resources | `try (MockedStatic<x> m = mockStatic(X.class)) {...}`（不释放会污染同线程其他测试） |
 | S | 直接采信 AI 一次性生成的"四维度齐全"测试 | 必须人工复核三维度的**真代表性**：代表值换一个同区间值期望行为不变（变了说明选错了类）；且至少触发一条与相邻等价类不同的分支。异常维度断言**被测契约指定的具体异常类**（如 `IllegalArgumentException`），勿断言 `RuntimeException`/`Exception` 根父类 |
 | A | 测试方法间共享可变状态 | 每个 `@Test` 自包含、可乱序执行 |
@@ -153,8 +153,18 @@ class ArchitectureTest {
 4. **落成代码**：按 `references/06-tools-lean.md` 把每个用例映射为 `@Test`/`@ParameterizedTest`/`assertThrows`；需 Mock 按上文边界界定。
 5. **输出前自检 S 级**：尤其"四维度是否齐全""多条件是否画了决策表""有状态对象是否测了非法转移""`new` 的依赖是否被误 mock"。
 
+## 测试完成判定（DoD 锚点）
+
+本节供外部 PR/DoD checklist **直接引用**——回答"这个方法的测试做完了没有"。三条**同时**满足才算最小充分（不是穷尽）。判定陷阱（"无遗漏"不可绝对证明）见 `references/05-coverage-and-quantity.md`「三个停止信号」。
+
+- [ ] **四维度齐全**：正向 / 反向 / 边界 / 异常各至少一个代表用例（对照上方「每个方法的四维度」表逐项打勾）。
+- [ ] **分支覆盖无盲区**：所有 `if/switch` 的每个分支都被至少一个用例走到——`mvn test` 后看 JaCoCo 报告的 Branch 列，红色（`BRANCH_MISSED > 0`）行逐一对照"漏了哪个等价类"再补，或判为死代码。**项目无 JaCoCo 时**：人工核对分支表，或按"成本收益"决定是否接入（接入见 05）。
+- [ ] **等价类清单已显式走完**：按 `references/02` 四步法列出有效/无效等价类清单，逐类打勾（`null`/空串/越界这些无效类最易漏）。
+
+> ✗ DoD 写"覆盖率 ≥ 80%" → ✓ DoD 写"四维度齐全 + 分支覆盖无盲区 + 等价类清单已走完"。前者把覆盖率当目标，催生凑数测试；后者才是测试设计完整性的判定。
+
 ## 版本与范围
 
 - JUnit 5（Jupiter）为主，JDK 8+；JUnit 4 项目的写法差异见 `references/06-tools-lean.md` §4。
-- Spring Boot 项目测试依赖一行 `spring-boot-starter-test`（自带 JUnit5+Mockito）；非 Spring 项目逐库坐标见 `references/06-tools-lean.md` §1。断言默认 JUnit 原生，升级阈值见上文"断言库策略"。
+- Spring Boot 项目测试依赖一行 `spring-boot-starter-test`（自带 JUnit5+Mockito）；非 Spring 项目逐库坐标见 `references/06-tools-lean.md` §1。断言默认 JUnit 原生，升级条件见上文"断言库策略"。
 - **与 `java-coding-guide-pro` 的关系**：正交互补。guide-pro 的编码高风险域（金额/日期/并发/加密）天然是测试设计的重点——其边界值正是 off-by-one 高发区，设计测试时优先覆盖这些域的边界。（注：guide-pro 用「S 级」标注编码高风险，与本文 S/A 表的「S 级＝测试设计缺陷」是两套体系，勿混。）

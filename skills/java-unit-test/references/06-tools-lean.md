@@ -12,7 +12,7 @@
     <artifactId>spring-boot-starter-test</artifactId>
     <scope>test</scope>
 </dependency>
-<!-- starter-test 还传递了 AssertJ / Hamcrest。断言默认用 JUnit 原生，仅在"3+字段断言/集合内容断言"时升级到 AssertJ（见 SKILL.md"断言库策略"） -->
+<!-- starter-test 还传递了 AssertJ / Hamcrest。断言默认用 JUnit 原生，仅在"集合内容断言/字段分组断言（同一逻辑组）"时升级到 AssertJ（见 SKILL.md"断言库策略"） -->
 ```
 
 **非 Spring Boot 项目** → 逐库声明（仅项目无时；按需取用，不强加）：
@@ -20,7 +20,7 @@
 ```xml
 <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.10.2</version><scope>test</scope></dependency>
 <dependency><groupId>org.mockito</groupId><artifactId>mockito-core</artifactId><version>5.11.0</version><scope>test</scope></dependency>
-<!-- 断言默认 JUnit 原生，3+字段断言/集合内容断言时才升级 AssertJ；ArchUnit 仅"架构守护询问"（见 SKILL.md）触发时引入 -->
+<!-- 断言默认 JUnit 原生，集合内容断言/字段分组断言（同一逻辑组）时才升级 AssertJ；ArchUnit 仅"架构守护询问"（见 SKILL.md）触发时引入 -->
 ```
 
 > 下面写法以 JUnit 5（Jupiter）为主；项目已有 TestNG / JUnit 4 → 跟随既有（栈中立，见 SKILL 铁律 3），JUnit 4 差异见 §4。
@@ -68,6 +68,8 @@ class OrderServiceTest {
 - 被测类有**多个构造器**或字段/构造器注入混用 → `@InjectMocks` 注入行为难预测，手工 `new` 传 mock 更可靠。
 - 需要在构造时传入**非 mock 的真实值**（如固定 `Clock`、真实 `ObjectMapper`）→ 手工构造显式可控。
 - 团队既有测试统一用手工构造 → 跟随，不为"统一"而迁移。
+
+> 除上述"手工 `new` 构造"外，项目既定的**容器装配模式**（如 TestConfig 手写 `@Bean` mock 轻量容器 + `@Import` + `@Autowired` 真实被测对象）同样优先于 `@InjectMocks` 默认——跟随项目，见 SKILL.md S 级表「@MockBean 用于纯单元测试」行的说明。
 
 > 状态机非法转移的异常类型（`IllegalStateException` vs 自定义业务异常）跟随项目既有，不强加。
 
