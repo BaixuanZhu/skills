@@ -71,7 +71,7 @@ last_verified: "2026-08-03"
 
 | 被测对象特征 | 用什么方法 | 典型用例数 | 详见 |
 |---|---|---|---|
-| 任何方法（先读它） | 四维度 + ISTQB 原则 | — | `references/01-test-design-foundations.md` |
+| 任何方法（先读它） | 四维度 + 黑盒优先 | — | `references/01-test-design-foundations.md` |
 | 纯计算/校验（输入→输出） | 等价类划分 + 边界值 | 3~6 | `references/02-equivalence-and-boundary.md` |
 | 多条件组合（促销/费率/权限） | 决策表（列数=用例数） | 决策表列数 | `references/03-decision-table.md` |
 | 有状态对象（状态机） | 状态迁移 | 迁移数 + 非法迁移数 | `references/04-state-transition.md` |
