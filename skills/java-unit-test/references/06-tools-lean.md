@@ -26,7 +26,7 @@
 ```xml
 <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.10.2</version><scope>test</scope></dependency>
 <dependency><groupId>org.mockito</groupId><artifactId>mockito-core</artifactId><version>5.11.0</version><scope>test</scope></dependency>
-<!-- 断言默认 JUnit 原生，3+字段断言/集合内容断言时才升级 AssertJ；ArchUnit 仅 C-CHECK 触发时引入 -->
+<!-- 断言默认 JUnit 原生，3+字段断言/集合内容断言时才升级 AssertJ；ArchUnit 仅"架构守护询问"（见 SKILL.md）触发时引入 -->
 ```
 
 > 栈中立铁律：项目已有 TestNG / JUnit 4 → 跟随既有框架，不强求升 JUnit 5。断言库**默认 JUnit 原生**，仅在"3+ 字段断言 / 集合内容断言"时升级到 AssertJ（见 SKILL.md"断言库策略"）——升级标准是机械可判的，避免凭感觉漂移。下面写法以 JUnit 5（Jupiter）为主，§4 给 JUnit 4 差异。
@@ -109,9 +109,51 @@ class GoodService {
 }
 ```
 
-- `mockStatic` 需 Mockito 3.4+（第 0 步探测版本）。
+- `mockStatic` 需 Mockito 3.4+。**工件坑**：Mockito 4.x 需额外引入 `mockito-inline`（仅 `mockito-core` 不够）；5.x 起默认 inline mock maker，`mockito-core` 即可。第 0 步探测 Mockito 版本时一并确认工件。
 - **必须**包在 `try-with-resources`，否则静态 mock 泄漏到同线程其他测试。
 - 优先重构为可注入实例方法；确需静态 mock 才用。
+
+### 链式调用 / 参数对象 mock（MyBatis-Plus、JPA Query）
+
+被测方法内部 `new` 查询条件对象（`LambdaQueryWrapper`/`Criteria`/`Specification`）再传给 mapper，是 ORM 场景常态。**这类"被测代码自构造的参数对象"不是外部依赖**——别去 mock wrapper 本身，直接对 mapper 方法用 `any()` 忽略参数内容：
+
+```java
+// 被测：service.findActive(name) 内部 new LambdaQueryWrapper().eq(...).eq(...) 再 selectOne(wrapper)
+@Test void should_returnNull_when_notFound() {
+    // ✗ 不要 when(mapper.selectOne(specificWrapper))...——wrapper 是被测方构造的，你重建不出同一实例
+    // ✓ 用 any() 忽略 wrapper 内容，只 stub mapper 的返回
+    when(mapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(null);
+    assertNull(service.findActive("nobody"));
+}
+```
+
+> 关键判别：mock 的对象 = 外部依赖（mapper/client）✓；被测代码 `new` 出来当**参数**传的对象（wrapper）= 被测逻辑的一部分，不 mock，用 `any()` 放行。这与"内部 new 的依赖不能 mock"不矛盾——后者指 `new` 的是**被调用的依赖**（如 `new PaymentClient()`），本条指 `new` 的是**传给依赖的入参**。
+>
+> **但 `any()` 会放过 wrapper 自身的构造 bug**（如 `.eq(User::getId, id)` 写成 `.eq(User::getName, id)`）。既然 wrapper 是被测逻辑，就别只 stub 返回值了事——用 `ArgumentCaptor` 捕获它，至少 `verify(mapper).selectOne(captor.capture())` 确认被调用了正确方法；wrapper 内部条件断言较脆（lambda 序列化不稳），可退一步断言 `captor.getValue()` 非空 + 被测方的下游行为（返回值处理）正确。
+
+### 静态方法：重构为可注入实例（"优先重构"的具体落地）
+
+`mockStatic` 是兜底；首选把静态调用包进接口注入。前后对照：
+
+```java
+// ✗ 静态调用难测：每次跑结果不同（UUID），不 mockStatic 无法断言
+class OrderService {
+    public String genId() { return IdUtil.getId(); }   // 静态，难测
+}
+
+// ✓ 抽接口 + 构造器注入：可 mock、可固定值，与"构造器注入"主张一致
+interface IdGenerator { String next(); }
+class OrderService {
+    private final IdGenerator idGen;
+    public OrderService(IdGenerator idGen) { this.idGen = idGen; }
+    public String genId() { return idGen.next(); }
+}
+// 测试：@Mock IdGenerator idGen; when(idGen.next()).thenReturn("FAKE");
+```
+
+> 代价是改生产代码——但这是消除"测不了"根因的正解，比在每个测试里 `try(MockedStatic)` 更干净、更不易泄漏。**仅在静态调用的代码你够不着时**（如调用点在第三方库内部）才退回 `mockStatic`。
+>
+> **常见误判**：`LocalDate.now()` / `UUID.randomUUID()` 看似"来自 JDK 第三方、改不了源"，但**调用点在你自己代码里**——首选 `Clock` 注入（`java.time.Clock`，JDK 原生，测试传 `Clock.fixed(...)`）或 `IdGenerator` 接口注入（本节上方范例），不走 `mockStatic`。能改调用点就不算"够不着"。
 
 ### Mockito stubbing / verify 隐蔽坑（用错不报错但埋雷）
 
