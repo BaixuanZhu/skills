@@ -18,15 +18,7 @@
 |---|---|
 | 动作桩 | 动作条目（每列对应的动作） |
 
-```
-条件1：是否会员      │  Y  Y  Y  Y  N  N  N  N
-条件2：是否满 100    │  Y  Y  N  N  Y  Y  N  N
-条件3：是否有券      │  Y  N  Y  N  Y  N  Y  N
-─────────────────────┼─────────────────────────
-动作：折扣力度       │ ...每列一个结果...
-```
-
-每一**列** = 一种条件组合 = 一个测试用例。
+每一**列** = 一种条件组合 = 一个测试用例。完整示例见下文。
 
 ## 完整示例：促销折扣决策表
 
@@ -76,31 +68,9 @@
 
 > **注意用例 3**：测试时"有券"取一个值即可（合并后该条件无关），但实战中可顺手补一个"会员+不满百+有券"确认券确实被忽略——这是验证"无关项"的额外保险。
 
-### 步骤 4：落地（映射见 06）
+### 步骤 4：落地
 
-每个用例一个 `@Test`，或用 `@ParameterizedTest` 把决策表当数据源。多条件组合**不宜**塞进单个 `@Test`，因为每列是独立的业务规则。
-
-```java
-@ParameterizedTest
-@CsvSource({
-    "true,  150, true,  0.7",    // 会员满额+券
-    "true,  150, false, 0.8",    // 会员满额无券
-    "true,  50,  true,  0.9",    // 会员不满额（券无效）
-    "false, 150, true,  0.85",   // 非会员满额+券
-    "false, 50,  false, 1.0"     // 非会员无券
-})
-void should_applyDiscount_byRuleCombination(boolean vip, double amount,
-                                            boolean hasCoupon, double expectedRate) {
-    Order order = new Order(vip, amount, hasCoupon);
-    assertEquals(expectedRate, order.discountRate(), 0.001);
-}
-```
-
-## 决策表的核心价值：防组合遗漏
-
-不用决策表的典型翻车：开发者凭印象测了"会员+满百+有券"（最常见路径），漏掉"会员+不满百+有券"——而后者正是"券是否叠加"规则分歧的高发区。
-
-决策表强制你**穷尽所有组合再化简**，化简过程本身就是在回答"哪些组合等价、哪些是无关项"。这是等价类思想在多维度的推广。
+每个用例一个 `@Test`，或用 `@ParameterizedTest` + `@CsvSource` 把决策表当数据源（每列对应一行 CsvSource 数据）。多条件组合**不宜**塞进单个 `@Test`——每列是独立业务规则。写法见 `references/06` §2。
 
 ## 化简规则
 
@@ -110,8 +80,7 @@ void should_applyDiscount_byRuleCombination(boolean vip, double amount,
 
 ## 何时该引入决策表的工程信号
 
-- 同一个方法里 `if` 嵌套超过 2 层，且都在判断不同条件 → 决策表（也可能是"该重构为策略 Map/规则引擎"的信号）。
-- Code review 反复争论"这个组合该怎么处理" → 决策表把规则显式化，争论就有了依据。
+- 同一个方法里 `if` 嵌套超过 2 层且判断不同条件 → 决策表（也可能是"该重构为策略 Map/规则引擎"的信号）。
 - Bug 反复出现在"某种条件组合" → 当前测试漏了该组合，补决策表。
 
 ## antipatterns

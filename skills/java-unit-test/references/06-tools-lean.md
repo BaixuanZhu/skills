@@ -1,12 +1,6 @@
 # 06 · 工具落地（设计 → 代码的最小映射）
 
-> 本文件只回答两个问题：**① 前面 01-05 设计好的用例，怎么映射成测试代码？② 哪些 API 坑值得固化？** 工具是为设计服务的，不是设计的目的。
->
-> **API 内容的筛选标准**（决定本文件收录什么，也锁住未来扩展边界）：
-> - ✅ **只固化"隐蔽型坑"（A 类）**：用错了**不报错**但埋雷——测试假绿/污染其他测试/掩盖耦合。这类"查文档也未必意识到严重性"，是技能存在的价值。
-> - ❌ **不收"即时报错型"（B 类）**：用错了立刻编译失败/测试红（如注解拼错、参数顺序写反、source 注解全列表）——查官方文档 30 秒即得，固化它等于复印文档，违背"不解释冗余"原则。
->
-> 判断一把尺：**这条 API 知识，是"省去查文档"，还是"省去踩一个查文档也发现不了的坑"？** 只有后者进本文件。
+> 本文件只固化"用错不报错但埋雷"的隐蔽型 API 坑（如测试假绿、污染其他测试、掩盖耦合）——查文档也未必意识到严重性的那种。即时报错型坑（注解拼错等）查文档 30 秒可得，不收录。
 
 ## §1 依赖：一句话定基线
 
@@ -29,7 +23,7 @@
 <!-- 断言默认 JUnit 原生，3+字段断言/集合内容断言时才升级 AssertJ；ArchUnit 仅"架构守护询问"（见 SKILL.md）触发时引入 -->
 ```
 
-> 栈中立铁律：项目已有 TestNG / JUnit 4 → 跟随既有框架，不强求升 JUnit 5。断言库**默认 JUnit 原生**，仅在"3+ 字段断言 / 集合内容断言"时升级到 AssertJ（见 SKILL.md"断言库策略"）——升级标准是机械可判的，避免凭感觉漂移。下面写法以 JUnit 5（Jupiter）为主，§4 给 JUnit 4 差异。
+> 下面写法以 JUnit 5（Jupiter）为主；项目已有 TestNG / JUnit 4 → 跟随既有（栈中立，见 SKILL 铁律 3），JUnit 4 差异见 §4。
 
 ## §2 设计用例 → 测试代码：映射表
 
@@ -75,7 +69,7 @@ class OrderServiceTest {
 - 需要在构造时传入**非 mock 的真实值**（如固定 `Clock`、真实 `ObjectMapper`）→ 手工构造显式可控。
 - 团队既有测试统一用手工构造 → 跟随，不为"统一"而迁移。
 
-> 同理，状态机的异常类型（`IllegalStateException` vs 自定义业务异常）也跟随项目——自定义异常对上层差异化处理更友好；默认 `IllegalStateException` 仅因其是 JDK 原生、无需额外定义。
+> 状态机非法转移的异常类型（`IllegalStateException` vs 自定义业务异常）跟随项目既有，不强加。
 
 ### 头号陷阱：被测类内部 new 的对象不能 mock
 
@@ -95,8 +89,6 @@ class GoodService {
     public GoodService(PaymentClient client) { this.client = client; }
 }
 ```
-
-> 当你发现"想 mock 但 mock 不了" → 这是**设计信号**：被测类耦合过重，应重构注入而非用反射强 mock。
 
 ### 静态方法 mock（最后手段）
 
@@ -127,9 +119,9 @@ class GoodService {
 }
 ```
 
-> 关键判别：mock 的对象 = 外部依赖（mapper/client）✓；被测代码 `new` 出来当**参数**传的对象（wrapper）= 被测逻辑的一部分，不 mock，用 `any()` 放行。这与"内部 new 的依赖不能 mock"不矛盾——后者指 `new` 的是**被调用的依赖**（如 `new PaymentClient()`），本条指 `new` 的是**传给依赖的入参**。
+> 判别：wrapper 是被测代码 `new` 出来当**参数**传给 mapper 的（查询条件），属被测逻辑，不 mock——用 `any()` 放行。（区别于"内部 new 的依赖"如 `new PaymentClient()`，那个要重构注入。）
 >
-> **但 `any()` 会放过 wrapper 自身的构造 bug**（如 `.eq(User::getId, id)` 写成 `.eq(User::getName, id)`）。既然 wrapper 是被测逻辑，就别只 stub 返回值了事——用 `ArgumentCaptor` 捕获它，至少 `verify(mapper).selectOne(captor.capture())` 确认被调用了正确方法；wrapper 内部条件断言较脆（lambda 序列化不稳），可退一步断言 `captor.getValue()` 非空 + 被测方的下游行为（返回值处理）正确。
+> **但 `any()` 会放过 wrapper 自身的构造 bug**（如 `.eq(User::getId, id)` 写错字段）。应用 `ArgumentCaptor` 捕获并 `verify(mapper).selectOne(captor.capture())` 确认调用；wrapper 内部条件断言较脆（lambda 序列化不稳），可退一步断言 `captor.getValue()` 非空 + 下游返回值处理正确。
 
 ### 静态方法：重构为可注入实例（"优先重构"的具体落地）
 
@@ -151,9 +143,9 @@ class OrderService {
 // 测试：@Mock IdGenerator idGen; when(idGen.next()).thenReturn("FAKE");
 ```
 
-> 代价是改生产代码——但这是消除"测不了"根因的正解，比在每个测试里 `try(MockedStatic)` 更干净、更不易泄漏。**仅在静态调用的代码你够不着时**（如调用点在第三方库内部）才退回 `mockStatic`。
+> 仅在静态调用的代码你够不着时（调用点在第三方库内部）才退回 `mockStatic`。
 >
-> **常见误判**：`LocalDate.now()` / `UUID.randomUUID()` 看似"来自 JDK 第三方、改不了源"，但**调用点在你自己代码里**——首选 `Clock` 注入（`java.time.Clock`，JDK 原生，测试传 `Clock.fixed(...)`）或 `IdGenerator` 接口注入（本节上方范例），不走 `mockStatic`。能改调用点就不算"够不着"。
+> **常见误判**：`LocalDate.now()` / `UUID.randomUUID()` 看似"来自 JDK 改不了源"，但**调用点在你自己代码里**——首选 `Clock` 注入（`Clock.fixed(...)`）或 `IdGenerator` 接口注入（本节上方范例），不走 `mockStatic`。能改调用点就不算"够不着"。
 
 ### Mockito stubbing / verify 隐蔽坑（用错不报错但埋雷）
 
@@ -204,8 +196,6 @@ class XTest {
 | 开销 | 毫秒，不起容器 | **启动/重建 Spring Context** |
 | 用于 | 本技能的主战场 | `@WebMvcTest`/`@DataJpaTest` 等 |
 
-> **纯单元测试禁用 `@MockBean`**——它会拉起 Spring 容器，让"单元测试"变成慢速集成测试。纯单测一律 `@Mock` + `@InjectMocks`。
-
 ## §4 JUnit 4 项目的写法差异（跟随既有）
 
 探测到 JUnit 4（`junit:junit` / `@RunWith`）时，跟随既有，不强升。差异：
@@ -219,17 +209,18 @@ class XTest {
 | 参数化 | `@ParameterizedTest` | `@RunWith(Parameterized.class)` |
 | Mockito 注解 | `MockitoAnnotations.openMocks` | `@RunWith(MockitoJUnitRunner.class)` |
 
-> 同一模块**禁止 JUnit 4 与 5 混用**——生命周期注解不互通，会导致测试不执行或乱序。
+> 同一模块禁止 JUnit 4 与 5 混用——生命周期注解不互通。
 
 ## §5 覆盖率工具（仅项目无且用户问时）
 
 JaCoCo 接入见 `references/05-coverage-and-quantity.md`。**不要主动推覆盖率接入**——只在用户问"测够没/覆盖率"时提，且强调它是反向诊断而非合格证。
 
-## §6 不做的事
+## §6 范围边界
 
-- **断言库按阈值用**：默认 JUnit 原生 `Assertions`；仅在"3+ 字段断言 / 集合内容断言"时升级 AssertJ（见 SKILL.md"断言库策略"）。AssertJ 的流式语法只在这两个场景出现，不为简单断言引入。
-- **不教集成测试/`@SpringBootTest`**——超出本技能范围（见 SKILL.md 不适用项）。
-- **不教 TestNG**——跟随既有；无则不主动推荐引入。
-- **不解释"为什么不用 XXX"**——不纳入的工具不解释原因（仓库原则）。
+本技能只覆盖**纯单元测试**（`@Mock`+`@InjectMocks`，毫秒级，不起容器）。以下不在本技能范围：
 
-> 本文件存在的唯一意义：让 01-05 设计的用例能落地成可跑的代码。设计是主角，工具是配角。
+- 集成测试 / `@SpringBootTest` 全量上下文 / 切片测试（`@WebMvcTest`/`@DataJpaTest`）—— 这些里 `@MockBean` 才适用。
+- TestNG —— 跟随项目既有；项目无则不主动推荐引入。
+- 性能测试、前端测试。
+
+用户问及以上时，说明超出本技能范围，建议走对应专门资料。
