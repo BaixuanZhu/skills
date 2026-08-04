@@ -56,17 +56,11 @@ dependencies:
 
 ### 2.2 产出
 
-**只写入 `agile-docs/VISION.md` 一个文档**，使用 `references/vision-template.md` 融合模板。**不顺手写 ARCHITECTURE / ADR / PRODUCT-BACKLOG / Sprint**。
+**只写入 `agile-docs/VISION.md` 一个文档**，使用 `references/vision-template.md` 融合模板。
 
 ### 2.3 阶段 A 写完即停（硬约束，结构化审阅）
 
-按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单，禁止只问"是否继续"：
-
-> ✅ `VISION.md` 已生成（路径：`agile-docs/VISION.md`）。本文档中我替你做出/记录了以下关键决策与假设：
-> {编号表格：决策/假设 × 来源（用户明确给出 / agent 推断 / agent 推荐待确认）}
-> 请逐条确认或纠正。全部确认后，是否**继续阶段 B**（架构层：ARCHITECTURE.md + ADR.md）？还是**更新**本愿景？
-
-然后**停下，等用户表态**。**禁止跨阶段**——即使 VISION 已确认，也要等用户明确"继续阶段 B"才进入 §3。
+按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列 VISION 的定位 / 核心原则 / 战略红线 / 成功指标等关键决策 × 来源），问"**继续阶段 B**（架构层）还是**更新**本愿景？"。然后**停下等用户表态**——禁止跨阶段，即使 VISION 已确认也要等用户明确"继续阶段 B"才进入 §3。
 
 **跳层兜底**：若用户要求跳过阶段 B 直接去 Backlog，提示"战略层架构未完成会让 T-NNN 缺少 ADR 关联，届时由 agile-backlog 按门禁 ① 拦截"。尊重用户选择。
 
@@ -121,32 +115,17 @@ dependencies:
 - 模板见 `references/c4-adr.md §二`
 - **更新策略**：章节式不可篡改（详见 §5 门禁 ②）
 
-**不顺手写**：VISION / PRODUCT-BACKLOG / Sprint
-
 ### 3.3 阶段 B 写完即停（结构化审阅）
 
-按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单：
-
-> ✅ 架构产出已完成：
-> - ARCHITECTURE.md（C4 Level 1 + Level 2）
-> - ADR.md（N 条决策）
->
-> 本层关键决策与假设清单：
-> {编号表格：每条 ADR 决策 + 架构假设 × 来源（用户裁决 / agent 推荐待确认 / agent 推断）}
-> 请逐条确认或纠正。全部确认后，是否**继续下一步**（执行层：agile-backlog 待办池）？还是**更新**本层？
-
-然后**停下等用户表态**。
+按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列每条 ADR 决策 + 架构假设 × 来源），问"**继续下一步**（执行层：agile-backlog 待办池）还是**更新**本层？"。然后停下等用户表态。
 
 ## 4. 硬约束（两阶段共用）
 
-- ✅ 阶段 A 只产 `VISION.md`；阶段 B 只产 `ARCHITECTURE.md` + `ADR.md`
+- ✅ 阶段 A 只产 `VISION.md`；阶段 B 只产 `ARCHITECTURE.md` + `ADR.md`；❌ **不顺手写** PRODUCT-BACKLOG / Sprint
 - ✅ 阶段间必须停下询问，**禁止跨阶段顺手写**
 - ✅ 写前探询遵循 `using-agile/references/probing-protocol.md`：含糊必追问、"你看着办"必给候选、仅明确跳过可标 `{待确认}`
 - ✅ **每项技术选型必须经过候选辩论 + 用户裁决（§3.1 步骤 4），禁止未经讨论直接写 ADR**
-- ❌ 不写 PRODUCT-BACKLOG / Sprint
-- ✅ ARCHITECTURE.md 可演进覆盖（git 记历史）
-- ✅ ADR.md 章节式不可篡改
-- ✅ 每条 ADR 严格 4 行结构
+- ✅ ARCHITECTURE.md 可演进覆盖（git 记历史）；ADR.md 章节式不可篡改，每条严格 4 行结构
 
 ## 5. 门禁
 

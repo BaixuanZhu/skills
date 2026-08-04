@@ -16,7 +16,7 @@
 
 检查前读取本 Sprint 对应的 `.done.yaml`：存在则以 completed/moved_next 为准；不存在则要求用户人工确认每条任务的完成情况。
 
-逐条核对 `agile-docs/DOD.md` 的「用户故事完成标准」+「Sprint 完成标准」。
+逐条核对 `agile-docs/DOD.md` 的「任务完成标准」+「Sprint 完成标准」。
 任一条未达标 → 该条目归入 moved_next（退回 Backlog 或延续下 Sprint），不计入完成。
 
 ## 三、关闭流程

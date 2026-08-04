@@ -13,13 +13,13 @@
 
 {Mermaid C4 Context Diagram}
 
-> 显示系统边界、外部用户、外部系统。每个外部实体 1 个节点。
+> 显示系统边界、外部用户、外部系统。每个外部实体 1 个节点。节点用 PascalCase，关系用动词描述。
 
 ## Level 2: 容器图（Containers）
 
 {Mermaid C4 Container Diagram}
 
-> 显示系统内部容器（Web / API / 数据库 / 缓存 / 消息队列等）及其交互。
+> 显示系统内部容器（Web / API / 数据库 / 缓存 / 消息队列等）及其交互。节点 PascalCase，关系用动词。
 ```
 
 **演进规则**：架构变化时**直接覆盖**本文件。不新建版本文件、不保留旧版本章节。Git diff 即历史。
@@ -78,9 +78,3 @@
 | 裁决结论 + 关键约束 | ADR 4 行结构（背景可一句带过"已评估 X/Y，因 Z 选定"） |
 | 用户要求对比表留档 | 代码仓库 `docs/research/`，不进 agile-docs/ |
 | 用户坚持与约束矛盾的选择 | 在 ADR 背景行如实记录质疑点与用户裁决 |
-
-## 五、C4 图资源（参考）
-
-- Mermaid C4 Context：https://mermaid.js.org/syntax/c4.html#c4-context-diagram-c4context
-- Mermaid C4 Container：https://mermaid.js.org/syntax/c4.html#c4-container-diagram-c4container
-- 命名约定：节点用 PascalCase，关系用动词描述

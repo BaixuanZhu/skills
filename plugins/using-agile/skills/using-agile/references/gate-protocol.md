@@ -51,7 +51,6 @@
 | ② | Backlog 为空（PRODUCT-BACKLOG.yaml 不存在或无条目）却要开 Sprint | 先引导创建至少 1 个条目，不创建空 Sprint |
 | ③ | 请求多 Sprint 并行 | 本模型仅一个 current Sprint；确需并行建议拆两个项目实例 |
 | ④ | Sprint 进行中大量加新需求 | 新需求先入 PRODUCT-BACKLOG 排序，下 Sprint 再纳入；仅 PO 正式中止重规划方可变更当前 Sprint |
-| ⑤ | 架构反向验证失败但替代方案未定 | 调用 agile-strategic 在 ADR.md 建「待定」ADR 章节占位，方案定后补为正式 supersede |
 | ⑥ | 条目过大无法估点（史诗级） | 拆为多个 T-/F- 条目再估斐波那契点 |
 | ⑦ | DoD 未定义却要关闭/交付 Sprint | 先生成 DOD 逐条确认，再允许关闭 |
 

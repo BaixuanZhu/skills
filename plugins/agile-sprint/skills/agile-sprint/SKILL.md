@@ -70,23 +70,15 @@ dependencies:
 
 ## 4. 写完即停（结构化审阅）
 
-按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（节奏另见 `using-agile/references/gate-protocol.md §四`）：
-> ✅ {环节} 已完成（{路径}）。本环节关键假设：
-> {编号表格：容量参数（人数/工作日/专注系数）/ 取条依据 / Sprint 目标 × 来源（用户确认 / agent 推荐待确认）}
-> 请逐条确认或纠正。全部确认后，是否**继续下一环节**？还是**更新**当前产出？
+按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列容量参数：人数/工作日/专注系数 / 取条依据 / Sprint 目标 × 来源），问"**继续下一环节**还是**更新**当前产出？"。
 
 ## 5. 硬约束
-- ✅ 单文件产出：`sprints/sprint-{序号:03d}-{日期}.md`
-- ✅ 命名含序号+日期（不用 `current.md`）
-- ✅ 写前探询遵循 `using-agile/references/probing-protocol.md`：容量参数（人数/工作日/专注系数）必经用户确认，禁止静默默认；Sprint 目标须可陈述（§2）
-- ✅ 关闭即标"已关闭"状态，不删除（自然保留）
-- ✅ 关闭 Sprint 前逐条过 DoD（独立出口门禁）
-- ✅ 关闭时记录执行结果来源（.done.yaml 或人工确认）
-- ❌ 不写 RETRO.md / RELEASE.md / FB-NNN.md
-- ❌ 不创建 `sprints/archive/` 子目录
-- ❌ 不在 **Sprint 文件**中设执行态追踪，不写 checkbox，不记阻塞，不处理执行中变更
-- ❌ 不直接修改 PRODUCT-BACKLOG.yaml/.md 的 status 字段（所有权属 agile-backlog，由入口检测 .done.yaml 后路由同步）
-- ❌ 不写 VISION / ARCHITECTURE / ADR / PRODUCT-BACKLOG 业务正文
+- ✅ 单文件产出 `sprints/sprint-{序号:03d}-{日期}.md`（命名含序号+日期，不用 `current.md`）；❌ **不顺手写** VISION / ARCHITECTURE / ADR / PRODUCT-BACKLOG 业务正文。
+- ✅ 写前探询遵循 `using-agile/references/probing-protocol.md`：容量参数（人数/工作日/专注系数）必经用户确认，禁止静默默认；Sprint 目标须可陈述（§2）。
+- ✅ 关闭 Sprint 前逐条过 DoD（独立出口门禁 ③）；关闭即标"已关闭"状态并记录执行结果来源（.done.yaml 或人工确认），不删除。
+- ❌ 不写 RETRO.md / RELEASE.md / FB-NNN.md，不创建 `sprints/archive/` 子目录。
+- ❌ 不在 Sprint 文件中设执行态追踪（不写 checkbox，不记阻塞，不处理执行中变更——归消费 Agent）。
+- ❌ 不直接修改 PRODUCT-BACKLOG.yaml/.md 的 status 字段（所有权属 agile-backlog，由入口检测 .done.yaml 后路由同步）。
 
 ## 6. 门禁
 - **DoD 出口门禁（③）**：有未估算/未过 DoD/未验收条目时要关闭 Sprint → 停下，逐条过 DoD。

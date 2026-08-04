@@ -93,8 +93,6 @@ items:
 
 **同步规则**：每次写入/更新 PRODUCT-BACKLOG.md 时，同步生成/更新 PRODUCT-BACKLOG.yaml。YAML 始终反映最新排序和状态，不含 acceptance/constraints 等描述详情。消费 Agent 读 YAML 拿排序，按需回读 `.md` 取详情。
 
-**不顺手写**：VISION / ARCHITECTURE / ADR / Sprint。
-
 ### 3c. 接受 .done 同步
 
 当 using-agile 检测到 `sprints/*.done.yaml` 存在且对应 Sprint 已关闭，路由到本技能：
@@ -108,21 +106,12 @@ items:
 
 ## 4. 写完即停（结构化审阅）
 
-按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（节奏另见 `using-agile/references/gate-protocol.md §四`）：
-> ✅ Product Backlog 已生成（{N} 个任务，{M} 个展开）。
-> 路径：`PRODUCT-BACKLOG.md`（人读）+ `.yaml`（Agent 读）
-> 本次排序与估点中我做出的关键假设：
-> {编号表格：排序依据 / 优先级判断 / agent 自估点数及理由 × 来源（用户裁决 / agent 建议待确认）}
-> 请逐条确认或纠正。全部确认后，是否**继续下一步**（agile-sprint）？还是**更新**本层？
+按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列排序依据 / 优先级判断 / agent 自估点数及理由 × 来源），问"**继续下一步**（agile-sprint）还是**更新**本层？"。
 
 ## 5. 硬约束
-- ✅ 产出 `PRODUCT-BACKLOG.md` + `PRODUCT-BACKLOG.yaml` 双文件。
-- ✅ 技术任务（T-NNN）和功能需求（F-NNN）平级。
-- ✅ 仅"非显然"条目展开（验收非显然 / 约束非显然 / 关联非显然）。
-- ❌ 不再拆 `backlog/epics/` + `backlog/enablers/` 子目录。
-- ❌ 不再使用 US / EN / EPIC 命名。
-- ❌ 不强制 INVEST / Given-When-Then 仪式。
-- ❌ 不写 VISION / ARCHITECTURE / ADR / Sprint。
+- ✅ 产出 `PRODUCT-BACKLOG.md` + `PRODUCT-BACKLOG.yaml` 双文件；❌ **不顺手写** VISION / ARCHITECTURE / ADR / Sprint。
+- ✅ 技术任务（T-NNN）和功能需求（F-NNN）平级；仅"非显然"条目展开（验收/约束/关联非显然）。
+- ❌ 不使用 INVEST / Given-When-Then 仪式，不拆 epics/enablers 子目录，不用 US/EN/EPIC 命名。
 - ✅ 涉及架构决策的 T-NNN 必须关联 ADR（门禁 ①）；F-NNN 默认不强制关联（判定细则见 `using-agile/references/gate-protocol.md §二 ①`）。
 - ✅ 写前探询遵循 `using-agile/references/probing-protocol.md`：Must 级条目须经范围挑战（§2b）；估点为 agent 建议值，须经用户确认；验收写不出可观察行为时追问而非脑补。
 - ✅ 每次编辑 .md 后必须同步更新 .yaml（id/priority/status 字段）。

@@ -85,7 +85,6 @@ version: 4.3.0
 ## 7. 硬约束
 
 - ❌ **绝不自己 Write 业务 `.md`**（VISION / ARCHITECTURE / ADR / PRODUCT-BACKLOG / Sprint）。
-- ✅ 只做：检测状态 → 询问 → 路由 → 变更协调（引用矩阵，不直接改业务正文）。
-- ✅ 每次激活后**逐层询问**"更新 or 继续"，不替用户决定走向。
+- ✅ 只做：检测状态 → 逐层询问"更新 or 继续"（不替用户决定走向）→ 路由 → 变更协调（引用矩阵，不直接改业务正文）。
 - ✅ 渐进式：业务技能产出即停；下一步须用户再次调用本技能或下个业务技能。
 - ✅ 路由到业务技能时提示其遵循 `references/probing-protocol.md`（探询协议，与 `references/gate-protocol.md` 门禁协议同级配套）。
