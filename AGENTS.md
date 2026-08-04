@@ -7,7 +7,7 @@
 两个内容目录是核心，其余是配套：
 
 - `skills/<name>/` —— **技能内容唯一编辑源**（npx skills / SkillHub / 虾评 / ZCode-npx 扫描这里）。每个含 `SKILL.md`（YAML frontmatter：`name`/`description`/`version`/`slug`/`displayName`，敏捷族另有 `dependencies`）+ `references/`（编号 `NN-topic.md`，1~14 个）+ 个别有 `assets/`（仅 java-coding-quality）。
-- `plugins/<name>/` —— **skills/ 的镜像**（Claude Code / ZCode 插件规范要求 `.claude-plugin/plugin.json` + `skills/<name>/` 嵌套，故与扁平的 `skills/` 分开存放）。**不要手改这里**——pre-commit hook 从 `skills/` 自动同步（见下文）。
+- `plugins/<name>/` —— **skills/ 的镜像**（Claude Code / ZCode 插件规范要求 `.claude-plugin/plugin.json` + `skills/<name>/` 嵌套，故与扁平的 `skills/` 分开存放）。支持「多 skill 合并入 1 个 plugin」（如 4 个敏捷 skill 归入 `plugins/agile/`，见下文「group 映射」）。**不要手改这里**——pre-commit hook 从 `skills/` 自动同步。
 - `.claude-plugin/marketplace.json` —— Claude Code 插件市场清单，`plugins[]` 每条 `source` 指 `./plugins/<name>`。
 - `eval/<skill-name>/` —— 达尔文评估产物（`eval/` 下游于 `skills/`，技能不从 eval 导入）。
 - `PUBLISH.local.md` —— **gitignored**，线上版本/平台 ID/发布流程的唯一真相来源。
@@ -28,7 +28,8 @@
 
 - **装 hook**：`npm install`（`postinstall` 自动装到 `.git/hooks/pre-commit`）。换机器 / 新 clone 后跑一次。
 - **手动跑同步**（不 commit）：`node scripts/sync-plugins.mjs`
-- **新增 / 删除技能**：hook 不自动建 / 删 `plugins/` 结构。需手动①在 `skills/<name>/` 建内容 → ②在 `plugins/<name>/` 建合规包（`.claude-plugin/plugin.json` + `skills/<name>/` 嵌套）→ ③在 `marketplace.json` 的 `plugins[]` 追加条目。之后同步自动。
+- **新增 / 删除技能**：hook 不自动建 / 删 `plugins/` 结构。需手动①在 `skills/<name>/` 建内容 → ②在 `plugins/<name>/` 建合规包（`.claude-plugin/plugin.json` + `skills/<name>/` 嵌套）→ ③在 `marketplace.json` 的 `plugins[]` 追加条目。之后同步自动。归入既有 group 的技能只需在 `plugin-map.json` 的 `groups.<group>.skills[]` 加名字，无需另建 plugin。
+- **group 映射**（`scripts/plugin-map.json`）：声明多个 skill 合并到 1 个 plugin（如敏捷 4 技能 → `plugins/agile/`）。sync hook 据此把组内各 skill 同步到 `plugins/<group>/skills/<skill名>/`；group 插件版本取组内 skill 版本的 max（`"version": "max"`）。不在 group 里的 skill 走默认 1:1（`plugins/<name>/skills/<name>/`）。
 - **marketplace.json 的 `description`/`category`/`keywords`/`source` 独立维护**（hook 不动）——因为 SKILL.md 的 `description` 是长触发器文本，与 marketplace 的一句话简述不是同一内容。
 
 ### 新增 plugin / marketplace 条目的字段要求
@@ -41,6 +42,9 @@
 ### 版本号真值源
 
 **只改 `skills/<name>/SKILL.md` frontmatter 的 `version`**，hook 自动同步到：① `plugins/<name>/.claude-plugin/plugin.json`（Claude Code / ZCode 安装后读）② `marketplace.json` 对应条目（市场列表展示读，不同步则版本落后）。
+
+- **独立插件**（1:1）：skill version 直接写入对应 plugin.json + marketplace 条目。
+- **group 插件**（多 skill 合一，如 agile）：plugin 版本取组内所有 skill version 的 max。各 skill 自己的 version 独立维护（`skills/<name>/SKILL.md`），plugin 版本跟随最高的那个。
 
 - 线上当前版本在 `PUBLISH.local.md`（gitignored，**不看 git tag**），版本号调整前先读它。SkillHub 对等于或低于线上的版本号**静默拒收**（不报错、不更新）。
 

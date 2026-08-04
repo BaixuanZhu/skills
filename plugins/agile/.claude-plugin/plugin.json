@@ -1,0 +1,9 @@
+{
+  "name": "agile",
+  "version": "4.3.1",
+  "description": "敏捷开发套件：入口路由(using-agile) + 战略层愿景/架构/ADR(agile-strategic) + 产品待办(agile-backlog) + Sprint 规划(agile-sprint)。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com"
+  }
+}

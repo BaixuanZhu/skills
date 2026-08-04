@@ -111,72 +111,22 @@
       ]
     },
     {
-      "name": "using-agile",
+      "name": "agile",
       "version": "4.3.1",
       "author": {
         "name": "BaixuanZhu",
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
-      "source": "./plugins/using-agile",
-      "description": "敏捷管理入口：路由 + 状态检测 + 变更协调。进入含 agile-docs/ 的项目或开始敏捷流程时触发。",
+      "source": "./plugins/agile",
+      "description": "敏捷开发套件（4 技能合一）：入口路由 using-agile + 战略层 agile-strategic + 产品待办 agile-backlog + Sprint 规划 agile-sprint。",
       "category": "productivity",
       "keywords": [
         "agile",
         "scrum",
-        "workflow",
-        "router"
-      ]
-    },
-    {
-      "name": "agile-strategic",
-      "version": "4.3.1",
-      "author": {
-        "name": "BaixuanZhu",
-        "email": "66127517+BaixuanZhu@users.noreply.github.com"
-      },
-      "source": "./plugins/agile-strategic",
-      "description": "敏捷战略层：愿景（VISION）+ 架构（C4）+ 架构决策记录（ADR）。写愿景、技术选型、架构决策时使用。",
-      "category": "productivity",
-      "keywords": [
-        "agile",
-        "vision",
-        "architecture",
-        "c4",
-        "adr"
-      ]
-    },
-    {
-      "name": "agile-backlog",
-      "version": "4.3.1",
-      "author": {
-        "name": "BaixuanZhu",
-        "email": "66127517+BaixuanZhu@users.noreply.github.com"
-      },
-      "source": "./plugins/agile-backlog",
-      "description": "敏捷产品待办：双文件 Backlog。拆任务、排优先级、迭代规划输入。",
-      "category": "productivity",
-      "keywords": [
-        "agile",
-        "backlog",
-        "product",
-        "prioritization"
-      ]
-    },
-    {
-      "name": "agile-sprint",
-      "version": "4.3.1",
-      "author": {
-        "name": "BaixuanZhu",
-        "email": "66127517+BaixuanZhu@users.noreply.github.com"
-      },
-      "source": "./plugins/agile-sprint",
-      "description": "Sprint 全周期规划器。开 Sprint、规划迭代、关闭 Sprint。",
-      "category": "productivity",
-      "keywords": [
-        "agile",
         "sprint",
-        "iteration",
-        "planning"
+        "backlog",
+        "vision",
+        "adr"
       ]
     }
   ]

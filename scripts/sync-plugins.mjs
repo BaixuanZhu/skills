@@ -24,6 +24,46 @@ const ROOT = join(__dirname, '..');
 const SKILLS_DIR = join(ROOT, 'skills');
 const PLUGINS_DIR = join(ROOT, 'plugins');
 const MARKETPLACE = join(ROOT, '.claude-plugin', 'marketplace.json');
+const PLUGIN_MAP = join(__dirname, 'plugin-map.json');
+
+// ── 加载 skill→plugin 分组映射 ────────────────────────────
+// plugin-map.json 声明「多个 skill 归属 1 个 plugin」的映射。
+// 反向索引: skillName → { group, versionStrategy }
+// 不在映射里的 skill 走默认 1:1 逻辑（plugins/<name>/skills/<name>/）。
+function loadPluginMap() {
+  if (!existsSync(PLUGIN_MAP)) return { skillToGroup: new Map(), groups: {} };
+  const raw = JSON.parse(readFileSync(PLUGIN_MAP, 'utf8'));
+  const skillToGroup = new Map();
+  const groups = raw.groups || {};
+  for (const [groupName, g] of Object.entries(groups)) {
+    for (const skillName of (g.skills || [])) {
+      skillToGroup.set(skillName, { group: groupName, versionStrategy: g.version || 'max' });
+    }
+  }
+  return { skillToGroup, groups };
+}
+
+const { skillToGroup, groups: PLUGIN_GROUPS } = loadPluginMap();
+
+// 版本聚合:max 策略 = 取组内所有 skill 版本的最大值
+function aggregateGroupVersion(groupName, skillVersions) {
+  const strategy = PLUGIN_GROUPS[groupName]?.version || 'max';
+  if (strategy === 'max') {
+    return skillVersions.sort((a, b) => compareVersions(b, a))[0];
+  }
+  throw new Error(`未知 version 策略: ${strategy} (group ${groupName})`);
+}
+
+// 语义化版本比较(a > b → 正数)
+function compareVersions(a, b) {
+  const pa = String(a).split('.').map(Number);
+  const pb = String(b).split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const da = pa[i] || 0, db = pb[i] || 0;
+    if (da !== db) return da - db;
+  }
+  return 0;
+}
 
 // ── 工具函数 ──────────────────────────────────────────────
 
@@ -70,6 +110,9 @@ function sync() {
   const marketplace = JSON.parse(readFileSync(MARKETPLACE, 'utf8'));
   const marketplaceByName = new Map(marketplace.plugins.map(p => [p.name, p]));
 
+  // 收集每个 group 的成员 skill 版本(用于版本聚合)
+  const groupSkillVersions = {};  // groupName → [{name, version}]
+
   for (const name of skillDirs) {
     const skillDir = join(SKILLS_DIR, name);
     const fm = readSkillFrontmatter(skillDir);
@@ -78,17 +121,21 @@ function sync() {
       continue;
     }
 
-    const pluginDir = join(PLUGINS_DIR, name);
+    // 判断 skill 归属:在 plugin-map.json 的 group 里 → plugin 名取 group 名;否则 1:1
+    const mapping = skillToGroup.get(name);
+    const pluginName = mapping ? mapping.group : name;
+
+    const pluginDir = join(PLUGINS_DIR, pluginName);
     const pluginJsonPath = join(pluginDir, '.claude-plugin', 'plugin.json');
     const skillDstDir = join(pluginDir, 'skills', name);
 
     // 边界:skills/ 有但 plugins/ 没有的技能(新增未初始化)→ 警告,不自动建
     if (!existsSync(pluginJsonPath)) {
-      report.warnings.push(`${name}: plugins/${name}/ 不存在(新增技能?需手动建 .claude-plugin/plugin.json + skills/${name}/ 结构后才能同步)`);
+      report.warnings.push(`${name}: plugins/${pluginName}/ 不存在(新增技能?需手动建 .claude-plugin/plugin.json + skills/ 结构后才能同步)`);
       continue;
     }
 
-    // ① 内容镜像:skills/<name>/ → plugins/<name>/skills/<name>/
+    // ① 内容镜像:skills/<name>/ → plugins/<pluginName>/skills/<name>/
     const beforeFiles = existsSync(skillDstDir) ? listSkillFiles(skillDstDir).sort().join('\n') : '';
     const afterFiles = listSkillFiles(skillDir).sort().join('\n');
     const contentChanged = beforeFiles !== afterFiles ||
@@ -103,21 +150,52 @@ function sync() {
       // 无变化则不动
     }
 
-    // ② plugin.json version 同步(只改 version,保留 name/description/author)
-    const pj = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
-    if (pj.version !== fm.version) {
-      pj.version = fm.version;
-      writeFileSync(pluginJsonPath, JSON.stringify(pj, null, 2) + '\n', 'utf8');
-      report.versionsChanged.push(`${name} plugin.json: → ${fm.version}`);
+    // 收集 group 成员版本(稍后统一聚合);非 group skill 收集自身版本供 1:1 同步
+    if (mapping) {
+      (groupSkillVersions[mapping.group] = groupSkillVersions[mapping.group] || []).push({ name, version: fm.version });
+    } else {
+      // ② 1:1 插件:plugin.json version 同步(只改 version,保留 name/description/author)
+      const pj = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
+      if (pj.version !== fm.version) {
+        pj.version = fm.version;
+        writeFileSync(pluginJsonPath, JSON.stringify(pj, null, 2) + '\n', 'utf8');
+        report.versionsChanged.push(`${name} plugin.json: → ${fm.version}`);
+      }
+
+      // ③ 1:1 marketplace.json version 同步(只改对应条目的 version)
+      const entry = marketplaceByName.get(name);
+      if (entry && entry.version !== fm.version) {
+        entry.version = fm.version;
+        report.versionsChanged.push(`${name} marketplace.json: → ${fm.version}`);
+      } else if (!entry) {
+        report.warnings.push(`${name}: marketplace.json 无对应条目(需手动添加 source/category/keywords)`);
+      }
+    }
+  }
+
+  // ②③ group 插件:版本聚合后统一同步 plugin.json + marketplace.json
+  for (const [groupName, members] of Object.entries(groupSkillVersions)) {
+    if (members.length === 0) continue;
+    const versions = members.map(m => m.version);
+    const aggVersion = aggregateGroupVersion(groupName, versions);
+    const pluginDir = join(PLUGINS_DIR, groupName);
+    const pluginJsonPath = join(pluginDir, '.claude-plugin', 'plugin.json');
+
+    if (existsSync(pluginJsonPath)) {
+      const pj = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
+      if (pj.version !== aggVersion) {
+        pj.version = aggVersion;
+        writeFileSync(pluginJsonPath, JSON.stringify(pj, null, 2) + '\n', 'utf8');
+        report.versionsChanged.push(`${groupName} plugin.json: → ${aggVersion} (聚合自 ${members.map(m => m.name).join(', ')})`);
+      }
     }
 
-    // ③ marketplace.json version 同步(只改对应条目的 version)
-    const entry = marketplaceByName.get(name);
-    if (entry && entry.version !== fm.version) {
-      entry.version = fm.version;
-      report.versionsChanged.push(`${name} marketplace.json: → ${fm.version}`);
+    const entry = marketplaceByName.get(groupName);
+    if (entry && entry.version !== aggVersion) {
+      entry.version = aggVersion;
+      report.versionsChanged.push(`${groupName} marketplace.json: → ${aggVersion}`);
     } else if (!entry) {
-      report.warnings.push(`${name}: marketplace.json 无对应条目(需手动添加 source/category/keywords)`);
+      report.warnings.push(`${groupName}: marketplace.json 无对应条目(需手动添加 source/category/keywords)`);
     }
   }
 
