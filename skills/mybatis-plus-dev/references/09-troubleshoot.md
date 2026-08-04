@@ -32,9 +32,3 @@ mybatis-plus:
 3. 单库是否指定 `DbType`？
 4. `selectPage` 入参 `Page` 是否正确 `new`（非 null）？
 5. XML 联表分页入参 `IPage` 是否非 null？
-
-## 4. 建议
-
-- 调试先开 SQL 日志，看真实执行的 SQL。
-- 涉及易错点先翻 `08-antipattern.md`。
-- 复杂查询优先 XML，避免 Wrapper 黑盒。

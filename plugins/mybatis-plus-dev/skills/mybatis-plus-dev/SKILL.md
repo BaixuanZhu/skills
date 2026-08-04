@@ -14,7 +14,7 @@ description: >-
   不适用于：已使用 JPA / Hibernate 的项目（不建议迁移）、数据库表结构设计/DDL、纯 SQL 性能调优
   （连接池/索引/慢查询属 DBA 层）。
 agent_created: true
-version: 2.2.0
+version: 2.2.1
 slug: mybatis-plus-dev
 displayName: MyBatis-Plus 开发助手
 ---
@@ -71,7 +71,7 @@ displayName: MyBatis-Plus 开发助手
 2. **优先用父类方法**：单表 CRUD 直接用 `BaseMapper` / `IService` 提供的方法（`selectList` / `selectById` / `save` / `updateById` / `page` …），**不要手撸冗余 CRUD 或重复 XML**。
 3. **复杂 / 联表 SQL 进 XML 或 `@Select`**：不要用 Wrapper 硬堆多表 join；MP 擅长单表，复杂查询交给 XML。
 4. **null 不更新**：`updateById(entity)` 中 entity 的 `null` 字段默认**不参与更新**（根因：全局 `updateStrategy` 默认 `NOT_NULL`，见 `references/02-config.md` §7）；要显式置空用 `UpdateWrapper.set(...)` 或字段级 `@TableField(updateStrategy = FieldStrategy.ALWAYS)`。
-5. **逻辑删除**：推荐 0+时间戳方案（`Long` 字段，`logic-not-delete-value: 0`，`logic-delete-value: "UNIX_TIMESTAMP(now())"`）；用全局 `logic-delete-field` 或字段 `@TableLogic`；启用后查询自动过滤已删除行。
+5. **逻辑删除**：推荐 0+毫秒时间戳方案（`Long` 字段，`logic-not-delete-value: 0`，`logic-delete-value: "UNIX_TIMESTAMP(now())*1000"`）；用全局 `logic-delete-field` 或字段 `@TableLogic`；启用后查询自动过滤已删除行。
 6. **分页插件最后添加 + 显式 DbType**：`MybatisPlusInterceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL))` 必须放在插件链**最后**；**非 MySQL（PG/Oracle/SQLServer/达梦/金仓）必须显式指定 `DbType`**，否则分页方言可能生成错误（total 错或语法错）。跨库差异（主键策略/引用符/批量语法）见 `references/12-dbtype.md`。
 7. **SQL 注入防护**：`Wrapper.apply` 用 `{0}` 占位符（PreparedStatement 参数化）+ 前置 `SqlInjectionUtils.check(...)` 校验，**禁止字符串拼接** SQL 片段。`check` 返回 boolean 并抛异常，不返回安全值。
 8. **Wrapper 不可复用**：同一 `Wrapper` 实例多次使用会叠加条件；每次查询 `new` 一个新的。
@@ -102,7 +102,7 @@ displayName: MyBatis-Plus 开发助手
 
 1. **确认 MP 适用性**：先执行「第 0 步：依赖探测与激活分支」；依赖缺失时主动询问是否引入 MyBatis-Plus。不适用 → 告知用户并建议退出；部分适用 → 告知范围并让用户确认；正常 → 继续。
 2. **定位 reference**：查上方「决策路由」表，读对应文件。
-3. **编码遵循强约束**：先看 9 条核心强约束，再读 reference 给代码。
+3. **编码遵循强约束**：先看 10 条核心强约束，再读 reference 给代码。
 4. **遇异常先查排错**：`references/09-troubleshoot.md` + `references/08-antipattern.md`。
 5. **输出前自检（7 项）**：
    - [ ] starter 坐标对应 SpringBoot 版本？（2.x / 3.x / 4.x）

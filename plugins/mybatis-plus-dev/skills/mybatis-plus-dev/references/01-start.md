@@ -107,8 +107,4 @@ userMapper.updateById(new User().setId(1L).setAge(21));
 userMapper.deleteById(1L);
 ```
 
-## 关键说明
-- Mapper 只需 `extends BaseMapper<T>`，**不要**再去写基础 CRUD 方法（除非自定义 SQL）。
-- 复杂 / 联表查询放 XML 或 `@Select`，不要用 Wrapper 硬堆 join（见 `05-wrapper.md`、`06-page.md`）。
-- 配置细节（分页插件、逻辑删除、自动填充、乐观锁等）见 `02-config.md`。
-- 实体字段映射、主键策略、null 处理见 `03-entity.md`。
+> 进阶配置（分页插件、逻辑删除、自动填充、乐观锁）见 `02-config.md`；实体字段映射、主键策略、null 处理见 `03-entity.md`。

@@ -58,17 +58,12 @@ userService.saveBatch(userList, 500);       // 指定批次大小
 
 ## 4. updateById / update 的 null 语义
 
-- `updateById(entity)`：`entity` 中 `null` 字段**不更新**（见 `03-entity.md` 字段策略）。
-- 想把字段置 null：用 `UpdateWrapper.set(...)`。
+- `updateById(entity)`：`entity` 中 `null` 字段**不更新**；想把字段置 null 用 `UpdateWrapper.set(...)`（机制与代码示例见 `03-entity.md` §4 字段策略）。
 - `update(entity, wrapper)`：`entity` 提供 SET 值，`wrapper` 提供 WHERE；`wrapper` 不可复用。
 
 ```java
 // 只更新 name，age 不受影响（因 entity.age 为 null）
 userMapper.updateById(new User().setId(1L).setName("New"));
-
-// 显式置 age 为 null
-userMapper.update(null, new LambdaUpdateWrapper<User>()
-    .eq(User::getId, 1L).set(User::getAge, null));
 ```
 
 ## 5. 常用方法速查

@@ -1,6 +1,6 @@
 # MyBatis XML Mapper 编写指南
 
-> MP 擅长单表 CRUD，复杂 / 联表查询应写 XML。本章覆盖从配置到编写的完整链路，确保 Agent 能产出一个**配置正确、结构规范、可直接运行**的 XML Mapper。
+> MP 擅长单表 CRUD，复杂 / 联表查询应写 XML。
 
 ## 1. mapper-locations 配置
 
