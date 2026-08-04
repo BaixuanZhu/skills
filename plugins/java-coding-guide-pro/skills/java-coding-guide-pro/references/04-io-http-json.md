@@ -93,7 +93,7 @@ public String postJson(String url, Object body) throws IOException {
 HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
 // ... 一堆 setRequestProperty / getResponseCode / 手读流
 ```
-OkHttp3 Builder API 简洁、自带连接池/GZIP/重试；坐标见 SKILL.md「必选依赖」。
+OkHttp3 Builder API 简洁、自带连接池/GZIP/重试；坐标见 SKILL.md「C-CHECK 询问（仅高风险能力缺失时触发）」。
 
 ## JSON（Jackson）规范
 
@@ -126,7 +126,7 @@ String json = "{\"id\":" + id + ",\"name\":\"" + name + "\"}";
 new ObjectMapper().readValue(json, User.class);
 ```
 
-Jackson 坐标见 SKILL.md「必选依赖」。
+Jackson 坐标见 SKILL.md「C-CHECK 询问（仅高风险能力缺失时触发）」。
 
 ## 推荐示例（HTTP + JSON 组合）
 
@@ -141,10 +141,3 @@ public User fetchUser(String userId) throws IOException {
     }
 }
 ```
-
-## 强约束提醒
-
-- 文件读写**必须 `FileUtil`/`IoUtil`**；禁手搓流且 `close` 不兜底（必须 try-with-resources）。
-- 文本读写**显式 UTF-8**；`writeUtf8String(content, path)` **内容在前**。
-- HTTP **OkHttp3** + try-with-resources；禁手搓 `HttpURLConnection`；`Response` 必须关闭。
-- JSON **Jackson `ObjectMapper` 复用单例**；禁手拼 JSON；大响应用 `byteStream()` 流式反序列化。

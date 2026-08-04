@@ -15,8 +15,8 @@ description: >-
   Math.random() 强转生成序号/ID、Random 生成 token/验证码。
   跟随项目既有技术栈（Spring / Hutool / commons-lang3 等），不强加任何库。
   不适用：业务架构设计、框架选型、DDL、纯算法、前端代码。
-version: "3.3.0"
-last_verified: "2026-07-31"
+version: "3.4.0"
+last_verified: "2026-08-04"
 ---
 
 # Java 编码指南
@@ -103,27 +103,27 @@ last_verified: "2026-07-31"
 | S | 无盐 MD5/SHA 存密码 | `BCrypt.hashpw` | 彩虹表反查 |
 | S | 手搓 `MessageDigest` 且 hex 无 `%02x` | `SecureUtil.md5`/`sha256`，或补 `%02x` | 前导零丢失致哈希碰撞 |
 | S | `catch (InterruptedException e) {}` 空吞 | 加 `Thread.currentThread().interrupt()` | 中断丢失，线程池无法关停 |
-| S | `finally { throw/return }` | 移除 | 掩盖 try 块原始异常 |
-| S | `catch (Throwable/Error)`、空 catch 吞异常 | 缩窄到具体类型分别处理 | 吞掉 OOM/断言，掩盖故障 |
-| S | `Optional.get()` 前无 `isPresent`/`orXxx` | `orElse`/`orElseThrow` | NoSuchElementException |
+| S | `finally { throw/return }` | 移除 | — |
+| S | `catch (Throwable/Error)`、空 catch 吞异常 | 缩窄到具体类型分别处理 | — |
+| S | `Optional.get()` 前无 `isPresent`/`orXxx` | `orElse`/`orElseThrow` | — |
 | S | `BeanUtils.copyProperties` 未确认源/目标顺序 | MapStruct / `BeanUtil`（顺序固定 source,target） | Spring 与 Apache 参数顺序相反，记错静默拷空 |
-| S | `subList` 结果当独立列表/分页 | `CollUtil.partition` 或拷贝 `new ArrayList<>(view)` | 视图与原列表耦合 + 越界 |
-| S | 手拼 JSON 字符串 | Jackson 等既有 JSON 库 | 转义遗漏 / 注入 |
+| S | `subList` 结果当独立列表/分页 | `ListUtil.partition` 或拷贝 `new ArrayList<>(view)` | — |
+| S | 手拼 JSON 字符串 | Jackson 等既有 JSON 库 | — |
 | S | `Math.random()`/`Random` 生成"唯一"序号/单号/ID（如 `(int)(Math.random()*100000)` 当 seq） | DB 序列 / Redis `INCR` / 雪花 ID 等单调发号器 | 随机≠唯一：10 万空间约 400 次即 50% 碰撞（生日悖论），单号重复是事故 |
 | S | `Random`/`ThreadLocalRandom`/`Math.random()` 生成 token/验证码/密码/盐等安全凭证 | JDK `SecureRandom`（原生即成熟） | 线性同余可由少量输出反推种子，凭证可预测 |
-| S | 违反目标 JDK 版本门控（如 JDK 8 用 `var`/`record`） | 按五档门控降级写法 | 编译失败 |
-| A | `== null \|\| .trim().isEmpty()` 手写判空 | 工具方法（`StrUtil.isBlank` / `StringUtils` / JDK `isBlank`(11+)） | 一行、null 安全 |
-| A | `a.equals(b)` 且 a 可能 null | `Objects.equals` / `ObjectUtil.equal` / 常量在前 | 防 NPE |
-| A | 仅初始化就 `new ArrayList<>()` 逐个 add；`subList` 手写分块 | `List.of` / `CollUtil.newArrayList`/`partition` | 简洁且防越界 |
+| S | 违反目标 JDK 版本门控（如 JDK 8 用 `var`/`record`） | 按五档门控降级写法 | — |
+| A | `== null \|\| .trim().isEmpty()` 手写判空 | 工具方法（`StrUtil.isBlank` / `StringUtils` / JDK `isBlank`(11+)） | — |
+| A | `a.equals(b)` 且 a 可能 null | `Objects.equals` / `ObjectUtil.equal` / 常量在前 | — |
+| A | 仅初始化就 `new ArrayList<>()` 逐个 add；`subList` 手写分块 | `List.of` / `CollUtil.newArrayList`/`partition` | — |
 | A | `log.error("x=" + e)` 字符串拼接 | 占位符 `log.error("x={}", x, e)`，异常作最后参数 | 拼接在日志关闭时也执行 |
 | A | 裸 `LocalDateTime.now()`/`LocalDate.now()` 等 time-based `now()` | `now(zoneId)` / `now(clock)`（应用级统一 ZoneId 常量或注入 Clock） | 隐式依赖 JVM 默认时区，容器多为 UTC，日切/对账跨天错 8 小时；Sonar java:S8688 |
 | A | `new Random().nextInt()` 手算范围、`(int)(Math.random()*n)` 强转 | `RandomUtil.randomInt(min,max)` / `ThreadLocalRandom.current().nextInt(min,max)` | 手算边界易错（半开区间）；`Math.random()` 全局共享实例有锁竞争 |
-| A | 手拼随机字符串（`Math.random()`+`String.format`/自建字符表循环） | `RandomUtil.randomString(len)` / `randomNumbers(len)` | 一行、字符集完整、无前导零/边界 bug |
-| A | POJO 布尔属性 `isXxx` 前缀 | 用 `deleted` 而非 `isDeleted` | RPC/序列化解析错误 |
-| A | 魔法值直出 | 抽 `static final` 常量或枚举 | 可维护性 |
+| A | 手拼随机字符串（`Math.random()`+`String.format`/自建字符表循环） | `RandomUtil.randomString(len)` / `randomNumbers(len)` | — |
+| A | POJO 布尔属性 `isXxx` 前缀 | 用 `deleted` 而非 `isDeleted` | — |
+| A | 魔法值直出 | 抽 `static final` 常量或枚举 | — |
 | A | 无用 import（未使用/重复/java.lang/同包）残留 | 移除；删掉某类最后一处使用时同步删 import | 虚假依赖信号、污染 diff；Sonar java:S1128 |
 | A | 单方法嵌套 ≥3 层、else-if ≥3 连、布尔混用 ≥3 项（预示认知复杂度超标） | 卫语句早返回 / 提炼语义方法 / switch、策略 Map 分发（禁无语义拆块） | 嵌套惩罚是计分大头，难读难测；Sonar java:S3776（阈值 15） |
-| A | `get`/`find` 类方法返回 null | `Optional<T>` 或空集合 | 调用方 NPE |
+| A | `get`/`find` 类方法返回 null | `Optional<T>` 或空集合 | — |
 
 ## C-CHECK 询问（仅高风险能力缺失时触发）
 

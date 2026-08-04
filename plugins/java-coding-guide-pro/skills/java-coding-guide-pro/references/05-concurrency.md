@@ -226,18 +226,7 @@ public class TaskRunner {
 }
 ```
 
-## 强约束提醒
-
-- **禁 `new Thread().start()`**；**禁 `Executors.newFixedThreadPool`/`newCachedThreadPool`**（无界 OOM）。
-- 必须 `new ThreadPoolExecutor` + **有界队列** + **手写命名 ThreadFactory** + **拒绝策略默认 `CallerRunsPolicy`**。
-- `CompletableFuture` 跑阻塞 IO 必传**自定义线程池**，禁用 commonPool。
-- 并发写 Map 用 `ConcurrentHashMap`；关闭线程池用 `shutdown`+`awaitTermination`。
-- 虚拟线程仅 JDK 21+，且不适用 CPU 密集任务。
-- **线程命名**：线程池必须自定义 `ThreadFactory` 命名线程（阿里规约），禁默认 `pool-x-thread-y`。
-- **非线程安全对象禁 static**（SonarQube S6373）：`SimpleDateFormat` 等用线程安全替代或实例化。
-- **Scoped Values（JDK 25+）**：替代 ThreadLocal 传不可变上下文；JDK 21 及以下仍用 ThreadLocal（finally remove）。
-- **虚拟线程 synchronized**：JDK 21 pin / JDK 25 不 pin，按 LTS 版本判断（见 `09` antipattern 3）。
-
 ## 依赖
 
 命名线程工厂**手写匿名 `ThreadFactory`**（见上，纯 JDK，无额外依赖）。**不引入 Guava** `ThreadFactoryBuilder`（本指南栈不含 Guava）。
+

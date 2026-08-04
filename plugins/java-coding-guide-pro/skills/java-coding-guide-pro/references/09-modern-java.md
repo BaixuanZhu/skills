@@ -56,7 +56,6 @@ String json = "{\"a\":1}";
 String r;
 switch (day) { case MON: r = "M"; break; default: r = "?"; }
 ```
-> **铁律**：先探测目标 JDK（读 `pom.xml` 的 `<source>` / `maven.compiler.release`）。JDK 8 项目一律禁用本文件除注释外的特性。
 
 ### 2. `Stream.toList()` 返回不可变（JDK 16+）
 ```java
@@ -85,21 +84,19 @@ public void fetch() {
     }
 }
 ```
-> **铁律**：先确认目标 JDK 的 LTS 版本。JDK 21 项目中虚拟线程仍应避免 synchronized（改 `ReentrantLock`）；JDK 25 项目可直接用 synchronized。**不要一刀切**——按 LTS 版本判断。详见 `05-concurrency.md`。
+> 不一刀切：JDK 21 虚拟线程避免 synchronized（改 `ReentrantLock`），JDK 25 不再 pin 可直接用——按目标 LTS 版本判断。
 
 ### 4. Scoped Values vs ThreadLocal（JDK 25+）
 ```java
-// ✗ 用 ThreadLocal 传请求上下文（可变、内存泄漏、线程池复用串值）
+// ✗ ThreadLocal 传请求上下文（可变、内存泄漏、线程池复用串值）
 private static final ThreadLocal<RequestContext> CTX = new ThreadLocal<>();
 CTX.set(context);
 try { handle(); } finally { CTX.remove(); }
 
-// ✓ JDK 25 用 ScopedValue（不可变、作用域绑定、自动清理）
-private static final ScopedValue<RequestContext> CTX = ScopedValue.newInstance();
+// ✓ JDK 25 ScopedValue（不可变、作用域绑定、自动清理）
 ScopedValue.where(CTX, context).run(() -> handle());
-// 作用域结束自动清理，无需 remove；不可变防止串改
 ```
-> ThreadLocal 的问题：可变（随时 set 覆盖）、忘记 remove 导致内存泄漏、线程池复用时串值。ScopedValue 不可变、作用域绑定、自动清理。**仅 JDK 25+ 可用**；JDK 21 及以下仍用 ThreadLocal（务必 finally remove）。详见 `05-concurrency.md`。
+> API 细节、与 ThreadLocal 的对比表、嵌套绑定示例见 `05-concurrency.md`「Scoped Values」。**仅 JDK 25+ 可用**；JDK 21 及以下仍用 ThreadLocal（务必 finally remove）。
 
 ### 5. Flexible Constructor Bodies 误用（JDK 25+）
 ```java
@@ -256,14 +253,3 @@ List<List<Integer>> windows = numbers.stream()
     .toList();
 // 更多自定义 Gatherer 见 java.util.stream.Gatherer
 ```
-
-## 强约束提醒
-
-- **先探测目标 JDK**；JDK 8 项目**全部禁用**本文件特性（除已属 JDK 8 的 Lambda/Optional/Stream/java.time）。
-- `Stream.toList()`（JDK 16+）返回**不可变**；需可变用 `Collectors.toList()`。
-- `var`（JDK 10+）仅限**局部变量**，禁作字段/参数/返回类型。
-- 虚拟线程（JDK 21+）不适用 CPU 密集任务，不池化。
-- HTTP 即使 JDK 11+ 有 `HttpClient`，本指南统一用 **OkHttp3**（一致性优先）。
-- **JDK 25 虚拟线程**：synchronized 不再 pin（JEP 491）；JDK 21 仍 pin。按目标 LTS 版本判断，不一刀切。
-- **Scoped Values（JDK 25+）**：替代 ThreadLocal 传不可变上下文；JDK 21 及以下仍用 ThreadLocal（务必 finally remove）。
-- **JDK 25 移除项**：Security Manager（JEP 486）、`sun.misc.Unsafe` 内存方法（JEP 471/498）；迁移至 FFM API / 容器隔离。

@@ -1,7 +1,8 @@
 # 02 · 集合与 Stream
 
-> Hutool `CollUtil`（`cn.hutool.core.collection`）+ `CollStreamUtil`（分组/转Map 的正确工具）+ JDK `Stream`。
+> Hutool `CollUtil`（`cn.hutool.core.collection`）+ `ListUtil`（同包，分块/分页）+ `CollStreamUtil`（分组/转Map 的正确工具）+ JDK `Stream`。
 > **默认用 JDK `Stream` + `Collectors`**（原生完善→原生优先，见 SKILL 选型哲学第一档）；仅 `groupByKey`+`toMap` 链式多步组合时才用 `CollStreamUtil`。
+> **分块/分页注意**：`partition`/`split`/`page` 在 `ListUtil`（`cn.hutool.core.collection.ListUtil`），**不在 `CollUtil`**——`CollUtil` 无这些方法。
 
 ## 规范速查
 
@@ -12,7 +13,7 @@
 | 遍历前守卫 | `for(x : list)`（null NPE） | `if (CollUtil.isNotEmpty(list)) {...}` |
 | 新建初始化 | `new ArrayList<>(); add(a); add(b);` | `CollUtil.newArrayList(a, b)` |
 | 新建 Set | `new HashSet<>()` + add | `CollUtil.newHashSet(a, b)` |
-| 分块（每 N 个一组） | `list.subList(from, to)` | `CollUtil.partition(list, size)` |
+| 分块（每 N 个一组） | `list.subList(from, to)` | `ListUtil.partition(list, size)`（**`CollUtil.partition` 不存在**，分块在 `ListUtil`） |
 | 取第几页 | `subList` 手写 | `CollUtil.page(pageNum, pageSize, list)` |
 | 按 key 分组 | 手写 `Map`+`for`+`computeIfAbsent` | **`Collectors.groupingBy(Bean::getX)`**（链式组合用 `CollStreamUtil.groupByKey`） |
 | 转 Map | 手写 for+put | **Stream `Collectors.toMap(k, v)`**（链式组合用 `CollStreamUtil.toMap`） |
@@ -35,9 +36,9 @@
 int from = page * size;
 List<Item> pageItems = list.subList(from, from + size); // from+size 越界？
 
-// ✓ partition 自动处理边界，返回独立子列表
-List<List<Item>> chunks = CollUtil.partition(list, 50);
-// ✓ 取指定页（0 基）
+// ✓ ListUtil.partition 自动处理边界，返回独立子列表（注意：CollUtil 无 partition，在 ListUtil）
+List<List<Item>> chunks = ListUtil.partition(list, 50);
+// ✓ 取指定页（0 基，CollUtil.page 存在）
 List<Item> p = CollUtil.page(0, 50, list);
 ```
 
@@ -56,6 +57,7 @@ Map<String, List<User>> byDept = users.stream().collect(Collectors.groupingBy(Us
 // 仅 groupByKey + toMap 链式多步组合时才用 CollStreamUtil.groupByKey
 // Map<String, List<User>> byDept = CollStreamUtil.groupByKey(users, User::getDept);
 ```
+> 同类「CollUtil 上不存在」的误用：`CollUtil.shuffle`（用 `Collections.shuffle`）、`CollUtil.toMap(list, k, v)`（CollUtil 的 toMap 需传入目标 Map）——遇到编译错误先查签名。
 
 ### 3. 转 Map 签名易错
 ```java
@@ -176,8 +178,8 @@ if (CollUtil.isNotEmpty(orders)) { ... }
 // 新建初始化
 List<String> tags = CollUtil.newArrayList("a", "b", "c");
 
-// 分块处理
-List<List<Order>> chunks = CollUtil.partition(orders, 20);
+// 分块处理（ListUtil.partition，非 CollUtil）
+List<List<Order>> chunks = ListUtil.partition(orders, 20);
 
 // 分组（默认 JDK Collectors；链式组合才用 CollStreamUtil.groupByKey）
 Map<Long, List<Order>> byUser = orders.stream().collect(Collectors.groupingBy(Order::getUserId));
@@ -188,14 +190,3 @@ List<Integer> both = new ArrayList<>(CollUtil.intersection(listA, listB));
 // 取字段值列表
 List<Object> names = CollUtil.getFieldValues(users, "name");
 ```
-
-## 强约束提醒
-
-- 判空**必须 `CollUtil.isEmpty`**；遍历前**必须 `isNotEmpty` 守卫**。
-- 新建初始化**优先 `CollUtil.newArrayList(a,b)`**；禁 `new ArrayList` 后逐个 `add`。
-- 分块/分页**必须 `CollUtil.partition`/`page`**；禁 `subList` 手写。
-- 分组/转Map：**默认 JDK `Collectors.groupingBy`/`toMap`**；仅链式多步组合用 `CollStreamUtil`；**禁 `CollUtil.groupBy`（不存在）**。
-- `CollUtil.shuffle` 不存在，用 `Collections.shuffle`。
-- **`Arrays.asList` 返回固定大小**（禁 add/remove）；需可变用 `new ArrayList<>(Arrays.asList(...))` 或 `CollUtil.newArrayList`。
-- **`isEmpty()` 优于 `size()==0`**（S2200）；遍历中删除用 `removeIf`，禁 foreach `remove`（CME）。
-- **HashMap 已知大小时预设容量**（减少扩容）。

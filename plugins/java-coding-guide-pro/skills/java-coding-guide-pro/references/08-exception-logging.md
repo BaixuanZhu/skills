@@ -72,8 +72,6 @@ Throwable root = ExceptionUtil.getRootCause(e);
 | 系统异常 | `RuntimeException`（非业务） | `NullPointerException`/`ClassCastException` | catch 后记 error + 降级/告警 |
 | 第三方异常 | 原始异常包装 | `RpcException("超时", cause)` | catch 后重试/降级 + 记 warn |
 
-> **铁律**：自定义业务异常继承 `RuntimeException`（非 checked），携带错误码；禁止业务异常继承 `Error`。三分法的价值在于**处理策略不同**——业务异常可预期、需用户提示；系统异常不可预期、需告警；第三方异常需重试/降级。
-
 ### antipattern：InterruptedException 空吞（SonarQube S2142）
 ```java
 // ✗ 吞掉中断状态，上层无法感知中断信号
@@ -88,7 +86,7 @@ catch (InterruptedException e) {
     return; // 或 throw，按业务决定是否中止
 }
 ```
-> **铁律**：`InterruptedException` 被捕获后中断标志会被清除。**必须**调用 `Thread.currentThread().interrupt()` 恢复中断状态，否则上层无法感知中断信号，线程池优雅关闭会失效。
+> `InterruptedException` 被捕获后中断标志**会被清除**——不调 `Thread.currentThread().interrupt()` 恢复，上层无法感知中断信号，线程池优雅关闭会失效。
 
 ### antipattern：finally 抛异常 / return（SonarQube S1181）
 ```java
@@ -105,7 +103,6 @@ try (var conn = dataSource.getConnection()) {
     riskyOp();
 } // 自动关闭，异常不丢失
 ```
-> **铁律**：`finally` 块**禁抛异常、禁 return**。finally 中抛异常会掩盖 try 块的原始异常（排查噩梦）；finally return 会吞掉 try 块的异常。资源关闭用 try-with-resources 替代手动 finally close。
 
 ### antipattern：catch 丢堆栈（SonarQube S1166）
 ```java
@@ -119,7 +116,7 @@ catch (Exception e) {
     log.error("失败, ctx={}", ctx, e); // 保留完整堆栈
 }
 ```
-> **铁律**：catch 中记日志**必须传异常对象**（作 SLF4J 最后参数），禁仅 `getMessage()`。`getMessage()` 可能 null 且丢失堆栈；完整异常对象让排查有据可循。
+> `getMessage()` 可能 null 且丢失堆栈；必须传异常对象（作 SLF4J 最后参数）才有完整堆栈。
 
 ### antipattern：catch Throwable / Error（阿里 + SonarQube）
 ```java
@@ -140,7 +137,6 @@ try {
     throw new RpcException("IO失败", e);
 }
 ```
-> **铁律**：禁 `catch (Throwable)`/`catch (Error)`。`Error` 是 JVM 级错误（OOM/StackOverflow），应用不应 catch——应让 JVM 处理或崩溃。按异常类型分别 catch，精准处理。
 
 ### antipattern：catch 只 rethrow 不处理（SonarQube S2221）
 ```java
@@ -156,7 +152,6 @@ catch (Exception e) {
 }
 // 或：不 catch，让异常自然向上传播
 ```
-> **铁律**：catch 后只 rethrow 不做任何处理（无日志、无包装）等于没 catch——白白增加嵌套。要么加日志/降级/包装，要么删除 try-catch 让异常自然传播。
 
 ## 断言规范（Hutool Assert）
 
@@ -251,17 +246,6 @@ String mockName = RandomUtil.randomString(8);
 
 ## 引入 SLF4J + Logback
 
-> 坐标与 JDK 门控见 SKILL.md「必选依赖」（SLF4J 门面 + Logback 实现，按 JDK 版本选号）。实现固定 Logback，不引 Log4j2。
+> 坐标与 JDK 门控见 SKILL.md「C-CHECK 询问（仅高风险能力缺失时触发）」（SLF4J 门面 + Logback 实现，按 JDK 版本选号）。实现固定 Logback，不引 Log4j2。
 > **门控原因**：Logback 1.5.x 需 JDK 11+/SLF4J 2.0.1+；1.2.x 已 EOL 且**不绑定 SLF4J 2.0**——两套不可混用，否则运行期报 "no SLF4J provider"。
 
-## 强约束提醒
-
-- 日志**必须 SLF4J 占位符 `{}`**；禁字符串拼接；异常作最后参数不占位。
-- 异常**禁吞**（空 catch）；取消息用 **`ExceptionUtil.getMessage`**（null 安全）；保留 cause 链。
-- 参数校验用 **`Assert.notNull`/`isTrue`**（抛 `IllegalArgumentException`，支持 `{}` 占位）。
-- 随机数用 **`RandomUtil`**；`randomInt(min,max)` 是 **[min, max) 半开**，禁手算 `Random` 范围、禁 `Math.random()` 强转。
-- **随机≠唯一**：单号/序号/ID 禁用随机数，用单调发号器；token/验证码/盐必须 **`SecureRandom`**。
-- **InterruptedException**：捕获后必须 `Thread.currentThread().interrupt()` 恢复中断状态（S2142）。
-- **finally**：禁抛异常、禁 return（S1181）；资源关闭用 try-with-resources。
-- **catch**：禁 `Throwable`/`Error`（阿里）；禁仅 `getMessage()` 丢堆栈（S1166）；禁只 rethrow 不处理（S2221）。
-- **异常分类**：业务异常继承 `RuntimeException` + 错误码；系统/第三方异常处理策略不同（阿里三级分类）。

@@ -99,11 +99,4 @@ String key = System.getenv("APP_AES_KEY");
 
 ## 引入依赖
 
-> Hutool BOM 见 SKILL.md「依赖坐标」；加密按需加 `hutool-crypto`（不带 version）：**`SecureUtil`/`DigestUtil`/`BCrypt`/`AES` 均在 `hutool-crypto`**；仅 `Base64` 编解码在 `hutool-core`（`cn.hutool.core.codec.Base64`）。
-
-## 强约束提醒
-
-- 加密/哈希/Base64 **必须 `SecureUtil`/`DigestUtil`/`Base64`**；禁手搓 `MessageDigest`（前导零丢失）；禁 `sun.misc.BASE64`。
-- 用户密码**禁无盐 MD5/SHA**；必须 `BCrypt.hashpw`（引 hutool-crypto）。
-- `SecureUtil.sha256` 返回 **hex String**；`DigestUtil.sha256` 返回 **byte[]**；勿混。
-- 密钥**禁硬编码**，从配置中心/环境变量/KMS 读取。
+> Hutool BOM 见 SKILL.md「C-CHECK 询问（仅高风险能力缺失时触发）」；加密按需加 `hutool-crypto`（不带 version）：**`SecureUtil`/`DigestUtil`/`BCrypt`/`AES` 均在 `hutool-crypto`**；仅 `Base64` 编解码在 `hutool-core`（`cn.hutool.core.codec.Base64`）。

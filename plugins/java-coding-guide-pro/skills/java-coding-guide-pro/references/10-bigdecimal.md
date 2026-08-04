@@ -149,14 +149,3 @@ long cents = 10050L;                                       // = ¥100.50
 BigDecimal display = BigDecimal.valueOf(cents).movePointLeft(2); // 100.50
 ```
 > `long` 分方案无精度损失、运算快，但需统一约定单位、小心溢出。**除非有明确性能要求，默认 BigDecimal**。
-
-## 强约束提醒
-
-- 金额/利率/单价**必须 `BigDecimal`**；禁 `double`/`float` 算钱。
-- 构造用 `BigDecimal.valueOf(double)` 或 `new BigDecimal(String)`；**禁 `new BigDecimal(double)`**。
-- 除法**必须给 scale + `RoundingMode`**；禁裸 `divide`（除不尽抛 `ArithmeticException`）。
-- 比较用 **`compareTo() == 0`**；禁 `equals`（scale 敏感）。
-- 运算**不可变**，必须接返回值。
-- 舍入用 **`RoundingMode` 枚举**；禁 `BigDecimal.ROUND_*` 废弃常量。默认 `HALF_UP`（银行场景注记 `HALF_EVEN` 银行家舍入作替代，不作默认）。
-- **`Math.abs(Integer.MIN_VALUE)` 仍为负**（S2133）；边界值转 `long` 取绝对值或显式判断。
-- **`byte` 位运算先 `& 0xFF`**（S3037）；防符号扩展导致拼接/位移错误。

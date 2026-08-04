@@ -136,11 +136,3 @@ long days    = DateUtil.between(createTime, now, DateUnit.DAY);
 List<DateTime> range = DateUtil.rangeToList(start, end, DateField.DAY_OF_MONTH);
 Date dayStart = DateUtil.beginOfDay(new Date());
 ```
-
-## 强约束提醒
-
-- 日期格式化/解析/加减**必须 `DateUtil` 或 `java.time`**；禁 `SimpleDateFormat` 共享、禁 `ThreadLocal<SimpleDateFormat>`、禁 `Calendar` 手算。
-- **time-based `.now()` 必须显式传 `ZoneId` 或 `Clock`**（Sonar java:S8688）；禁裸 `LocalDateTime.now()`/`LocalDate.now()`。
-- 时间戳转换用 `DateUtil.date(ts)`/`currentSeconds()`，禁手除 1000。
-- `rangeToList` 第三参是 **`DateField`**；`between` 第三参是 `DateUnit`，勿混。
-- `now()`/`today()` 返回**格式化字符串**，不是时间戳。

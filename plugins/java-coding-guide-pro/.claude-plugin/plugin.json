@@ -1,6 +1,6 @@
 {
   "name": "java-coding-guide-pro",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "Java 编码规范与避坑助手（JDK 8~25、阿里手册、SonarQube）。编写/修改/审查 Java/Spring 代码时使用。",
   "author": {
     "name": "BaixuanZhu",

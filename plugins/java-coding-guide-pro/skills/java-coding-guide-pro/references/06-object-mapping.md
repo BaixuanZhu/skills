@@ -18,7 +18,7 @@
 | 默认值 | `obj != null ? obj : def` | `ObjectUtil.defaultIfNull(obj, def)` |
 | 判空 | `obj == null` | `ObjectUtil.isNull(obj)` / `isNotNull` |
 | 深拷贝 | 手搓 Cloneable | `ObjectUtil.cloneByStream(obj)` |
-| toString | 手写/`ToStringBuilder` | Lombok `@ToString` / `@Data` |
+| toString | 手写/`ToStringBuilder`/`Validate`（commons-lang3） | Lombok `@ToString` / `@Data`（Hutool + Lombok 已覆盖，不引 commons-lang3） |
 
 ## 反例详解（antipattern）
 
@@ -95,7 +95,7 @@ public interface OrderMapper {
 }
 ```
 
-MapStruct 坐标与 annotation processor 配置见 SKILL.md「必选依赖」（编译期，零运行时依赖；JDK 8 兼容）。
+MapStruct 坐标与 annotation processor 配置见 SKILL.md「C-CHECK 询问（仅高风险能力缺失时触发）」（编译期，零运行时依赖；JDK 8 兼容）。
 
 ## BeanUtil 运行时示例
 
@@ -117,11 +117,3 @@ if (ObjectUtil.equal(a, b)) { ... }
 String name = ObjectUtil.defaultIfNull(user.getName(), "匿名");
 User copy = ObjectUtil.cloneByStream(user); // 深拷贝（需 Serializable）
 ```
-
-## 强约束提醒
-
-- 属性拷贝**默认 MapStruct**；仅**无 annotation processor 环境 / 一次性临时拷贝**退 `BeanUtil.copyProperties`；禁随手 Spring/Apache `BeanUtils` 且不确认顺序。
-- `BeanUtil.beanToMap` **无单参版**，用 `beanToMap(bean, true, true)`。
-- Map 转 Bean 用 **`toBean`**，禁用已废弃的 `mapToBean`。
-- 相等判断用 **`ObjectUtil.equal`**（防 NPE）；toString 用 Lombok `@ToString`（注意循环引用 `exclude`）。
-- 不引 commons-lang3 的 `ToStringBuilder`/`Validate`（Hutool + Lombok 已覆盖）。

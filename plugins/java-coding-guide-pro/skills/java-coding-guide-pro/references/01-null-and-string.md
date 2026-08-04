@@ -123,12 +123,3 @@ Hutool 5.5.3+ 把字符串方法上移至 `CharSequenceUtil`，`StrUtil` 作为�
 2. 全局改用定义类 `CharSequenceUtil`。
 
 > 同类门面（`DateUtil extends CalendarUtil`、`ArrayUtil extends PrimitiveArrayUtil`）同策略。
-
-## 强约束提醒
-
-- 字符串判空**必须 `StrUtil.isBlank`**；禁 `== null || trim().isEmpty()`。
-- 相等判断**防 NPE**：`ObjectUtil.equal` / 常量在前。
-- 截取/分隔优先 `StrUtil.subXxx`/`split`，避 `substring`/`split` 越界与正则坑。
-- **HTML 转义用 `HtmlUtil`，不是 `StrUtil`**（StrUtil 无此方法）。
-- `Optional.get()` 前必须有 `isPresent`/`orXxx`；Optional 仅作返回值。
-- Sonar **S3252** 命中 Hutool 门面：默认保留 `StrUtil`；门禁阻断才全局换 `CharSequenceUtil` 或配置例外，禁混用。
