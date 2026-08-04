@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户说"开始项目""敏捷""Sprint""待办""Backlog""用户故事""迭代""架构决策""ADR""C4""需求变了""要改故事""依赖检查"或进入含 agile-docs/ 目录的项目时触发。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 4.3.0
+version: 4.3.1
 ---
 
 # 敏捷管理入口 (Using Agile)
