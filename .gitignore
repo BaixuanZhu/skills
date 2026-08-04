@@ -7,3 +7,9 @@ PUBLISH.local.md
 
 # 本地安装的第三方技能（评估工具等，非本仓库产物）
 .zcode/
+
+# Node 依赖（sync-plugins.mjs 用,不进 git）
+node_modules/
+
+# 本地临时
+tmp/

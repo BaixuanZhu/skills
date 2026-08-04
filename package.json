@@ -1,0 +1,14 @@
+{
+  "name": "skills-sync",
+  "private": true,
+  "version": "1.0.0",
+  "description": "同步 skills/ → plugins/ + marketplace.json 的本地工具(不发布)",
+  "type": "module",
+  "scripts": {
+    "sync": "node scripts/sync-plugins.mjs",
+    "postinstall": "node scripts/sync-plugins.mjs --install"
+  },
+  "devDependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}

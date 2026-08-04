@@ -1,0 +1,42 @@
+name: verify-sync
+
+# 兑底校验:确保 skills/ 与 plugins/ + marketplace.json 保持同步
+# 若本地装了 pre-commit hook(正常情况),push 上来已同步,此 CI 直接通过
+# 若提交者没装 hook 或 hook 没跑,此 CI 会失败拦截
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+      - 'plugins/**'
+      - '.claude-plugin/marketplace.json'
+      - 'scripts/sync-plugins.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    paths:
+      - 'skills/**'
+      - 'plugins/**'
+      - '.claude-plugin/marketplace.json'
+      - 'scripts/sync-plugins.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run sync (check mode)
+        run: node scripts/sync-plugins.mjs --check

@@ -29,17 +29,22 @@
 - `author` 用隐私邮箱 `66127517+BaixuanZhu@users.noreply.github.com`（noreply，不暴露真实地址）。
 - 缺 `version`/`author` → Claude Code 市场只显示插件名，看不到版本号和开发者。
 
-### plugins/ 是 skills/ 的镜像 —— 改内容必须两边同步
+### plugins/ 是 skills/ 的镜像 —— pre-commit hook 自动同步
 
-`skills/<name>/` 是内容唯一编辑源；`plugins/<name>/skills/<name>/` 是它的副本（为满足 Claude Code 插件规范而存在）。**改技能内容时：先改 `skills/<name>/`，再把改动同步到 `plugins/<name>/skills/<name>/`。** 只改前者不同步后者 → Claude Code / ZCode 用户拿到的是旧内容。验证一致：`diff <(cd skills/<name> && find . -type f|sort) <(cd plugins/<name>/skills/<name> && find . -type f|sort)` 应无输出。
+`skills/<name>/` 是内容 + 版本号唯一编辑源；`plugins/` 是它的镜像（为满足 Claude Code 插件规范）。**改技能时只改 `skills/<name>/`，pre-commit hook 自动把改动同步到 `plugins/` + `marketplace.json`，加进本次 commit。**
+
+- **hook 安装**：`npm install`（`postinstall` 自动装 hook 到 `.git/hooks/pre-commit`）。换机器/新 clone 后跑一次即可。
+- **手动触发同步**（不 commit 也能跑）：`node scripts/sync-plugins.mjs`
+- **hook 没装时**：commit 不会同步，但 GitHub Actions（`.github/workflows/verify-sync.yml`）会检测到 `skills/` 与 `plugins/` 不一致并**失败拦截**——装 hook 或 push 前手动跑一次脚本。
+- **新增/删除技能**：hook 不自动建/删 `plugins/` 结构。手动建好 `plugins/<name>/{.claude-plugin/plugin.json, skills/<name>/}` + marketplace 条目后，之后的同步自动。同步脚本检测到 `skills/` 有但 `plugins/` 没有的技能会打印警告（不失败）。
 
 ## 编辑技能内容的约定
 
 - **技能编写的权威外部参考**：<https://agentskills.io/home> —— 拿不准结构 / frontmatter / 最佳实践时查阅。
-- **重发必须 bump `version`，且版本号有**三个源头**必须同步：**
-  1. `skills/<name>/SKILL.md` 的 frontmatter `version`（npx skills / SkillHub / 虾评 读这个）；
-  2. `plugins/<name>/.claude-plugin/plugin.json` 的 `version`（**Claude Code / ZCode 安装后读这个识别插件版本**）；
-  3. `.claude-plugin/marketplace.json` 对应 plugin 条目的 `version`（**Claude Code 市场列表展示读这个**——只改 SKILL.md 不改 marketplace.json，市场显示的版本会落后，用户无法判断是否更新）。
+- **重发必须 bump `version`：只改 `skills/<name>/SKILL.md` 的 frontmatter `version`**（唯一源头），pre-commit hook 自动同步到另外两处：
+  1. `skills/<name>/SKILL.md` frontmatter `version` —— **唯一编辑源**（npx skills / SkillHub / 虾评 读这个）；
+  2. `plugins/<name>/.claude-plugin/plugin.json` `version` —— hook 自动同步（Claude Code / ZCode 安装后读这个识别插件版本）；
+  3. `.claude-plugin/marketplace.json` plugin 条目 `version` —— hook 自动同步（**Claude Code 市场列表展示读这个**，不同步则市场版本落后，用户无法判断是否更新）。
   - 线上当前版本在 `PUBLISH.local.md`（gitignored），不在 git——任何版本号调整前先读它。SkillHub 对等于或低于线上的版本号**静默拒收**（不报错、不更新）。
 - `description` 字段两种 YAML 风格都存在：`>-`（折叠，适合列很多关键词的长触发描述）与 `|`（字面量，适合较短的）。与该技能现有风格保持一致。
 - 编号 references 按阅读优先级排序；文件之间用指针交叉引用，**不要复制内容**。
