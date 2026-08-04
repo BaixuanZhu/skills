@@ -39,16 +39,18 @@ AGENTS.md 是**单一事实源**：一份跨工具通用的项目简报，所有
 
 > **检查点**：判定为「不适用」→ 告知用户当前目标不在本技能范围，建议退出或调整诉求。
 
-## 独特价值
+## 能力与参考路由
 
-1. **双能力**：既能冷启动新建，也能对已有文件做安全的增量更新（diff 式建议，不覆盖）。
-2. **锚定官方核心标准**：以 AGENTS.md spec 的 5 个推荐 section（Project overview / Build and test commands / Code style / Testing instructions / Security considerations）+ 嵌套就近覆盖为骨架；"≤200 行"是信息密度护栏（Claude Code 实践），非官方硬限；section 主标题建议英文（工具解析更稳）。
-3. **antipattern 护栏**（`references/03-antipatterns.md`）：15 条 init / 更新类常见错误，每条含「错误 → 正确 → 为什么」。
-4. **强约束**：8 条核心规则，生成 / 更新前必须满足。
-5. **关键决策检查点**：4 个不可擅自替用户选择的决策点（C1 已有文件 / C2 命令真实 / C3 是否嵌套 / C4 工具无关）。
-6. **扫描清单**（`references/01-scan-signals.md`）：系统性探测信号，避免漏看或臆造。
-7. **输出模板**（`references/02-output-template.md`）：标准化 section + 完整示例。
-8. **Token 经济学护栏**（`references/01-scan-signals.md` §0）：7 条铁律约束扫描行为（限定范围 / 元数据优先 / 懒加载 / Bash 聚合 / 签名提取 / Git 增量 / 信号先聚后出），用最少 Token 换最高密度上下文，规避 Context Rot。
+| 能力 | 详见 |
+|------|------|
+| 冷启动新建 + 已有文件增量更新（diff 式，不覆盖） | §流程 Path A / Path B |
+| 锚定官方 5 section 骨架（≤200 行信息密度护栏，非硬限；section 标题建议英文） | §强约束 3、`references/02-output-template.md` |
+| 15 条 antipattern（错误→正确→为什么） | `references/03-antipatterns.md` |
+| 8 条核心强约束 | §强约束 |
+| 4 个关键决策检查点（C1 已有文件 / C2 命令真实 / C3 嵌套 / C4 工具无关） | §关键决策检查点 |
+| 7 类扫描信号（构建/入口测试/CI/linter/已有上下文/陷阱/i18n） | `references/01-scan-signals.md` |
+| Token 经济学 7 铁律（限定范围/元数据优先/懒加载/Bash 聚合/签名提取/Git 增量/先聚后出） | `references/01-scan-signals.md` §0 |
+| 标准化 section + 完整示例 | `references/02-output-template.md` |
 
 ## 流程（两条路径，共用扫描与落盘）
 
@@ -127,9 +129,6 @@ AGENTS.md 是**单一事实源**：一份跨工具通用的项目简报，所有
 - 不在每次新对话、每次接手任务、每次 git 操作前自动扫描或自动建议 init
 - 不主动"监听"仓库变化并推送更新提醒
 - 不因"发现现有 AGENTS.md 命令失效/缺 section"就自动发起更新——这类信号仅在用户已明示要更新时，作为 Path B 的输入被纳入
-
-> 为何非自动：AGENTS.md 依强约束 #7 是**低频手动维护**的稳定文档；自动触发会把它变成高频状态检查，
-> 且每次扫描都消耗 Token（见 `01` §0 铁律）。用户主动触发，才符合"无状态、信息密集、按需维护"的定位。
 
 ## antipattern（硬价值）
 
