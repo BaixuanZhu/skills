@@ -2,7 +2,7 @@
   "_comment": "声明 skills/ → plugins/ 的多对一映射。不在 groups 里的 skill 走默认 1:1 逻辑（plugins/<name>/skills/<name>/）。version 策略：max = 取组内所有 skill 版本的最大值作为 plugin 版本。",
   "groups": {
     "agile": {
-      "skills": ["using-agile", "agile-strategic", "agile-backlog", "agile-sprint"],
+      "skills": ["using-agile", "agile-strategic", "agile-backlog", "agile-sprint", "agile-report"],
       "version": "max"
     }
   }
