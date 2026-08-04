@@ -1,0 +1,9 @@
+{
+  "name": "agile-backlog",
+  "version": "4.3.0",
+  "description": "敏捷产品待办：双文件 Backlog。拆任务、排优先级、迭代规划输入。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "agile-strategic",
+  "version": "4.3.0",
+  "description": "敏捷战略层：愿景（VISION）+ 架构（C4）+ 架构决策记录（ADR）。写愿景、技术选型、架构决策时使用。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com"
+  }
+}

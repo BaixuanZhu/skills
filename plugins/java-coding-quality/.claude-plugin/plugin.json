@@ -1,0 +1,9 @@
+{
+  "name": "java-coding-quality",
+  "version": "1.4.0",
+  "description": "Java 代码质量与安全门禁（PMD7 + SpotBugs/FindSecBugs 零侵入）。提交前检查、代码审查、安全扫描。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com"
+  }
+}

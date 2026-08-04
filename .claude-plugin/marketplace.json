@@ -9,92 +9,175 @@
     {
       "name": "repo-init",
       "version": "1.3.7",
-      "author": { "name": "BaixuanZhu", "email": "66127517+BaixuanZhu@users.noreply.github.com" },
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
       "source": "./plugins/repo-init",
       "description": "为项目生成/更新跨工具通用的 AGENTS.md 简报，让任意 AI 编码工具快速理解项目。",
       "category": "engineering",
-      "keywords": ["agents-md", "project-init", "context"]
+      "keywords": [
+        "agents-md",
+        "project-init",
+        "context"
+      ]
     },
     {
       "name": "java-coding-guide-pro",
       "version": "3.3.0",
-      "author": { "name": "BaixuanZhu", "email": "66127517+BaixuanZhu@users.noreply.github.com" },
-      "source": "./skills/java-coding-guide-pro",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/java-coding-guide-pro",
       "description": "Java 编码规范与避坑助手（JDK 8~25、阿里手册、SonarQube）。编写/修改/审查 Java/Spring 代码时使用。",
       "category": "engineering",
-      "keywords": ["java", "coding-standards", "spring-boot"]
+      "keywords": [
+        "java",
+        "coding-standards",
+        "spring-boot"
+      ]
     },
     {
       "name": "java-coding-quality",
       "version": "1.4.0",
-      "author": { "name": "BaixuanZhu", "email": "66127517+BaixuanZhu@users.noreply.github.com" },
-      "source": "./skills/java-coding-quality",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/java-coding-quality",
       "description": "Java 代码质量与安全门禁（PMD7 + SpotBugs/FindSecBugs 零侵入）。提交前检查、代码审查、安全扫描。",
       "category": "engineering",
-      "keywords": ["java", "quality", "security", "pmd", "spotbugs"]
+      "keywords": [
+        "java",
+        "quality",
+        "security",
+        "pmd",
+        "spotbugs"
+      ]
     },
     {
       "name": "java-unit-test",
       "version": "1.4.0",
-      "author": { "name": "BaixuanZhu", "email": "66127517+BaixuanZhu@users.noreply.github.com" },
-      "source": "./skills/java-unit-test",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/java-unit-test",
       "description": "Java 单元测试规范对齐助手（设计方法骨架 + 工程默认值纪律）。编写/评审/补全单元测试。",
       "category": "engineering",
-      "keywords": ["java", "unit-test", "junit", "mockito"]
+      "keywords": [
+        "java",
+        "unit-test",
+        "junit",
+        "mockito"
+      ]
     },
     {
       "name": "sa-token-dev",
       "version": "2.1.0",
-      "author": { "name": "BaixuanZhu", "email": "66127517+BaixuanZhu@users.noreply.github.com" },
-      "source": "./skills/sa-token-dev",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/sa-token-dev",
       "description": "Sa-Token（cn.dev33）权限认证框架开发助手。登录鉴权、权限角色、SSO、JWT、会话管理。",
       "category": "engineering",
-      "keywords": ["java", "sa-token", "authentication", "authorization", "jwt", "sso"]
+      "keywords": [
+        "java",
+        "sa-token",
+        "authentication",
+        "authorization",
+        "jwt",
+        "sso"
+      ]
     },
     {
       "name": "mybatis-plus-dev",
       "version": "2.2.0",
-      "author": { "name": "BaixuanZhu", "email": "66127517+BaixuanZhu@users.noreply.github.com" },
-      "source": "./skills/mybatis-plus-dev",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/mybatis-plus-dev",
       "description": "MyBatis-Plus（baomidou）ORM 增强框架开发助手。CRUD、分页查询、Mapper/Service 层、事务、逻辑删除。",
       "category": "engineering",
-      "keywords": ["java", "mybatis-plus", "orm", "crud", "baomidou"]
+      "keywords": [
+        "java",
+        "mybatis-plus",
+        "orm",
+        "crud",
+        "baomidou"
+      ]
     },
     {
       "name": "using-agile",
       "version": "4.3.0",
-      "author": { "name": "BaixuanZhu", "email": "66127517+BaixuanZhu@users.noreply.github.com" },
-      "source": "./skills/using-agile",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/using-agile",
       "description": "敏捷管理入口：路由 + 状态检测 + 变更协调。进入含 agile-docs/ 的项目或开始敏捷流程时触发。",
       "category": "productivity",
-      "keywords": ["agile", "scrum", "workflow", "router"]
+      "keywords": [
+        "agile",
+        "scrum",
+        "workflow",
+        "router"
+      ]
     },
     {
       "name": "agile-strategic",
       "version": "4.3.0",
-      "author": { "name": "BaixuanZhu", "email": "66127517+BaixuanZhu@users.noreply.github.com" },
-      "source": "./skills/agile-strategic",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/agile-strategic",
       "description": "敏捷战略层：愿景（VISION）+ 架构（C4）+ 架构决策记录（ADR）。写愿景、技术选型、架构决策时使用。",
       "category": "productivity",
-      "keywords": ["agile", "vision", "architecture", "c4", "adr"]
+      "keywords": [
+        "agile",
+        "vision",
+        "architecture",
+        "c4",
+        "adr"
+      ]
     },
     {
       "name": "agile-backlog",
       "version": "4.3.0",
-      "author": { "name": "BaixuanZhu", "email": "66127517+BaixuanZhu@users.noreply.github.com" },
-      "source": "./skills/agile-backlog",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/agile-backlog",
       "description": "敏捷产品待办：双文件 Backlog。拆任务、排优先级、迭代规划输入。",
       "category": "productivity",
-      "keywords": ["agile", "backlog", "product", "prioritization"]
+      "keywords": [
+        "agile",
+        "backlog",
+        "product",
+        "prioritization"
+      ]
     },
     {
       "name": "agile-sprint",
       "version": "4.3.0",
-      "author": { "name": "BaixuanZhu", "email": "66127517+BaixuanZhu@users.noreply.github.com" },
-      "source": "./skills/agile-sprint",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/agile-sprint",
       "description": "Sprint 全周期规划器。开 Sprint、规划迭代、关闭 Sprint。",
       "category": "productivity",
-      "keywords": ["agile", "sprint", "iteration", "planning"]
+      "keywords": [
+        "agile",
+        "sprint",
+        "iteration",
+        "planning"
+      ]
     }
   ]
 }

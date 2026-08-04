@@ -1,0 +1,9 @@
+{
+  "name": "using-agile",
+  "version": "4.3.0",
+  "description": "敏捷管理入口：路由 + 状态检测 + 变更协调。进入含 agile-docs/ 的项目或开始敏捷流程时触发。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com"
+  }
+}

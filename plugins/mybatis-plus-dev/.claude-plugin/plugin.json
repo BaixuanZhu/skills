@@ -1,0 +1,9 @@
+{
+  "name": "mybatis-plus-dev",
+  "version": "2.2.0",
+  "description": "MyBatis-Plus（baomidou）ORM 增强框架开发助手。CRUD、分页查询、Mapper/Service 层、事务、逻辑删除。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com"
+  }
+}
