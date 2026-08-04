@@ -1,5 +1,7 @@
 # BaixuanZhu Skills
 
+[English](./README.en.md) | **中文**
+
 面向**中文 Java / Spring 生态**的 Agent Skills 套装。覆盖编码规范、质量门禁、单元测试、主流框架（Sa-Token / MyBatis-Plus）开发、敏捷流程、项目初始化——让 AI 编码助手在中文 Java 项目里表现得更专业。
 
 ## 安装
@@ -51,7 +53,7 @@ npx skills add BaixuanZhu/skills
 
 ## 维护
 
-本仓库的技能内容由开发仓库同步而来，通过同步脚本更新。新增技能时在开发仓库的同步脚本白名单加一行即可，无需手动改本仓库。
+技能内容在 `skills/<name>/` 直接编辑；`plugins/<name>/` 是为 Claude Code / ZCode 插件规范准备的镜像（嵌套 `.claude-plugin/plugin.json` + `skills/<name>/`），由 pre-commit hook（`scripts/sync-plugins.mjs`）自动同步，push 时 GitHub Actions 兑底校验。**改技能只改 `skills/`**。
 
 ## 测试与评估
 
