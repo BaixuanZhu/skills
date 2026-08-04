@@ -1,0 +1,9 @@
+{
+  "name": "repo-init",
+  "version": "1.3.7",
+  "description": "为项目生成/更新跨工具通用的 AGENTS.md 简报，让任意 AI 编码工具快速理解项目。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com"
+  }
+}
