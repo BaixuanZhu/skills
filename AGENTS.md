@@ -4,12 +4,13 @@
 
 ## 仓库结构
 
-- `skills/<name>/` —— 技能目录，**本仓库编辑的核心**。每个技能含：
+- `skills/<name>/` —— **技能内容的唯一编辑源**（npx skills / SkillHub / 虾评 / ZCode-npx 扫描这里）。每个技能含：
   - `SKILL.md`：YAML frontmatter（`name`、`description`、`version`，通常还有 `slug` + `displayName`；敏捷族技能另有 `dependencies`）。
   - `references/`：编号文件 `NN-topic.md`，按阅读优先级排序；数量从 1（agile-backlog）到 14（sa-token-dev / mybatis-plus-dev）不等。
   - 个别含 `assets/`（如 java-coding-quality）。
+- `plugins/<name>/` —— **Claude Code 插件包**（`.claude-plugin/plugin.json` + `skills/<name>/` 嵌套，内容是 `skills/` 的副本）。**改技能内容时必须两边同步**（见下文「plugins/ 是 skills/ 的镜像」）。
 - `eval/<skill-name>/` —— 达尔文评估产物（测试 prompt、产出快照、判分记录），按技能分子目录；评估后提交到此。见 `eval/README.md`。
-- `.claude-plugin/` —— Claude Code 插件市场清单（`marketplace.json`、`plugin.json`），每个技能对应一个 plugin 条目。
+- `.claude-plugin/` —— Claude Code 插件市场清单（`marketplace.json` 的 `plugins[]`，每个条目 `source` 指向 `./plugins/<name>`）。
 - `README.md` —— 对外安装指南（双协议：Claude Code 插件 + `npx skills`）。
 - `PUBLISH.local.md` —— **已 gitignore**，线上发布版本、平台 ID、发布流程的唯一真相来源。
 
@@ -22,17 +23,23 @@
 | Claude Code 插件 | `.claude-plugin/marketplace.json`（`plugins[]`） | `/plugin marketplace add BaixuanZhu/skills` → `/plugin install <name>` |
 | npx skills（Vercel CLI） | `skills/<name>/SKILL.md`（自动扫描） | `npx skills add BaixuanZhu/skills` |
 
-**新增技能必须更新 `marketplace.json`** —— 把 `{name, version, author: {name, email}, source: "./skills/<name>", description, category, keywords}` 追加到 `plugins` 数组：
-- `version` 必须与对应 `SKILL.md` frontmatter 一致（见下文「版本号两个源头」）；
+**新增技能必须三处同步：** 在 `skills/<name>/` 建内容 → 在 `plugins/<name>/` 建合规插件包（`.claude-plugin/plugin.json` + `skills/<name>/` 嵌套，内容复制自前者）→ 在 `.claude-plugin/marketplace.json` 的 `plugins[]` 追加 `{name, version, author: {name, email}, source: "./plugins/<name>", description, category, keywords}`：
+- `source` 必须**指 `./plugins/<name>`**（不是 `./skills/<name>`）——Claude Code / ZCode 加载器进 source 目录找 `.claude-plugin/plugin.json` + `skills/<name>/SKILL.md`，指向 `skills/` 会因缺这俩导致"装上但不触发"。
+- `version` 必须与对应 `SKILL.md` frontmatter 一致（见下文「版本号两个源头」）。
 - `author` 用隐私邮箱 `66127517+BaixuanZhu@users.noreply.github.com`（noreply，不暴露真实地址）。
-- 缺 `version`/`author` → Claude Code 市场只显示插件名，看不到版本号和开发者。技能能通过 `npx skills` 安装但市场列表信息不全。（npx skills 无需改清单。）
+- 缺 `version`/`author` → Claude Code 市场只显示插件名，看不到版本号和开发者。
+
+### plugins/ 是 skills/ 的镜像 —— 改内容必须两边同步
+
+`skills/<name>/` 是内容唯一编辑源；`plugins/<name>/skills/<name>/` 是它的副本（为满足 Claude Code 插件规范而存在）。**改技能内容时：先改 `skills/<name>/`，再把改动同步到 `plugins/<name>/skills/<name>/`。** 只改前者不同步后者 → Claude Code / ZCode 用户拿到的是旧内容。验证一致：`diff <(cd skills/<name> && find . -type f|sort) <(cd plugins/<name>/skills/<name> && find . -type f|sort)` 应无输出。
 
 ## 编辑技能内容的约定
 
 - **技能编写的权威外部参考**：<https://agentskills.io/home> —— 拿不准结构 / frontmatter / 最佳实践时查阅。
-- **重发必须 bump `version`，且版本号有**两个源头**必须同步：**
+- **重发必须 bump `version`，且版本号有**三个源头**必须同步：**
   1. `skills/<name>/SKILL.md` 的 frontmatter `version`（npx skills / SkillHub / 虾评 读这个）；
-  2. `.claude-plugin/marketplace.json` 对应 plugin 条目的 `version`（**Claude Code 市场列表展示读这个**——只改 SKILL.md 不改 marketplace.json，市场显示的版本会落后，用户无法判断是否更新）。
+  2. `plugins/<name>/.claude-plugin/plugin.json` 的 `version`（**Claude Code / ZCode 安装后读这个识别插件版本**）；
+  3. `.claude-plugin/marketplace.json` 对应 plugin 条目的 `version`（**Claude Code 市场列表展示读这个**——只改 SKILL.md 不改 marketplace.json，市场显示的版本会落后，用户无法判断是否更新）。
   - 线上当前版本在 `PUBLISH.local.md`（gitignored），不在 git——任何版本号调整前先读它。SkillHub 对等于或低于线上的版本号**静默拒收**（不报错、不更新）。
 - `description` 字段两种 YAML 风格都存在：`>-`（折叠，适合列很多关键词的长触发描述）与 `|`（字面量，适合较短的）。与该技能现有风格保持一致。
 - 编号 references 按阅读优先级排序；文件之间用指针交叉引用，**不要复制内容**。
