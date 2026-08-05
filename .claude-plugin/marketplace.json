@@ -111,6 +111,25 @@
       ]
     },
     {
+      "name": "spring-boot-dev",
+      "version": "1.0.0",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/spring-boot-dev",
+      "description": "Spring Boot 框架层开发助手。三层架构、配置、参数校验、全局异常、事务、异步、定时、事件、自动装配、SpringDoc。",
+      "category": "engineering",
+      "keywords": [
+        "java",
+        "spring-boot",
+        "spring",
+        "transactional",
+        "validation",
+        "async"
+      ]
+    },
+    {
       "name": "agile",
       "version": "4.3.1",
       "author": {
