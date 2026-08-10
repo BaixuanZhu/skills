@@ -353,14 +353,3 @@ IPage<UserVO> selectUserPage(IPage<UserVO> page, @Param("query") UserQueryDTO qu
 | 逻辑删除 XML 不自动改写 | MP 仅改写 `select`，`delete` 标签不自动转软删 | 软删除用 `removeById`，XML 中写物理删除 |
 | 批量插入性能差 | `foreach` 生成超长 SQL | 分批（如 500 条一次），或用 `InsertBatchSomeColumn` |
 | 列名冲突 | 联表多表同名列 | 所有列用 `AS` 别名，resultMap 中 `column` 对应别名 |
-
-## 9. XML vs @Select 注解
-
-| 维度 | XML | `@Select` 注解 |
-|---|---|---|
-| 复杂度 | 支持动态 SQL 全套标签 | 复杂动态 SQL 需 `<script>` 包裹，可读性差 |
-| 可维护性 | 独立文件，SQL 与 Java 分离 | SQL 嵌入 Java，修改需重新编译 |
-| resultMap | 支持完整 resultMap / 嵌套映射 | 支持 `@Results`，但联表嵌套不便 |
-| 适用 | **联表、动态条件、批量操作** | **简单单表查询、快速验证** |
-
-> 约定：简单查询可用 `@Select`；联表、动态条件、批量操作一律写 XML。

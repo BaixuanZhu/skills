@@ -24,7 +24,7 @@
 
 ## 5. apply 字符串拼接注入
 - ❌ `w.apply("create_time >= '" + userInput + "'")`。
-- ✅ `SqlInjectionUtils.check(userInput); w.apply("create_time >= {0}", userInput);`（先校验后占位，见 `05-wrapper.md` §4）。
+- ✅ `SqlInjectionUtils.check(userInput); w.apply("create_time >= {0}", userInput);`（先校验后占位，见 `05-wrapper.md` §5）。
 - 为什么：拼接外部输入即留 SQL 注入后门；`{0}` 占位符走 PreparedStatement 参数化，`check` 前置校验拦截恶意输入。
 
 ## 6. 逻辑删除 + 唯一索引冲突
@@ -39,15 +39,16 @@
 
 ## 8. Wrapper 复用叠加条件
 - ❌ 同一 `Wrapper` 实例多次 `selectList`，第二次条件翻倍。
-- ✅ 每次查询 `new` 一个新 Wrapper（见 `05-wrapper.md` §7）。
+- ✅ 每次查询 `new` 一个新 Wrapper（见 `05-wrapper.md` §8）。
 
 ## 9. 用 eq(field, null) 查空值
-- ❌ `w.eq(User::getDeleted, null)` 想查未删除，结果该条件被忽略（查全表）。
-- ✅ `w.isNull(User::getDeleted)`。
+- ❌ `w.eq(User::getDeleted, null)` 想查未删除，结果生成 `deleted = NULL`，匹配 0 行（既非忽略也非查到 null 行）。
+- ✅ `w.isNull(User::getDeleted)`；条件性跳过用三参重载 `w.eq(val != null, User::getXxx, val)`（见 `05-wrapper.md` §7）。
 
 ## 10. 联表分页硬堆 Wrapper
 - ❌ 用 `QueryWrapper` 拼 join + 手写分页。
 - ✅ 写 XML（入参 `IPage` 不可为 null），见 `06-page.md` §4。
+- 窗口/聚合/GROUP BY 等超 Wrapper 能力边界的场景同理（见 #25）。
 
 ## 11. 重复引入 MyBatis
 - ❌ 同时引 `mybatis-spring-boot-starter` 和 `mybatis-plus-boot-starter`。
@@ -67,7 +68,7 @@
 
 ## 15. last 覆盖分页 / 排序
 - ❌ `wrapper.last("limit 1")` 后又依赖 `Page` 分页。
-- ✅ `last` 直接拼 SQL 末尾，会覆盖 MP 生成的分页 / 排序；非必要不用（见 `05-wrapper.md` §5）。
+- ✅ `last` 直接拼 SQL 末尾，会覆盖 MP 生成的分页 / 排序；非必要不用（见 `05-wrapper.md` §6）。
 
 ## 16. 枚举映射失效
 - ❌ 数据库存 `1`/`2`，枚举没标 `@EnumValue` 也没实现 `IEnum`，查出来是 `null`；或前端收到 `"MALE"` 而非 `1`。
@@ -108,3 +109,17 @@
 - ❌ `@DS("master")` + `@Transactional` 中跨 `@DS("slave")` 操作，以为跨库也原子。
 - ✅ 跨库一致性用 Seata / XA 或补偿机制；同一事务内不要切换数据源（见 `11-transaction.md` §6）。
 - 为什么：Spring 事务管理器绑定单个 Connection，`@DS` 切换数据源后新连接不在原事务内，原库回滚不影响新库。
+
+## 24. Wrapper 用字符串字段名
+- ❌ `new QueryWrapper<User>().eq("name", name)` —— 字段改名时编译不报错，运行时产出 `Unknown column 'name'` 或静默查错数据。
+- ✅ `new LambdaQueryWrapper<User>().eq(User::getName, name)` —— 方法引用编译期检查，改名即编译报错。
+- 为什么：字符串字面量与实体属性无关联，IDE 和编译器都无法追踪 rename，是"能跑但有坑"的典型。例外：动态列名/动态表名（运行时才知道的列）用 `QueryWrapper` 字符串形式 + 注释（见 `05-wrapper.md` §1.1）。
+
+## 25. SQL 函数表达式硬堆 Wrapper
+- ❌ 窗口/聚合/GROUP BY-HAVING/数据库专有函数用 `apply()` / `last()` 拼：
+  ```java
+  w.apply("ROW_NUMBER() OVER (PARTITION BY dept_id ORDER BY id) = 1")
+   .last("GROUP BY dept_id HAVING COUNT(*) > 5");
+  ```
+- ✅ 改写 XML（见 `10-xml.md`），用 resultMap 映射计算列。
+- 为什么：`apply` / `last` 是字符串拼接——注入风险 + 跨库不可移植（`DATE_FORMAT` 在 Oracle 报错）+ 语义不可读 + 聚合查询需专用 resultMap 映射计算列，Wrapper 的实体映射不适用。Wrapper 能力边界见 `05-wrapper.md` §1.2。

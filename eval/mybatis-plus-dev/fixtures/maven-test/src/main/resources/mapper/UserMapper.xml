@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 验证 Wrapper 能力边界 → XML（强约束 #3）+ 枚举 typeHandler 逐处声明（强约束 #9） -->
+<mapper namespace="com.eval.darwin.mapper.UserMapper">
+
+    <!-- 聚合查询结果映射（计算列 deptId/userCount/avgAge 无对应实体属性，用独立 VO） -->
+    <resultMap id="deptStatResultMap" type="com.eval.darwin.entity.DeptStatVO">
+        <result property="deptId" column="dept_id"/>
+        <result property="userCount" column="user_count"/>
+        <result property="avgAge" column="avg_age"/>
+        <result property="rowNum" column="row_num"/>
+    </resultMap>
+
+    <!-- 聚合 + GROUP BY + HAVING（Wrapper 表达不了，进 XML） -->
+    <select id="selectDeptStat" resultMap="deptStatResultMap">
+        SELECT dept_id,
+               COUNT(*) AS user_count,
+               CAST(AVG(age) AS INT) AS avg_age
+        FROM sys_user
+        WHERE deleted = 0
+        GROUP BY dept_id
+        HAVING COUNT(*) > #{minCount}
+    </select>
+
+    <!-- 窗口函数 ROW_NUMBER() OVER（Wrapper 表达不了，进 XML） -->
+    <select id="selectTopUserPerDept" resultMap="deptStatResultMap">
+        SELECT dept_id, row_num
+        FROM (
+            SELECT dept_id,
+                   ROW_NUMBER() OVER (PARTITION BY dept_id ORDER BY age DESC) AS row_num
+            FROM sys_user
+            WHERE deleted = 0
+        ) t
+        WHERE row_num = 1
+    </select>
+
+    <!-- 联表分页（IPage 入参非 null，MP 自动改写 LIMIT + COUNT） -->
+    <select id="selectDeptStatPage" resultMap="deptStatResultMap">
+        SELECT dept_id,
+               COUNT(*) AS user_count,
+               CAST(AVG(age) AS INT) AS avg_age
+        FROM sys_user
+        WHERE deleted = 0
+        GROUP BY dept_id
+        HAVING COUNT(*) > #{minCount}
+    </select>
+
+</mapper>

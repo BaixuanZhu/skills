@@ -58,7 +58,7 @@ w.like(User::getName, "张").eq(User::getStatus, "ACTIVE");
 2. 替换 `PaginationInterceptor` Bean → `MybatisPlusInterceptor` + `PaginationInnerInterceptor`（最后添加）。
 3. 引 `mybatis-plus-jsqlparser`（v3.5.9+ 必引，否则分页失效）。
 4. 全局替换 `FieldStrategy.IGNORED` → `FieldStrategy.ALWAYS`。
-5. 删除所有 `Page.MybatisPlusLang.*` 调用，改 `QueryWrapper`/`LambdaQueryWrapper`。
+5. 删除所有 `Page.MybatisPlusLang.*` 调用，改 `LambdaQueryWrapper`（方法引用，见 `05-wrapper.md` §1）。
 6. 自定义 SQL 注入器：`extends SqlInjector` → `extends DefaultSqlInjector`。
 7. 清理依赖树：`mvn dependency:tree` 确认无 3.3.x / 3.4.x `mybatis-plus-extension` 残留（避免类路径迁移导致的 `ClassNotFoundException`）。
 

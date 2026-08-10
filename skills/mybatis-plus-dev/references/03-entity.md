@@ -59,7 +59,7 @@ public class User {
 
 **默认情况下 `updateById(entity)` 中 `null` 字段不会写入 SQL**，这正是"为什么 update 后某些字段没变"的根因（全局 `updateStrategy` 默认 `NOT_NULL`）。
 
-- 想把某字段显式置为 `null`：用 `UpdateWrapper.set("age", null)`。
+- 想把某字段显式置为 `null`：用 `LambdaUpdateWrapper.set(User::getAge, null)`（方法引用版，见 `05-wrapper.md` §2）。
 - 想某字段随时可 null：字段标 `@TableField(updateStrategy = FieldStrategy.ALWAYS)`（慎用，会绕过 null 不更新保护）。
 
 ```java
