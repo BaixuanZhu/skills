@@ -6,7 +6,7 @@
 
 两个内容目录是核心，其余是配套：
 
-- `skills/<name>/` —— **技能内容唯一编辑源**（npx skills / SkillHub / 虾评 / ZCode-npx 扫描这里）。每个含 `SKILL.md`（YAML frontmatter：`name`/`description`/`version`/`slug`/`displayName`，敏捷族另有 `dependencies`）+ `references/`（编号 `NN-topic.md`，1~14 个）+ 个别有 `assets/`（仅 java-coding-quality）。
+- `skills/<name>/` —— **技能内容唯一编辑源**（npx skills / SkillHub / ZCode-npx 扫描这里）。每个含 `SKILL.md`（YAML frontmatter：`name`/`description`/`version`/`slug`/`displayName`，敏捷族另有 `dependencies`）+ `references/`（编号 `NN-topic.md`，1~14 个）+ 个别有 `assets/`（仅 java-coding-quality）。
 - `plugins/<name>/` —— **skills/ 的镜像**（Claude Code / ZCode 插件规范要求 `.claude-plugin/plugin.json` + `skills/<name>/` 嵌套，故与扁平的 `skills/` 分开存放）。支持「多 skill 合并入 1 个 plugin」（如 4 个敏捷 skill 归入 `plugins/agile/`，见下文「group 映射」）。**不要手改这里**——pre-commit hook 从 `skills/` 自动同步。
 - `.claude-plugin/marketplace.json` —— Claude Code 插件市场清单，`plugins[]` 每条 `source` 指 `./plugins/<name>`。
 - `eval/<skill-name>/` —— 达尔文评估产物（`eval/` 下游于 `skills/`，技能不从 eval 导入）。
@@ -82,7 +82,7 @@
 
 - **提交风格**（混合，非严格）：`S<n> <skill>: <摘要>`（slimdown 轮）/ `fix:` / `init:` / `add ...`。拿不准跟最近一次提交风格。**未经用户确认不要 amend / push。**
 - **达尔文评估**：在本仓库内进行，产物 commit 到 `eval/<skill-name>/`。流程：独立子 agent 打分（避免自评偏差）→ 改进 → **实跑测试**（搭最小 Maven 项目跑代码，不要空想）→ 独立盲评重打分 → 棘轮（只保留已验证改进）。透明可复现。跑或提交评估前先读 `eval/README.md`。
-- **发布**：到 SkillHub（腾讯）/ 虾评涉及平台凭证、ID、版本追踪，**绝不能进 git**。手册即 `PUBLISH.local.md`。两套平台版本号相互独立，勿混。**发布外发且不可逆——两平台发布前都要先与用户确认。**
+- **发布**：仅到 SkillHub（腾讯），涉及平台凭证、ID、版本追踪，**绝不能进 git**。手册即 `PUBLISH.local.md`。**发布外发且不可逆——发布前要先与用户确认。**
 
 ## 平台 / 环境坑
 
