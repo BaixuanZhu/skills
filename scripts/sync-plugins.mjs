@@ -24,6 +24,7 @@ const ROOT = join(__dirname, '..');
 const SKILLS_DIR = join(ROOT, 'skills');
 const PLUGINS_DIR = join(ROOT, 'plugins');
 const MARKETPLACE = join(ROOT, '.claude-plugin', 'marketplace.json');
+const AGENTS_MARKETPLACE = join(ROOT, '.agents', 'plugins', 'marketplace.json');
 const PLUGIN_MAP = join(__dirname, 'plugin-map.json');
 
 // ── 加载 skill→plugin 分组映射 ────────────────────────────
@@ -108,7 +109,9 @@ function sync() {
     .filter(d => !d.startsWith('.') && statSync(join(SKILLS_DIR, d)).isDirectory());
 
   const marketplace = JSON.parse(readFileSync(MARKETPLACE, 'utf8'));
+  const agentsMarketplace = existsSync(AGENTS_MARKETPLACE) ? JSON.parse(readFileSync(AGENTS_MARKETPLACE, 'utf8')) : null;
   const marketplaceByName = new Map(marketplace.plugins.map(p => [p.name, p]));
+  const agentsByName = new Map((agentsMarketplace?.plugins || []).map(p => [p.name, p]));
 
   // 收集每个 group 的成员 skill 版本(用于版本聚合)
   const groupSkillVersions = {};  // groupName → [{name, version}]
@@ -158,14 +161,9 @@ function sync() {
       syncManifestVersion(pluginJsonPath, fm.version, `${name} .claude-plugin/plugin.json`, report);
       syncManifestVersion(join(pluginDir, '.codex-plugin', 'plugin.json'), fm.version, `${name} .codex-plugin/plugin.json`, report);
 
-      // ③ 1:1 marketplace.json version 同步(只改对应条目的 version)
-      const entry = marketplaceByName.get(name);
-      if (entry && entry.version !== fm.version) {
-        entry.version = fm.version;
-        report.versionsChanged.push(`${name} marketplace.json: → ${fm.version}`);
-      } else if (!entry) {
-        report.warnings.push(`${name}: marketplace.json 无对应条目(需手动添加 source/category/keywords)`);
-      }
+      // ③ 1:1 两份 marketplace.json version 同步(只改对应条目的 version)
+      setMarketplaceVersion(marketplaceByName, name, fm.version, `${name} .claude-plugin/marketplace.json`, report);
+      setMarketplaceVersion(agentsByName, name, fm.version, `${name} .agents/plugins/marketplace.json`, report);
     }
   }
 
@@ -181,18 +179,14 @@ function sync() {
     syncManifestVersion(pluginJsonPath, aggVersion, `${groupName} .claude-plugin/plugin.json`, report);
     syncManifestVersion(join(pluginDir, '.codex-plugin', 'plugin.json'), aggVersion, `${groupName} .codex-plugin/plugin.json`, report);
 
-    const entry = marketplaceByName.get(groupName);
-    if (entry && entry.version !== aggVersion) {
-      entry.version = aggVersion;
-      report.versionsChanged.push(`${groupName} marketplace.json: → ${aggVersion}`);
-    } else if (!entry) {
-      report.warnings.push(`${groupName}: marketplace.json 无对应条目(需手动添加 source/category/keywords)`);
-    }
+    setMarketplaceVersion(marketplaceByName, groupName, aggVersion, `${groupName} .claude-plugin/marketplace.json`, report);
+    setMarketplaceVersion(agentsByName, groupName, aggVersion, `${groupName} .agents/plugins/marketplace.json`, report);
   }
 
-  // 写回 marketplace.json(若 version 有变更)
+  // 写回两份 marketplace.json(若 version 有变更)
   if (report.versionsChanged.length > 0) {
     writeFileSync(MARKETPLACE, JSON.stringify(marketplace, null, 2) + '\n', 'utf8');
+    if (agentsMarketplace) writeFileSync(AGENTS_MARKETPLACE, JSON.stringify(agentsMarketplace, null, 2) + '\n', 'utf8');
   }
 
   return report;
@@ -227,13 +221,27 @@ function syncManifestVersion(jsonPath, newVersion, label, report) {
   }
 }
 
+// 同步单份 marketplace.json 里某条目的 version——只改 version,保留其余字段。
+// 供 .claude-plugin/ 与 .agents/plugins/ 两份 marketplace 共用;条目缺失仅告警不中断。
+function setMarketplaceVersion(byName, name, version, label, report) {
+  const entry = byName.get(name);
+  if (entry) {
+    if (entry.version !== version) {
+      entry.version = version;
+      report.versionsChanged.push(`${label}: → ${version}`);
+    }
+  } else {
+    report.warnings.push(`${label}: 无对应条目(需手动添加)`);
+  }
+}
+
 // ── pre-commit hook 安装 ──────────────────────────────────
 
 const HOOK_CONTENT = `#!/bin/sh
 # 自动生成 by scripts/sync-plugins.mjs --install
-# 把 skills/ 的改动同步到 plugins/ + marketplace.json,加进本次 commit
+# 把 skills/ 的改动同步到 plugins/(双 manifest) + 两份 marketplace.json,加进本次 commit
 node scripts/sync-plugins.mjs || { echo "❌ sync-plugins 失败,commit 中止"; exit 1; }
-git add plugins/ .claude-plugin/marketplace.json 2>/dev/null || true
+git add plugins/ .claude-plugin/marketplace.json .agents/plugins/marketplace.json 2>/dev/null || true
 `;
 
 function installHook() {
@@ -243,7 +251,7 @@ function installHook() {
   writeFileSync(hookPath, HOOK_CONTENT, 'utf8');
   try { chmodSync(hookPath, 0o755); } catch { /* Windows 无 chmod 概念,无害 */ }
   console.log(`✅ pre-commit hook 已安装: ${relative(ROOT, hookPath)}`);
-  console.log('   以后 git commit 时自动同步 skills/ → plugins/ + marketplace.json');
+  console.log('   以后 git commit 时自动同步 skills/ → plugins/(双 manifest) + 两份 marketplace.json');
 }
 
 // ─-- 主入口 ─────────────────────────────────────────────
