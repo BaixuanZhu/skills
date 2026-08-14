@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="Spring Rules Test"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+    <description>3 条 Spring XPath 规则最终验证</description>
+
+    <!-- 规则1：@Transactional 标 private/static/final 方法（代理失效） -->
+    <rule name="TransactionalOnNonProxyableMethod"
+          language="java"
+          message="@Transactional 标在 private/static/final 方法上，CGLIB/JDK 代理无法覆盖，事务不生效。改为 public 非 final 非 static 方法"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <priority>1</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+//MethodDeclaration[
+    ModifierList/Annotation[pmd-java:typeIs('org.springframework.transaction.annotation.Transactional')]
+    and (@Static = true() or @Final = true() or @Visibility = 'private')
+]
+                ]]></value>
+            </property>
+        </properties>
+        <example><![CDATA[
+// 反例
+@Transactional
+private void insert(User u) { }          // private：代理失效
+@Transactional
+public static void batchInsert() { }    // static：代理失效
+@Transactional
+public final void update(User u) { }    // final：CGLIB 无法覆盖
+// 正例
+@Transactional(rollbackFor = Exception.class)
+public void insert(User u) { }          // public 非 final 非 static
+        ]]></example>
+    </rule>
+
+    <!-- 规则2：@Transactional 缺 rollbackFor（限定方法上的注解，不含构造器/字段） -->
+    <rule name="TransactionalMissingRollbackFor"
+          language="java"
+          message="@Transactional 未指定 rollbackFor，受检异常（IOException/SQLException）默认提交不回滚。须显式 @Transactional(rollbackFor = Exception.class)"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <priority>2</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+(: 只匹配方法声明上的 @Transactional，避免构造器/字段上的无意义注解误报 :)
+//MethodDeclaration/ModifierList/Annotation[
+    pmd-java:typeIs('org.springframework.transaction.annotation.Transactional')
+    and not(AnnotationMemberList/MemberValuePair[@Name='rollbackFor' or @Name='rollbackForClassName'])
+]
+                ]]></value>
+            </property>
+        </properties>
+        <example><![CDATA[
+// 反例（受检异常不回滚）
+@Transactional
+public void upload() throws IOException { throw new IOException("fail"); }  // 提交不回滚
+// 正例
+@Transactional(rollbackFor = Exception.class)
+public void upload() throws IOException { ... }
+        ]]></example>
+    </rule>
+
+    <!-- 规则3：ListenableFuture（Spring 6 / SpringBoot 3.x 已 @Deprecated） -->
+    <rule name="AvoidDeprecatedListenableFuture"
+          language="java"
+          message="ListenableFuture 在 Spring 6 / SpringBoot 3.x 已 @Deprecated，改用 CompletableFuture"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <priority>3</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+//ClassType[pmd-java:typeIs('org.springframework.util.concurrent.ListenableFuture')]
+                ]]></value>
+            </property>
+        </properties>
+        <example><![CDATA[
+// 反例（SpringBoot 3.x 已废弃）
+public ListenableFuture<String> sendAsync() { ... }
+// 正例
+public CompletableFuture<String> sendAsync() { ... }
+        ]]></example>
+    </rule>
+
+    <!-- 候选 A：@Value 注入静态字段 -->
+    <rule name="ValueInjectedIntoStaticField"
+          language="java"
+          message="测试A"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <priority>1</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+//FieldDeclaration[
+    @Static = true()
+    and ModifierList/Annotation[pmd-java:typeIs('org.springframework.beans.factory.annotation.Value')]
+]
+                ]]></value>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- 候选 B：@Async 返回非 void/Future -->
+    <rule name="AsyncMethodShouldReturnFutureOrVoid"
+          language="java"
+          message="测试B"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <priority>2</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+//MethodDeclaration[
+    ModifierList/Annotation[pmd-java:typeIs('org.springframework.scheduling.annotation.Async')]
+    and TypeResult[
+        not(PrimitiveType[@Kind='void'])
+        and not(ClassType[
+            pmd-java:typeIs('java.util.concurrent.Future')
+            or pmd-java:typeIs('java.util.concurrent.CompletableFuture')
+        ])
+    ]
+]
+                ]]></value>
+            </property>
+        </properties>
+    </rule>
+
+</ruleset>

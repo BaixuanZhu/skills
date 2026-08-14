@@ -1,0 +1,15 @@
+# 验证 03-config-properties.md：松散绑定（user-name → userName）
+app:
+  name: "DarwinTest"
+  max-size: 50
+  user-name: "alice"   # kebab-case，字段 userName 能绑定（@ConfigurationProperties 松散绑定）
+
+# 验证 01-startup-config.md：profile 与配置加载
+spring:
+  profiles:
+    active: dev
+
+# H2 内存数据库（避免启动报 "no datasource"）
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver

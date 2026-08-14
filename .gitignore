@@ -17,3 +17,6 @@ tmp/
 # 本地 agent 工作区 / hook 运行时状态（非仓库产物）
 .workbuddy/
 .mimosa/
+
+# Maven 构建产物（eval fixture 的 target/）
+target/
