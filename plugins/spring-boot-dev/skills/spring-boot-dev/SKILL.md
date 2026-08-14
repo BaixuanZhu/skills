@@ -29,7 +29,7 @@ displayName: Spring Boot 开发助手
 
 面向日常 Java 开发的 Spring Boot **框架层**编码助手。推荐 **3.5.x**（3.x 末线，2025-05 GA），**2.7.x 仍适用**（差异已注明），4.x 已 GA。采用**完全本地自包含**策略：所有知识沉淀于本地 `references/`，运行时不依赖任何外部文档站点。
 
-**只管框架层**：三层架构写法、配置、校验、全局异常、事务、异步、定时、事件、自动装配、SpringDoc。**不管** ORM（→ mybatis-plus-dev）、Java 语言层（→ java-coding-guide-pro）、单测（→ java-unit-test）。认证鉴权：项目已用 Sa-Token → sa-token-dev；否则本技能提供 HttpSession / ThreadLocal 最小方案。
+**只管框架层**：三层架构写法、配置、校验、全局异常、事务、异步、定时、事件、自动装配、SpringDoc。**不管** ORM（→ mybatis-plus-dev）、Java 语言层（→ java-coding-guide-pro）、单测（→ java-unit-test）、集成测试 / 冒烟 / E2E（→ java-integration-test）。认证鉴权：项目已用 Sa-Token → sa-token-dev；否则本技能提供 HttpSession / ThreadLocal 最小方案。
 
 ## 版本与命名空间（先判 SpringBoot 版本）
 
@@ -73,7 +73,7 @@ displayName: Spring Boot 开发助手
 | 启动 / 主类（`@SpringBootApplication` / `scanBasePackages` / `@ComponentScan` / 启动失败 / Bean 找不到） | 激活 → `references/01-startup-config.md` |
 | 接口文档（`@OpenAPIDefinition` / `@Operation` / `@Schema` / springdoc / openapi） | 激活 → `references/11-springdoc.md` |
 | **ORM CRUD / Mapper / 实体映射**；**认证 / 鉴权 / token / SSO** | **不适用** → mybatis-plus-dev / sa-token-dev |
-| Java 语言层（判空 / 集合 / 并发 / 异常日志）；单测；前端 | **不适用** → java-coding-guide-pro / java-unit-test / — |
+| Java 语言层（判空 / 集合 / 并发 / 异常日志）；单测；集成测试 / 冒烟 / E2E；前端 | **不适用** → java-coding-guide-pro / java-unit-test / java-integration-test / — |
 
 > **检查点**：判定为「不适用」→ 告知用户该问题属哪个技能范围，建议切换。判定为「框架层 + ORM/认证 混合」→ 只做框架层部分，其余指向对应技能。
 

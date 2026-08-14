@@ -221,8 +221,8 @@ JaCoCo 接入见 `references/05-coverage-and-quantity.md`。**不要主动推覆
 
 本技能只覆盖**纯单元测试**（`@Mock`+`@InjectMocks`，毫秒级，不起容器）。以下不在本技能范围：
 
-- 集成测试 / `@SpringBootTest` 全量上下文 / 切片测试（`@WebMvcTest`/`@DataJpaTest`）—— 这些里 `@MockBean` 才适用。
+- 集成测试 / `@SpringBootTest` 全量上下文 / 切片测试（`@WebMvcTest`/`@DataJpaTest`）/ Testcontainers / REST Assured / WireMock / 冒烟测试 / API 级 E2E —— **→ `java-integration-test` 技能**。这些场景里 `@MockBean` 才适用。
 - TestNG —— 跟随项目既有；项目无则不主动推荐引入。
 - 性能测试、前端测试。
 
-用户问及以上时，说明超出本技能范围，建议走对应专门资料。
+用户问及以上时，说明超出本技能范围，建议切换到 `java-integration-test` 技能。

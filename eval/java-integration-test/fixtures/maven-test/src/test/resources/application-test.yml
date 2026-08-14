@@ -1,0 +1,6 @@
+# 08-test-execution-efficiency 的日志抑制配置（实跑验证：压掉 Spring 启动噪音）
+logging:
+  level:
+    root: WARN
+    org.springframework: WARN
+    org.hibernate: ERROR
