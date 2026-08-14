@@ -1,0 +1,9 @@
+{
+  "name": "java-quality",
+  "version": "3.4.0",
+  "description": "Java 代码质量套件（2 技能合一）：编码规范「怎么写对」+ PMD/SpotBugs 门禁「怎么查」。写代码、代码审查、提交前扫描时使用。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com"
+  }
+}

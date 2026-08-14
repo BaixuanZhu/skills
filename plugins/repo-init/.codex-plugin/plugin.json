@@ -1,0 +1,24 @@
+{
+  "name": "repo-init",
+  "version": "1.3.7",
+  "description": "为项目生成或更新跨工具通用的 AGENTS.md 简报，让 Claude Code、Codex、Cursor 等 60+ AI 编码工具开箱即懂项目。新项目冷启动或既有说明过期时使用。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com",
+    "url": "https://github.com/BaixuanZhu"
+  },
+  "homepage": "https://github.com/BaixuanZhu/skills",
+  "repository": "https://github.com/BaixuanZhu/skills",
+  "license": "MIT",
+  "keywords": ["agents-md", "project-init", "context", "onboarding"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "AGENTS.md Pro",
+    "shortDescription": "生成/更新跨工具通用的 AGENTS.md 项目简报",
+    "longDescription": "为新项目冷启动生成一份跨工具通用的 AGENTS.md，让任意 AI 编码工具自动读取、快速理解项目；在已有 AGENTS.md 时基于当前仓库信号做增量更新（修正过期命令、补全缺失章节、删除失真项），而非整份覆盖。",
+    "developerName": "BaixuanZhu",
+    "category": "Engineering",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": ["为这个项目生成一份 AGENTS.md", "更新现有 AGENTS.md，修正过期的命令"]
+  }
+}

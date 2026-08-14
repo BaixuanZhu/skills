@@ -1,9 +1,0 @@
-{
-  "name": "java-integration-test",
-  "version": "1.0.0",
-  "description": "Java/Spring Boot 集成测试助手（消灭 curl 仿真测试 + MockMvc/Testcontainers/REST Assured/WireMock 工具链）。集成测试/切片测试/冒烟测试/API级E2E。",
-  "author": {
-    "name": "BaixuanZhu",
-    "email": "66127517+BaixuanZhu@users.noreply.github.com"
-  }
-}

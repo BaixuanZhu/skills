@@ -1,0 +1,24 @@
+{
+  "name": "java-quality",
+  "version": "3.4.0",
+  "description": "Java 代码质量套件（2 技能合一）：编码规范「怎么写对」+ PMD/SpotBugs 门禁「怎么查」。写代码、代码审查、提交前扫描时使用。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com",
+    "url": "https://github.com/BaixuanZhu"
+  },
+  "homepage": "https://github.com/BaixuanZhu/skills",
+  "repository": "https://github.com/BaixuanZhu/skills",
+  "license": "MIT",
+  "keywords": ["java", "coding-standards", "quality", "security", "pmd", "spotbugs"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Java 代码质量套件",
+    "shortDescription": "Java 编码规范 + 质量安全门禁",
+    "longDescription": "合并两个 Java 质量技能：java-coding-guide-pro（编码规范与避坑，JDK 8~25、判空/集合/并发/日期/加密/异常）与 java-coding-quality（PMD7 + SpotBugs/FindSecBugs 零侵入实跑扫描，按严重级修复直到 Blocker/Critical 清零）。",
+    "developerName": "BaixuanZhu",
+    "category": "Engineering",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": ["帮我审查这段 Java 代码的规范问题", "对项目做一次提交前的质量门禁扫描"]
+  }
+}

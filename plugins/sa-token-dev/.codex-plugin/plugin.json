@@ -1,0 +1,24 @@
+{
+  "name": "sa-token-dev",
+  "version": "2.1.0",
+  "description": "Sa-Token（cn.dev33）权限认证框架开发助手——登录鉴权、权限角色、SSO、JWT、会话与接口保护。项目已引入 Sa-Token 时使用。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com",
+    "url": "https://github.com/BaixuanZhu"
+  },
+  "homepage": "https://github.com/BaixuanZhu/skills",
+  "repository": "https://github.com/BaixuanZhu/skills",
+  "license": "MIT",
+  "keywords": ["java", "sa-token", "authentication", "authorization", "jwt", "sso"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Sa-Token 开发助手",
+    "shortDescription": "Sa-Token 权限认证框架开发",
+    "longDescription": "在 Java/Spring Boot 项目中开发登录、注册、登出、认证鉴权、权限角色、token、会话管理、接口保护、SSO 单点登录、OAuth2.0、JWT、踢人下线等功能的助手。",
+    "developerName": "BaixuanZhu",
+    "category": "Engineering",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": ["实现一个基于 Sa-Token 的登录鉴权", "给接口加权限角色校验"]
+  }
+}

@@ -14,7 +14,7 @@
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
       "source": "./plugins/repo-init",
-      "description": "为项目生成/更新跨工具通用的 AGENTS.md 简报，让任意 AI 编码工具快速理解项目。",
+      "description": "为项目生成或更新跨工具通用的 AGENTS.md 简报，让 Claude Code、Codex、Cursor 等 60+ AI 编码工具开箱即懂项目。新项目冷启动或既有说明过期时使用。",
       "category": "engineering",
       "keywords": [
         "agents-md",
@@ -23,33 +23,18 @@
       ]
     },
     {
-      "name": "java-coding-guide-pro",
+      "name": "java-quality",
       "version": "3.4.0",
       "author": {
         "name": "BaixuanZhu",
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
-      "source": "./plugins/java-coding-guide-pro",
-      "description": "Java 编码规范与避坑助手（JDK 8~25、阿里手册、SonarQube）。编写/修改/审查 Java/Spring 代码时使用。",
+      "source": "./plugins/java-quality",
+      "description": "Java 代码质量套件（2 技能合一）：编码规范「怎么写对」+ PMD/SpotBugs 门禁「怎么查」。写代码、代码审查、提交前扫描时使用。",
       "category": "engineering",
       "keywords": [
         "java",
         "coding-standards",
-        "spring-boot"
-      ]
-    },
-    {
-      "name": "java-coding-quality",
-      "version": "1.4.0",
-      "author": {
-        "name": "BaixuanZhu",
-        "email": "66127517+BaixuanZhu@users.noreply.github.com"
-      },
-      "source": "./plugins/java-coding-quality",
-      "description": "Java 代码质量与安全门禁（PMD7 + SpotBugs/FindSecBugs 零侵入）。提交前检查、代码审查、安全扫描。",
-      "category": "engineering",
-      "keywords": [
-        "java",
         "quality",
         "security",
         "pmd",
@@ -57,20 +42,22 @@
       ]
     },
     {
-      "name": "java-unit-test",
+      "name": "java-test",
       "version": "1.4.0",
       "author": {
         "name": "BaixuanZhu",
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
-      "source": "./plugins/java-unit-test",
-      "description": "Java 单元测试规范对齐助手（设计方法骨架 + 工程默认值纪律）。编写/评审/补全单元测试。",
+      "source": "./plugins/java-test",
+      "description": "Java 测试套件（2 技能合一）：单元测试规范对齐 + 集成测试（MockMvc/Testcontainers 替代 curl 仿真）。编写、评审、补全测试时使用。",
       "category": "engineering",
       "keywords": [
         "java",
         "unit-test",
+        "integration-test",
         "junit",
-        "mockito"
+        "mockito",
+        "testcontainers"
       ]
     },
     {
@@ -81,7 +68,7 @@
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
       "source": "./plugins/sa-token-dev",
-      "description": "Sa-Token（cn.dev33）权限认证框架开发助手。登录鉴权、权限角色、SSO、JWT、会话管理。",
+      "description": "Sa-Token（cn.dev33）权限认证框架开发助手——登录鉴权、权限角色、SSO、JWT、会话与接口保护。项目已引入 Sa-Token 时使用。",
       "category": "engineering",
       "keywords": [
         "java",
@@ -100,7 +87,7 @@
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
       "source": "./plugins/mybatis-plus-dev",
-      "description": "MyBatis-Plus（baomidou）ORM 增强框架开发助手。CRUD、分页查询、Mapper/Service 层、事务、逻辑删除。",
+      "description": "MyBatis-Plus（baomidou）ORM 增强框架开发助手——CRUD、分页、条件构造、Mapper/Service 层、逻辑删除与乐观锁。项目已引入 MyBatis-Plus 时使用。",
       "category": "engineering",
       "keywords": [
         "java",
@@ -118,7 +105,7 @@
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
       "source": "./plugins/spring-boot-dev",
-      "description": "Spring Boot 框架层开发助手。三层架构、配置、参数校验、全局异常、事务、异步、定时、事件、自动装配、SpringDoc。",
+      "description": "Spring Boot 框架层开发助手——三层架构写法与注解隐性陷阱（事务失效、异步线程池、循环依赖等）。写 Controller/Service/配置时使用。",
       "category": "engineering",
       "keywords": [
         "java",
@@ -130,25 +117,6 @@
       ]
     },
     {
-      "name": "java-integration-test",
-      "version": "1.0.0",
-      "author": {
-        "name": "BaixuanZhu",
-        "email": "66127517+BaixuanZhu@users.noreply.github.com"
-      },
-      "source": "./plugins/java-integration-test",
-      "description": "Java/Spring Boot 集成测试助手（消灭 curl 仿真测试 + MockMvc/Testcontainers/REST Assured/WireMock）。集成测试/切片测试/冒烟测试/API级E2E。",
-      "category": "engineering",
-      "keywords": [
-        "java",
-        "integration-test",
-        "spring-boot",
-        "testcontainers",
-        "rest-assured",
-        "wiremock"
-      ]
-    },
-    {
       "name": "agile",
       "version": "4.3.1",
       "author": {
@@ -156,7 +124,7 @@
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
       "source": "./plugins/agile",
-      "description": "敏捷开发套件（4 技能合一）：入口路由 using-agile + 战略层 agile-strategic + 产品待办 agile-backlog + Sprint 规划 agile-sprint。",
+      "description": "敏捷开发套件（4 技能合一）：入口路由 + 战略层（愿景/架构/ADR）+ 产品待办 + Sprint 规划，文件驱动地做项目规划与迭代管理。",
       "category": "productivity",
       "keywords": [
         "agile",

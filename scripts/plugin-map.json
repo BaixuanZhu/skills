@@ -4,6 +4,14 @@
     "agile": {
       "skills": ["using-agile", "agile-strategic", "agile-backlog", "agile-sprint"],
       "version": "max"
+    },
+    "java-test": {
+      "skills": ["java-unit-test", "java-integration-test"],
+      "version": "max"
+    },
+    "java-quality": {
+      "skills": ["java-coding-guide-pro", "java-coding-quality"],
+      "version": "max"
     }
   }
 }

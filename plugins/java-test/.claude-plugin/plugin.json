@@ -1,0 +1,9 @@
+{
+  "name": "java-test",
+  "version": "1.4.0",
+  "description": "Java 测试套件（2 技能合一）：单元测试规范对齐 + 集成测试（MockMvc/Testcontainers 替代 curl 仿真）。编写、评审、补全测试时使用。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com"
+  }
+}

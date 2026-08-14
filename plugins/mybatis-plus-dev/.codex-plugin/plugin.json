@@ -1,0 +1,24 @@
+{
+  "name": "mybatis-plus-dev",
+  "version": "2.3.0",
+  "description": "MyBatis-Plus（baomidou）ORM 增强框架开发助手——CRUD、分页、条件构造、Mapper/Service 层、逻辑删除与乐观锁。项目已引入 MyBatis-Plus 时使用。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com",
+    "url": "https://github.com/BaixuanZhu"
+  },
+  "homepage": "https://github.com/BaixuanZhu/skills",
+  "repository": "https://github.com/BaixuanZhu/skills",
+  "license": "MIT",
+  "keywords": ["java", "mybatis-plus", "orm", "crud", "baomidou"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "MyBatis-Plus 开发助手",
+    "shortDescription": "MyBatis-Plus ORM 开发",
+    "longDescription": "在 Java/Spring Boot 项目中开发数据库 CRUD、分页查询、条件构造（LambdaQueryWrapper）、Mapper/Service 层、实体映射、逻辑删除、批量插入、乐观锁、自动填充等功能的助手。",
+    "developerName": "BaixuanZhu",
+    "category": "Engineering",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": ["用 MyBatis-Plus 写一个分页查询", "实现逻辑删除和乐观锁"]
+  }
+}
