@@ -4,8 +4,8 @@ description: >-
   Spring Boot 框架层开发助手——三层架构写法与 Spring 注解隐性陷阱。
   在编写、修改、重构 Spring Boot 的 Controller / Service / Repository 层代码，或处理
   参数校验、全局异常、事务、异步、定时、事件、配置、自动装配问题时使用本技能——
-  无论用户是否提到 Spring Boot（写接口 / 写 Controller / 写 Service / 参数校验 / validation /
-  全局异常 / @Transactional / 事务失效 / 事务不生效 / 回滚 / @Async / 线程池 /
+  无论用户是否提到 Spring Boot（写接口 / Controller / Service / 参数校验 / validation /
+  全局异常 / @Transactional / 事务失效 / 回滚 / @Async / 线程池 /
   @Scheduled / 定时任务 / @EventListener / 循环依赖 / @ConfigurationProperties /
   @Value / 配置读不到 / 配置不生效）。
   项目依赖含 spring-boot-starter-web 或代码出现 @SpringBootApplication / @RestController /
@@ -13,7 +13,7 @@ description: >-
   @RestControllerAdvice / @ConditionalOnXxx / @Validated 时激活。
   次级触发信号：@Transactional 自调用失效、@Transactional 标在 private 方法、
   @Async 默认 SimpleAsyncTaskExecutor、循环依赖报错（BeanCurrentlyInCreationException）、
-  @Validated 分组校验不触发、@ExceptionHandler 顺序错乱、@Value 配置读不到。
+  @Validated 分组校验不触发、@ExceptionHandler 顺序错乱。
   不适用（主动让位）：ORM CRUD / 分页 / Mapper / 实体映射 → mybatis-plus-dev；
   认证 / 权限 / token / SSO → sa-token-dev（仅当项目依赖含 sa-token 或代码出现 StpUtil；
   否则由本技能提供 HttpSession / ThreadLocal 最小方案）；
