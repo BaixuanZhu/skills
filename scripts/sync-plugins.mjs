@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// sync-plugins.mjs —— 把 skills/ 的改动同步到 plugins/ + marketplace.json
+// sync-plugins.mjs —— 把 skills/ 的改动同步到 plugins/ + 两份 marketplace.json
 //
 // 真值源:
 //   - skills/<name>/SKILL.md frontmatter 的 version  → 版本号唯一源头
 //   - skills/<name>/ 全部文件                        → 内容唯一源头
 //
 // 不动(独立维护):
-//   - marketplace.json 的 description/category/keywords/source
-//   - plugin.json 的 description/author
+//   - 两份 marketplace.json(.claude-plugin/ 与 .agents/plugins/) 的 description/category/keywords/source
+//   - plugin.json(.claude-plugin 与 .codex-plugin) 的 description/author 等非 version 字段
 //
 // 用法:
 //   node scripts/sync-plugins.mjs            # 同步,退出码 0(有改动也返回 0,hook 会 git add)

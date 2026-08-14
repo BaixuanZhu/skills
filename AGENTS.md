@@ -7,29 +7,31 @@
 两个内容目录是核心，其余是配套：
 
 - `skills/<name>/` —— **技能内容唯一编辑源**（npx skills / SkillHub / ZCode-npx 扫描这里）。每个含 `SKILL.md`（YAML frontmatter：`name`/`description`/`version`/`slug`/`displayName`，敏捷族另有 `dependencies`）+ `references/`（编号 `NN-topic.md`，1~14 个）+ 个别有 `assets/`（仅 java-coding-quality）。
-- `plugins/<name>/` —— **skills/ 的镜像**（Claude Code / ZCode 插件规范要求 `.claude-plugin/plugin.json` + `skills/<name>/` 嵌套，故与扁平的 `skills/` 分开存放）。支持「多 skill 合并入 1 个 plugin」（如 4 个敏捷 skill 归入 `plugins/agile/`，见下文「group 映射」）。**不要手改这里**——pre-commit hook 从 `skills/` 自动同步。
-- `.claude-plugin/marketplace.json` —— Claude Code 插件市场清单，`plugins[]` 每条 `source` 指 `./plugins/<name>`。
+- `plugins/<name>/` —— **skills/ 的镜像**（Claude Code / ZCode / Codex 插件规范要求 manifest + `skills/<name>/` 嵌套，故与扁平的 `skills/` 分开存放）。每个含 `.claude-plugin/plugin.json`（Claude Code / ZCode 读）+ `.codex-plugin/plugin.json`（Codex 读）。支持「多 skill 合并入 1 个 plugin」（agile / java-test / java-quality 三个 group，见下文「group 映射」）。**不要手改这里**——pre-commit hook 从 `skills/` 自动同步。
+- `.claude-plugin/marketplace.json` —— Claude Code / ZCode 插件市场清单，`plugins[]` 每条 `source` 指 `./plugins/<name>`。
+- `.agents/plugins/marketplace.json` —— Codex 插件市场清单，`plugins[]` 每条 `source` 是对象（`{"source":"local","path":"./plugins/<name>"}` + `policy` + `category`），与 Claude 的字符串 `source` 不同。
 - `eval/<skill-name>/` —— 达尔文评估产物（`eval/` 下游于 `skills/`，技能不从 eval 导入）。
 - `PUBLISH.local.md` —— **gitignored**，线上版本/平台 ID/发布流程的唯一真相来源。
 - `.zcode/` —— 用户本地第三方技能，**gitignored，绝不提交**。
 
 ## 分发与同步
 
-### 双协议，共享 `skills/` 内容
+### 三协议，共享 `skills/` 内容
 
 | 协议 | 识别依据 | 用户命令 |
 |---|---|---|
 | Claude Code / ZCode 插件 | `.claude-plugin/marketplace.json` + `plugins/<name>/` | `/plugin marketplace add BaixuanZhu/skills` → `/plugin install <name>` |
+| Codex 插件 | `.agents/plugins/marketplace.json` + `plugins/<name>/`（兼容读 `.claude-plugin/marketplace.json`） | `codex plugin marketplace add BaixuanZhu/skills` |
 | npx skills（Vercel CLI，41+ agent 通用） | `skills/<name>/SKILL.md`（自动扫描） | `npx skills add BaixuanZhu/skills` |
 
 ### plugins/ 是 skills/ 的镜像 —— hook 自动同步
 
-改技能**只改 `skills/<name>/`**。pre-commit hook（`scripts/sync-plugins.mjs`）自动把内容 + version 同步到 `plugins/` + `marketplace.json`，加进本次 commit（单 commit，干净）。GitHub Actions（`.github/workflows/verify-sync.yml`）push 时兑底校验，未同步则 CI 失败拦截。
+改技能**只改 `skills/<name>/`**。pre-commit hook（`scripts/sync-plugins.mjs`）自动把内容 + version 同步到 `plugins/`（`.claude-plugin` + `.codex-plugin` 双 manifest）+ 两份 `marketplace.json`，加进本次 commit（单 commit，干净）。GitHub Actions（`.github/workflows/verify-sync.yml`）push 时兑底校验，未同步则 CI 失败拦截。
 
 - **装 hook**：`npm install`（`postinstall` 自动装到 `.git/hooks/pre-commit`）。换机器 / 新 clone 后跑一次。
 - **手动跑同步**（不 commit）：`node scripts/sync-plugins.mjs`
-- **新增 / 删除技能**：hook 不自动建 / 删 `plugins/` 结构。需手动①在 `skills/<name>/` 建内容 → ②在 `plugins/<name>/` 建合规包（`.claude-plugin/plugin.json` + `skills/<name>/` 嵌套）→ ③在 `marketplace.json` 的 `plugins[]` 追加条目。之后同步自动。归入既有 group 的技能只需在 `plugin-map.json` 的 `groups.<group>.skills[]` 加名字，无需另建 plugin。
-- **group 映射**（`scripts/plugin-map.json`）：声明多个 skill 合并到 1 个 plugin（如敏捷 4 技能 → `plugins/agile/`）。sync hook 据此把组内各 skill 同步到 `plugins/<group>/skills/<skill名>/`；group 插件版本取组内 skill 版本的 max（`"version": "max"`）。不在 group 里的 skill 走默认 1:1（`plugins/<name>/skills/<name>/`）。
+- **新增 / 删除技能**：hook 不自动建 / 删 `plugins/` 结构。需手动①在 `skills/<name>/` 建内容 → ②在 `plugins/<name>/` 建合规包（`.claude-plugin/plugin.json` + `.codex-plugin/plugin.json` + `skills/<name>/` 嵌套）→ ③在**两份** `marketplace.json`（`.claude-plugin/` 与 `.agents/plugins/`）的 `plugins[]` 各追加条目。之后同步自动。归入既有 group 的技能只需在 `plugin-map.json` 的 `groups.<group>.skills[]` 加名字，无需另建 plugin。
+- **group 映射**（`scripts/plugin-map.json`）：声明多个 skill 合并到 1 个 plugin。现有 3 个 group：`agile`（using-agile / agile-strategic / agile-backlog / agile-sprint）、`java-test`（java-unit-test / java-integration-test）、`java-quality`（java-coding-guide-pro / java-coding-quality）。sync hook 据此把组内各 skill 同步到 `plugins/<group>/skills/<skill名>/`；group 插件版本取组内 skill 版本的 max（`"version": "max"`）。不在 group 里的 skill 走默认 1:1（`plugins/<name>/skills/<name>/`）。
 - **marketplace.json 的 `description`/`category`/`keywords`/`source` 独立维护**（hook 不动）——因为 SKILL.md 的 `description` 是长触发器文本，与 marketplace 的一句话简述不是同一内容。
 
 ### 新增 plugin / marketplace 条目的字段要求
@@ -38,10 +40,11 @@
 - `source` 必须**指 `./plugins/<name>`**（不是 `./skills/<name>`）——指向 skills/ 会导致 Claude Code / ZCode "装上但不触发"（加载器进 source 找 `.claude-plugin/plugin.json` + `skills/<name>/SKILL.md`，扁平目录缺这俩）。
 - `author` 用隐私邮箱 `66127517+BaixuanZhu@users.noreply.github.com`（noreply，不暴露真实地址）。
 - 缺 `version`/`author` → 市场只显示插件名，看不到版本号和开发者。
+- 每个 plugin 需**两份 manifest**：`.claude-plugin/plugin.json`（`name`/`version`/`description`/`author`）+ `.codex-plugin/plugin.json`（Claude 版超集，多 `license`/`keywords`/`skills`(指向 `./skills/`)/`interface` 展示字段）。Codex 的 `marketplace.json` 独立放 `.agents/plugins/`，`source` 是对象格式（见上文）。
 
 ### 版本号真值源
 
-**只改 `skills/<name>/SKILL.md` frontmatter 的 `version`**，hook 自动同步到：① `plugins/<name>/.claude-plugin/plugin.json`（Claude Code / ZCode 安装后读）② `marketplace.json` 对应条目（市场列表展示读，不同步则版本落后）。
+**只改 `skills/<name>/SKILL.md` frontmatter 的 `version`**，hook 自动同步到：① `plugins/<name>/.claude-plugin/plugin.json`（Claude Code / ZCode 安装后读）② `plugins/<name>/.codex-plugin/plugin.json`（Codex 安装后读）③ 两份 `marketplace.json` 对应条目（市场列表展示读，不同步则版本落后）。
 
 - **独立插件**（1:1）：skill version 直接写入对应 plugin.json + marketplace 条目。
 - **group 插件**（多 skill 合一，如 agile）：plugin 版本取组内所有 skill version 的 max。各 skill 自己的 version 独立维护（`skills/<name>/SKILL.md`），plugin 版本跟随最高的那个。
