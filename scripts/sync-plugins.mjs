@@ -154,13 +154,9 @@ function sync() {
     if (mapping) {
       (groupSkillVersions[mapping.group] = groupSkillVersions[mapping.group] || []).push({ name, version: fm.version });
     } else {
-      // ② 1:1 插件:plugin.json version 同步(只改 version,保留 name/description/author)
-      const pj = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
-      if (pj.version !== fm.version) {
-        pj.version = fm.version;
-        writeFileSync(pluginJsonPath, JSON.stringify(pj, null, 2) + '\n', 'utf8');
-        report.versionsChanged.push(`${name} plugin.json: → ${fm.version}`);
-      }
+      // ② 1:1 插件:双 manifest(Claude + Codex)version 同步(只改 version,保留其余字段)
+      syncManifestVersion(pluginJsonPath, fm.version, `${name} .claude-plugin/plugin.json`, report);
+      syncManifestVersion(join(pluginDir, '.codex-plugin', 'plugin.json'), fm.version, `${name} .codex-plugin/plugin.json`, report);
 
       // ③ 1:1 marketplace.json version 同步(只改对应条目的 version)
       const entry = marketplaceByName.get(name);
@@ -181,14 +177,9 @@ function sync() {
     const pluginDir = join(PLUGINS_DIR, groupName);
     const pluginJsonPath = join(pluginDir, '.claude-plugin', 'plugin.json');
 
-    if (existsSync(pluginJsonPath)) {
-      const pj = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
-      if (pj.version !== aggVersion) {
-        pj.version = aggVersion;
-        writeFileSync(pluginJsonPath, JSON.stringify(pj, null, 2) + '\n', 'utf8');
-        report.versionsChanged.push(`${groupName} plugin.json: → ${aggVersion} (聚合自 ${members.map(m => m.name).join(', ')})`);
-      }
-    }
+    // 双 manifest(Claude + Codex)version 同步(只改 version,保留其余字段)
+    syncManifestVersion(pluginJsonPath, aggVersion, `${groupName} .claude-plugin/plugin.json`, report);
+    syncManifestVersion(join(pluginDir, '.codex-plugin', 'plugin.json'), aggVersion, `${groupName} .codex-plugin/plugin.json`, report);
 
     const entry = marketplaceByName.get(groupName);
     if (entry && entry.version !== aggVersion) {
@@ -219,6 +210,21 @@ function hasContentDiff(srcDir, dstDir) {
     if (a !== b) return true;
   }
   return false;
+}
+
+// 同步单个 manifest(plugin.json)的 version——只改 version,保留其余字段。
+// 供 .claude-plugin/plugin.json 与 .codex-plugin/plugin.json 共用;缺失时仅告警不中断。
+function syncManifestVersion(jsonPath, newVersion, label, report) {
+  if (!existsSync(jsonPath)) {
+    report.warnings.push(`${label}: ${relative(ROOT, jsonPath)} 不存在,version 不同步`);
+    return;
+  }
+  const data = JSON.parse(readFileSync(jsonPath, 'utf8'));
+  if (data.version !== newVersion) {
+    data.version = newVersion;
+    writeFileSync(jsonPath, JSON.stringify(data, null, 2) + '\n', 'utf8');
+    report.versionsChanged.push(`${label}: → ${newVersion}`);
+  }
 }
 
 // ── pre-commit hook 安装 ──────────────────────────────────
