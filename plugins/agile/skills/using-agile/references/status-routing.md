@@ -13,6 +13,7 @@
 | `agile-docs/VISION.md` | 愿景已产出 | agile-strategic（阶段 A） |
 | `agile-docs/ARCHITECTURE.md` | 架构图已产出 | agile-strategic（阶段 B） |
 | `agile-docs/ADR.md` | ADR 决策已产出 | agile-strategic（阶段 B） |
+| `agile-docs/STRATEGY_CONFLICT.md` | 战略冲突待裁决 | using-agile（写前门禁生成，裁决后吸收可删） |
 | `agile-docs/PRODUCT-BACKLOG.yaml` | 待办池已产出（Agent 读） | agile-backlog |
 | `agile-docs/PRODUCT-BACKLOG.md` | 待办池已产出（人读） | agile-backlog |
 | `agile-docs/DOD.md` | 完成定义已就绪 | using-agile（初始化） |
@@ -29,6 +30,7 @@
 | 战略 | 愿景 | {VISION.md: ✅/❌} |
 | 战略 | 架构图 | {ARCHITECTURE.md: ✅/❌} |
 | 战略 | ADR | {ADR.md: N 条决策} |
+| 战略 | 冲突待裁决 | {STRATEGY_CONFLICT.md: 有（待裁决）/无} |
 | 执行 | DoD | {DOD.md: ✅/❌} |
 | 执行 | Backlog MD | {PRODUCT-BACKLOG.md: ✅/❌，N 条} |
 | 执行 | Backlog YAML | {PRODUCT-BACKLOG.yaml: ✅/❌} |
@@ -42,6 +44,7 @@
 
 | 用户表态 | 路由到 |
 |----------|--------|
+| STRATEGY_CONFLICT.md 存在（待裁决） | 先裁决冲突再继续（写前门禁，见 `references/gate-protocol.md §一`） |
 | VISION ❌ | agile-strategic 阶段 A |
 | VISION ✅ 但 ARCHITECTURE 或 ADR ❌ | agile-strategic 阶段 B |
 | 战略层已就绪 + 想拆待办 | agile-backlog |

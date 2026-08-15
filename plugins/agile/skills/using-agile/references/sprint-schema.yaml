@@ -1,7 +1,7 @@
 # Sprint 文件接口契约
 # 消费 Agent 读此文件了解 Sprint 规划文件的格式
 # using-agile 初始化时将此文件复制到 agile-docs/interfaces/
-version: "1.2"
+version: "1.3"
 sprint_file:
   naming: "sprint-{序号:03d}-{日期}.md"
   location: "sprints/"
@@ -10,14 +10,16 @@ sprint_file:
       format: YAML-style key-value
     - header: 任务清单
       format: plain list, no checkboxes
+    - header: 回填要求（消费 Agent 必读）
+      format: 说明段落 + yaml 示例；明确消费 Agent 执行完毕必须回填 .done.yaml 的硬性义务（免人工提醒）
     - header: 闭环检查
       format: plain list, no checkboxes
     - header: 条目状态建议
       format: plain list; 由 agile-sprint 在 DoD 关闭环节追加，规划交付时不存在，消费 Agent 无需读取
 
-# 执行结果回传：消费 Agent 执行完 Sprint 任务后写入此文件
+# 执行结果回传：消费 Agent 执行完 Sprint 任务后写入此文件（回填是硬性义务，见 sprint 文件内「回填要求」段）
 # agile-sprint DoD 关闭时以此为依据；using-agile 检测到 .done.yaml + Sprint 已关闭 → 路由 agile-backlog 同步
-# 同步完成后改后缀 .done.processed 留痕，不删除
+# 同步完成后改后缀 .done.processed.yaml 留痕，不删除
 done_file:
   filename: "sprint-{序号:03d}-{日期}.done.yaml"
   location: "sprints/"
@@ -28,5 +30,7 @@ done_file:
     moved_next:
       - T-003
   note: completed 和 moved_next 至少一个可为空数组；不应包含 Sprint 任务清单之外的 ID；两个列表之外的清单内条目视为未执行，DoD 时归入 moved_next
+  mandatory: true  # 回填是硬性义务：消费 Agent 执行完毕必须生成，否则 Sprint 无法关闭、Backlog 无法同步
   timing: 消费 Agent 执行完毕后生成（含部分完成）
-  lifecycle: 写入（消费 Agent）→ 读取（agile-sprint DoD 检查）→ 检测（using-agile，Sprint 已关闭时路由）→ 消费（agile-backlog 同步到 .yaml+.md）→ 改后缀 .done.processed（留痕，不删除）
+  lifecycle: 写入（消费 Agent）→ 读取（agile-sprint DoD 检查）→ 检测（using-agile，Sprint 已关闭时路由）→ 消费（agile-backlog 同步到 .yaml+.md）→ 改后缀 .done.processed.yaml（留痕，不删除）
+

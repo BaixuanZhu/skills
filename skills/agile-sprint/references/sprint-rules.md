@@ -10,7 +10,7 @@
 >
 > **三个参数（人数/工作日/系数）均须经用户确认，禁止静默按 0.6 默认**；用户不决时给推荐值 + 理由，确认后使用并在 Sprint 文件中标注"agent 推荐"（见 `using-agile/references/probing-protocol.md §二` 规则 2）。
 >
-> 承诺点 ≤ 可用点；超额则放回 Backlog 顶部，下 Sprint 再取。
+> 承诺点 ≤ 可用点；超额部分本次不取用、留待下 Sprint 再取（条目本就在 Backlog 顶部，无需"放回"，Sprint 不修改 PRODUCT-BACKLOG）。
 
 ## 二、DoD 出口检查（关闭 Sprint 前必过）
 
@@ -30,4 +30,5 @@
 ## 四、估点体系（默认与异常）
 
 - **默认**：斐波那契（1/2/3/5/8/13）
-- **异常**：纯研究型 Sprint 允许线性估点（1/2/3/4/5），必须在 Sprint 文件头标注「估点体系：线性」
+- **异常**：纯研究型 Sprint 可用线性估点（1/2/3/4/5），必须在 Sprint 文件头标注「估点体系：线性」
+- 点数的定义权威在 `agile-backlog/references/backlog-rules.md §二`；Sprint 只消费点值并标注体系，不另立估点规则

@@ -5,7 +5,7 @@ displayName: Sprint规划
 description: |
   当用户说"开 Sprint""规划迭代""关闭 Sprint"或 using-agile 路由到此，且 PRODUCT-BACKLOG.yaml 已有条目时触发。
 agent_created: true
-version: 4.3.1
+version: 4.4.0
 dependencies:
   - skill: using-agile
     reason: 提供 DOD.md 模板
@@ -34,14 +34,14 @@ dependencies:
 
 ⚠️ **执行阶段（任务拆解、进度追踪、阻塞处理）归消费 Agent 负责，不在本技能能力范围内。**
 
-## 2. 写前对齐（渐进式：先探询，再产出）
+## 2. 写前对齐（先问询，再产出；选择题）
 
-姿态与节奏遵循 `using-agile/references/probing-protocol.md`（一轮≤3问，含糊必追问）。
+姿态遵循 `using-agile/references/probing-protocol.md`（一次一问，含糊必追问）；需要你拍板的决策点用「候选 + 推荐 + 自定义」选择题问。
 
 - 确认取哪些 PRODUCT-BACKLOG.yaml 顶部条目（按 priority 排序）
 - **Sprint 目标反问**：取完候选条目后，先向用户确认"这 {N} 条能否支撑一个可陈述的 Sprint 目标？用一句话说是什么？"——目标说不出来 → 建议调整取用条目（换入/换出由用户裁决），不开"杂项堆" Sprint
 - **技术任务（T-NNN）需关联 ADR 章节编号**；若关联缺失，按 `using-agile/references/gate-protocol.md §二 ①` 拦截，先回 agile-strategic 阶段 B 补 ADR
-- **容量参数必问**：团队人数 / Sprint 工作日 / 团队成熟度（决定专注系数）——三者任一未知就问（可先读 `agile-docs/DOD.md` 头部项目画像取团队人数），**禁止静默按 0.6 默认**；用户说"你看着办" → 给推荐参数 + 理由，经确认后使用并在 Sprint 文件中标注"agent 推荐"
+- **容量参数必问**：团队人数 / Sprint 工作日 / 团队成熟度（决定专注系数）——三者任一未知就问（可先读 `agile-docs/DOD.md` 头部项目画像取团队人数），**禁止静默按 0.6 默认**；专注系数给选项 + 推荐（A 0.5 新团队 / B 0.6 成熟 / C 0.7-0.75 全职专注），确认后使用并在 Sprint 文件中标注"agent 推荐"
 - **容量检查**：按 id 回读 `PRODUCT-BACKLOG.md` 获取每个条目的 point（YAML 不含 point 数据，仅含 priority/status），计算承诺点是否 ≤ 可用点。可用点计算见 `references/sprint-rules.md §一`
 - 确认本 Sprint 序号：扫描 `sprints/` 目录下已有 `sprint-NNN-*.md`，取最大序号 +1；目录为空则从 001 起（用于命名 `sprint-{序号:03d}-{日期}.md`）
 - 确认起始日期（用于命名）
@@ -52,8 +52,8 @@ dependencies:
 ### 环节 A：规划
 - 从 `agile-docs/PRODUCT-BACKLOG.yaml` 按 priority 取顶部条目（经 §2 Sprint 目标反问确认）
 - 在 `sprints/` 下新建 `sprint-{序号:03d}-{日期}.md`
-- 按模板（`references/sprint-template.md`）填写：周期/目标/容量/任务清单（纯列表）/闭环检查清单
-- 写完停，按结构化审阅（§4）列出容量假设与取条依据，确认后问"是否进入关闭？"
+- 按模板（`references/sprint-template.md`）填写：周期/目标/容量/任务清单（纯列表）/**回填要求（消费 Agent 必读段）**/闭环检查清单
+- 写完停，按结构化审阅（§4）列出容量假设与取条依据，确认后问"是否交付消费 Agent 执行？"（执行完毕回填 .done.yaml 后再回来走环节 B 关闭）
 
 ### 环节 B：DoD 关闭
 - 读取 `sprints/{sprint文件}.done.yaml`：
@@ -74,7 +74,7 @@ dependencies:
 
 ## 5. 硬约束
 - ✅ 单文件产出 `sprints/sprint-{序号:03d}-{日期}.md`（命名含序号+日期，不用 `current.md`）；❌ **不顺手写** VISION / ARCHITECTURE / ADR / PRODUCT-BACKLOG 业务正文。
-- ✅ 写前探询遵循 `using-agile/references/probing-protocol.md`：容量参数（人数/工作日/专注系数）必经用户确认，禁止静默默认；Sprint 目标须可陈述（§2）。
+- ✅ 写前问询遵循 `using-agile/references/probing-protocol.md`：容量参数（人数/工作日/专注系数）必经用户确认，禁止静默默认；Sprint 目标须可陈述（§2）。
 - ✅ 关闭 Sprint 前逐条过 DoD（独立出口门禁 ③）；关闭即标"已关闭"状态并记录执行结果来源（.done.yaml 或人工确认），不删除。
 - ❌ 不写 RETRO.md / RELEASE.md / FB-NNN.md，不创建 `sprints/archive/` 子目录。
 - ❌ 不在 Sprint 文件中设执行态追踪（不写 checkbox，不记阻塞，不处理执行中变更——归消费 Agent）。

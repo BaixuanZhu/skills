@@ -18,14 +18,15 @@
 | ID | ✅ | T-NNN 或 F-NNN，零填充 3 位 |
 | 标题 | ✅ | 一句话概括（动词 + 名词） |
 | 类型 | ✅ | 技术 / 功能 |
-| 点 | ✅ | 斐波那契（1/2/3/5/8/13）；过大无法估点 → 触发门禁 ⑥（拆分） |
+| 点 | ✅ | 斐波那契（1/2/3/5/8/13，默认）；纯研究型 Sprint 可用线性（1/2/3/4/5），在 Sprint 文件头标注；过大无法估点 → 触发门禁 ⑤（拆分） |
 | 优先级 | ✅ | Must / Should / Could / Won't |
-| 状态 | ✅ | 待办 / 已完成 / 移至下个Sprint |
+| 状态 | ✅ | 待办 / 已完成 |
 | 关联 | — | ADR 编号（如 ADR-006）或依赖条目 ID；无则"—" |
+| 来源/依据 | — | 点的来源（agent 推荐 / 用户确认）+ 优先级依据（开发顺序 / MoSCoW / 依赖 / ADR 优先级） |
 
 ## 三、优先级排序逻辑
 
-1. **开发顺序（用户指定）**：阶段 0 → 阶段 1 → ... 按用户给出的开发顺序
+1. **开发顺序（用户指定）**：按用户口述的先后顺序（先做 A、再做 B）
 2. **业务优先级（MoSCoW）**：Must > Should > Could > Won't
 3. **依赖关系**：被依赖项优先于依赖项（如 T-001 yudao 初始化必须先于 T-002 ArchUnit）
 4. **架构约束**：关联 ADR 的 T-NNN 按 ADR 优先级排
@@ -49,17 +50,16 @@
 
 ```
 待办 → 已完成
-  ↓        ↑
-  └→ 移至下个Sprint ┘
 ```
 
 - **待办**：默认状态（含已纳入 Sprint 但未完成——执行态追踪由消费 Agent 负责，不在规范层体现）
 - **已完成**：通过 DoD 验收
-- **移至下个Sprint**：本 Sprint 未完成，滚入下个 Sprint 候选
+
+> Backlog 状态只有两态。Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改 priority，自然回到取用顺序前列），**不设「移至下个Sprint」状态**——该表述只出现在 Sprint 文件的「条目状态建议」里，不进 Backlog。
 
 ## 六、门禁
 
-详见 `using-agile/references/gate-protocol.md §二`（① 技术任务须关联 ADR；⑥ 过大条目拆分后估点）。
+详见 `using-agile/references/gate-protocol.md §二`（① 技术任务须关联 ADR）+ §三 异常表 ⑤（过大条目拆分后估点）。
 
 ## 七、YAML 接口契约（消费 Agent 读此文件）
 
@@ -72,12 +72,12 @@
 | version | ✅ | schema 版本，当前 "1.0" |
 | items[].id | ✅ | T-NNN 或 F-NNN |
 | items[].priority | ✅ | Must / Should / Could / Won't |
-| items[].status | ✅ | 待办 / 已完成 / 移至下个Sprint |
+| items[].status | ✅ | 待办 / 已完成 |
 | items[].adr_refs | — | 关联 ADR 编号列表 |
 
 **规则**：消费 Agent 统一读 YAML 获取排序和状态，不应解析 Markdown 表格。需要详情时按 id 回读 `.md` 中对应展开段落。
 
-**一致性校验**（每次读取 YAML 前执行）：
+**一致性校验**（双文件一致性检查的唯一权威口径；每次读取 YAML 前执行）：
 1. id 集合一致（.md 表格行与 .yaml items 无遗漏/多余）
 2. 条目数一致
 3. 同 id 的 priority/status 一致

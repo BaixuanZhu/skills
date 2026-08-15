@@ -20,9 +20,10 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
 - 周期: {YYYY-MM-DD} ~ {YYYY-MM-DD}
 - 目标: {一句 Sprint 目标}
 - 容量: 团队 {N} 人 × {D} 天 × {专注系数} ≈ {可用点} 点
+- 估点体系: 斐波那契（默认）/ 线性（仅纯研究型 Sprint，见 `references/sprint-rules.md §四`）
 - 来源: PRODUCT-BACKLOG.yaml（按 priority 顶部取条目）
 - 消费方: 本文件是单向交付，任务状态由消费 Agent 自行追踪
-- 执行结果: sprints/sprint-{序号:03d}-{日期}.done.yaml（由消费 Agent 生成）
+- 执行结果: 待回填（消费 Agent 执行后生成 .done.yaml，见下方「回填要求」段）
 
 ## 任务清单
 
@@ -30,6 +31,27 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
 - T-002 {标题} ({点})
 - F-001 {标题} ({点})
 ...
+
+## 回填要求（消费 Agent 必读 · 硬性义务）
+
+> 本段随 Sprint 文件一并交付给消费 Agent，用于**免人工提醒地**完成执行结果回填。
+
+执行本 Sprint 的消费 Agent 在任务执行完毕后，**必须**生成执行结果回填文件，否则规范层无法关闭本 Sprint、Backlog 状态无法同步：
+
+- **回填文件**：`sprints/sprint-{序号:03d}-{日期}.done.yaml`（与本文件同名、同目录）
+- **时机**：执行完毕后即回填（含部分完成——完成的进 completed，未完成的进 moved_next）
+- **格式**（字段定义见 `agile-docs/interfaces/sprint-schema.yaml`）：
+
+  ```yaml
+  completed:
+    - T-001
+    - F-002
+  moved_next:
+    - T-003
+  ```
+
+- **约束**：只能回填本文件「任务清单」中出现的 ID；清单内未出现在 completed/moved_next 的条目视为未执行，DoD 关闭时归入 moved_next
+- **回填即触发闭环**：回填文件放入 `sprints/` 后，用户调用入口 → 规范层据此做 DoD 检查 → 关闭 Sprint → 同步 Backlog
 
 ## 闭环检查（关闭前过，纯列表，不使用 checkbox）
 
@@ -56,9 +78,9 @@ Sprint 生命周期 3 环节（规划/DoD 关闭/关闭）的定义详见 `SKILL
 消费 Agent 执行完毕后，须在 `sprints/` 下生成 `.done.yaml` 文件，与 Sprint 文件同名。
 该文件是规范层 DoD 检查和状态同步的依据。
 
-### 格式与约束（单一权威源）
+### 格式与约束
 
-`.done.yaml` 的字段格式、命名、路径与约束以 `using-agile/references/sprint-schema.yaml`（初始化时复制到 `agile-docs/interfaces/`，消费 Agent 读取的接口契约）为**唯一权威定义**，本文件不重复维护。
+`.done.yaml` 的字段格式、命名、路径与约束见 `using-agile/references/sprint-schema.yaml`（初始化时复制到 `agile-docs/interfaces/`），本文件不重复。
 
 ### 使用流程
 
@@ -68,5 +90,5 @@ Sprint 生命周期 3 环节（规划/DoD 关闭/关闭）的定义详见 `SKILL
 用户将 .done 放入 sprints/ → 调用入口"关 Sprint"
     → agile-sprint 读 .done → DoD 检查 → 关文件
     → 入口下次检测到 .done + sprint 已关闭 → 路由到 agile-backlog 同步
-    → 同步后改后缀为 .done.processed，留痕
+    → 同步后改后缀为 .done.processed.yaml，留痕
 ```
