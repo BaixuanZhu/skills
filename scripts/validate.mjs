@@ -1,18 +1,22 @@
 #!/usr/bin/env node
 // validate.mjs —— 技能内容静态校验(只读,不写任何文件)
 //
-// 校验三块:
+// 校验四块:
 //   ① frontmatter 规范: name 匹配目录名 / description≤1024 / version semver /
 //      slug+displayName(SkillHub 发布前置) / dependencies 引用真实存在
-//   ② 引用完整性: SKILL.md 与 references 里引用的 references/NN-*.md 实际存在;
+//   ② 引用完整性: SKILL.md 与 references 里引用的 references/<file> 实际存在
+//      (完整文件名,含非编号名与 .yaml);缩写式 references/NN 的 NN 前缀须有对应文件;
 //      plugin-map.json 的 group 成员在 skills/ 存在且不重复映射
+//   ③ references 可达性(防孤儿/防漂移,源自敏捷套件历轮评估根因):
+//      孤儿 error  —— references/ 下文件在 skills/ 树内零引用(完整名或缩写,跨技能合法)
+//      可达 warning —— 从本技能 SKILL.md 沿指针图走不到的自身 reference
 //
 // 用法:
 //   node scripts/validate.mjs            # 有错误则退出码 1,否则 0
 //   node scripts/validate.mjs --json     # 输出 JSON(供 CI / 工具解析)
 
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, dirname } from 'node:path';
+import { join, relative, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
 
@@ -42,14 +46,14 @@ function readSkillFrontmatter(skillDir) {
   }
 }
 
-function listMdFiles(dir) {
+function listContentFiles(dir) {
   const out = [];
   const walk = (d) => {
     for (const entry of readdirSync(d)) {
       if (entry.startsWith('.')) continue;
       const full = join(d, entry);
       if (statSync(full).isDirectory()) walk(full);
-      else if (entry.endsWith('.md')) out.push(full);
+      else if (/\.(md|ya?ml)$/.test(entry)) out.push(full);
     }
   };
   walk(dir);
@@ -101,23 +105,96 @@ function collectAllRefFiles(skillDirs) {
     const refDir = join(SKILLS_DIR, name, 'references');
     if (!existsSync(refDir)) continue;
     for (const f of readdirSync(refDir)) {
-      if (f.endsWith('.md')) all.add(f);
+      if (/\.(md|ya?ml)$/.test(f)) all.add(f);
     }
   }
   return all;
 }
 
-function validateReferences(name, allRefFiles) {
+// 完整式引用: references/<file>(编号或非编号名,.md/.yaml)
+const FULL_REF = /references\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:md|ya?ml))/g;
+// 缩写式引用: references/NN(后面不能再跟文件名字符——那属于完整式)
+function abbrRefRegex(nn) {
+  return new RegExp(`references/${nn}(?![\\w.-])`);
+}
+
+function validateReferences(name, allFiles, allRefFiles) {
   const skillDir = join(SKILLS_DIR, name);
-  const refPattern = /references\/([0-9]{2}-[a-z0-9-]+\.md)/g;
-  for (const f of listMdFiles(skillDir)) {
-    const content = readFileSync(f, 'utf8');
+  const ownRefDir = join(skillDir, 'references');
+  const ownRefFiles = existsSync(ownRefDir)
+    ? readdirSync(ownRefDir).filter(f => /\.(md|ya?ml)$/.test(f)) : [];
+
+  for (const { path, content } of allFiles) {
+    if (!path.startsWith(skillDir)) continue;
+    // ① 完整式悬空
+    FULL_REF.lastIndex = 0;
     let m;
-    while ((m = refPattern.exec(content)) !== null) {
-      const ref = m[1];
-      if (!allRefFiles.has(ref)) {
-        err(name, `${relative(skillDir, f)} 引用不存在的 references/${ref}`);
+    while ((m = FULL_REF.exec(content)) !== null) {
+      if (!allRefFiles.has(m[1])) {
+        err(name, `${relative(ROOT, path)} 引用不存在的 references/${m[1]}`);
       }
+    }
+    // ② 缩写式错位: references/NN 在本技能无 NN- 前缀文件
+    const abbr = /references\/(\d{2})(?![\w.-])/g;
+    while ((m = abbr.exec(content)) !== null) {
+      if (!ownRefFiles.some(f => f.startsWith(`${m[1]}-`))) {
+        err(name, `${relative(ROOT, path)} 缩写引用 references/${m[1]} 在本技能 references/ 无对应文件(编号错位?)`);
+      }
+    }
+  }
+}
+
+// ── ③ references 可达性(孤儿 + SKILL.md 可达) ─────────────
+
+function validateReachability(name, allFiles) {
+  const refDir = join(SKILLS_DIR, name, 'references');
+  if (!existsSync(refDir)) return;
+  const refFiles = readdirSync(refDir).filter(f => /\.(md|ya?ml)$/.test(f));
+
+  // 孤儿: 完整文件名在 skills/ 树内(跨技能合法)出现过,或缩写 NN 被本技能文件引用
+  for (const f of refFiles) {
+    const nn = f.match(/^(\d{2})-/)?.[1];
+    const cited = allFiles.some(({ path, content }) => {
+      if (path === join(refDir, f)) return false; // 不算自引
+      if (content.includes(f)) return true;
+      // 缩写只在本技能内解析(其他技能的 references/99 指向它自己的文件)
+      return nn !== undefined && path.startsWith(join(SKILLS_DIR, name) + sep) && abbrRefRegex(nn).test(content);
+    });
+    if (!cited) {
+      err(name, `references/${f} 是孤儿: skills/ 树内零引用(agent 无法发现,内容不可达)`);
+    }
+  }
+
+  // SKILL.md 可达: 从 SKILL.md 沿指针图(完整式+缩写式)BFS,走不到的自身 reference 告警
+  const skillMd = allFiles.find(({ path }) => path === join(SKILLS_DIR, name, 'SKILL.md'));
+  if (!skillMd) return;
+  const edgesFor = (content) => {
+    const targets = new Set();
+    // 裸文件名式(不带 references/ 前缀,如 `04-monorepo-nesting.md`)
+    for (const f of refFiles) if (content.includes(f)) targets.add(f);
+    FULL_REF.lastIndex = 0;
+    let m;
+    while ((m = FULL_REF.exec(content)) !== null) {
+      if (refFiles.includes(m[1])) targets.add(m[1]);
+    }
+    const abbr = /references\/(\d{2})(?![\w.-])/g;
+    while ((m = abbr.exec(content)) !== null) {
+      for (const f of refFiles) if (f.startsWith(`${m[1]}-`)) targets.add(f);
+    }
+    return targets;
+  };
+  const visited = new Set();
+  const queue = [...edgesFor(skillMd.content)];
+  while (queue.length) {
+    const f = queue.shift();
+    if (visited.has(f)) continue;
+    visited.add(f);
+    const file = allFiles.find(({ path }) => path === join(refDir, f));
+    if (file) queue.push(...edgesFor(file.content));
+  }
+  for (const f of refFiles) {
+    if (!visited.has(f)) {
+      warn(name, `references/${f} 从本技能 SKILL.md 沿指针走不到(仅其他文件可达或纯孤儿)`);
     }
   }
 }
@@ -153,10 +230,13 @@ function main() {
   const skillDirs = readdirSync(SKILLS_DIR)
     .filter(d => !d.startsWith('.') && statSync(join(SKILLS_DIR, d)).isDirectory());
 
+  const allFiles = listContentFiles(SKILLS_DIR)
+    .map(p => ({ path: p, content: readFileSync(p, 'utf8') }));
   const allRefFiles = collectAllRefFiles(skillDirs);
   for (const name of skillDirs) {
     validateFrontmatter(name);
-    validateReferences(name, allRefFiles);
+    validateReferences(name, allFiles, allRefFiles);
+    validateReachability(name, allFiles);
   }
   validatePluginMap();
 
@@ -166,7 +246,7 @@ function main() {
     for (const w of warnings) console.log(`⚠ ${w}`);
     for (const e of errors) console.log(`✗ ${e}`);
     if (errors.length === 0) {
-      console.log(`✓ 校验通过: ${skillDirs.length} 个技能 frontmatter + 引用 + 映射均合规`);
+      console.log(`✓ 校验通过: ${skillDirs.length} 个技能 frontmatter + 引用 + 可达性 + 映射均合规`);
     } else {
       console.log(`\n共 ${errors.length} 个错误`);
     }
