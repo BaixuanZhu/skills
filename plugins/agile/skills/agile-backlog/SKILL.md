@@ -65,7 +65,7 @@ dependencies:
 
 3. **共识后落盘**：三决策点确认 → 进入 §3 产出；未确认不写 Backlog 文件。
 
-**变更快速响应**：已产出后遇「需求变了」，先按 `using-agile/references/change-matrix.md §二` 分级——L1 措辞就地改、L2 只重问受影响条目、L3 才走完整问询；禁止整层重访。
+**变更快速响应**：已产出后遇「需求变了」，先按 `using-agile/references/change-matrix.md §二` 分级——L1 措辞就地改、L2 只重问受影响条目、L3 才走完整问询；L1/L2 禁止整层重访。
 
 ## 3. 产出（分阶段，每阶段写完即停）
 

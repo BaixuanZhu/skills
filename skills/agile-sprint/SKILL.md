@@ -64,8 +64,8 @@ dependencies:
 - 写完停，问"是否关闭本 Sprint？"
 
 ### 环节 C：关闭
-- 将 Sprint 文件头"状态"改为"已关闭"
 - 在文件头追加行标注执行结果来源（.done.yaml 文件路径 或 "人工确认"）
+- 将 Sprint 文件头"状态"改为"已关闭"
 - 提示用户：同步到 Backlog 需调用入口（入口会检测 .done.yaml 后自动路由到 agile-backlog）
 
 ## 4. 写完即停（结构化审阅）

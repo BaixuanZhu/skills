@@ -95,7 +95,7 @@ version: 4.4.0
    - 改 DoD 模板 → 本入口（DoD 模板就是本技能生成的）
    - 同步 Sprint 执行结果到 Backlog → `agile-backlog`（检测 .done.yaml 文件后触发）
 4. **跨层变更按依赖顺序逐层路由**：如改 VISION 原则影响 Backlog 排序 → 先 agile-strategic 改 VISION，再回本入口做状态检测，再路由 agile-backlog 改标注（不要并行触发多个业务技能）
-5. **L2/L3 走增量问询**（`references/change-matrix.md §三`）：只重问受影响维度，已确认维度复用现有文档，不做整层重访。
+5. **L2 走增量问询、L3 走完整问询**（`references/change-matrix.md §二/§三`）：L2 只重问受影响维度，已确认维度复用现有文档；L3 走完整问询 + 变更传播评估，跨层按依赖顺序逐层路由。
 6. **底层变更做下游影响评估**（`references/change-matrix.md §四`）：如 Backlog 变更后评估 Sprint 是否需调整，作为审阅清单一项，由用户裁决是否触发下游重规划。
 7. **不重新生成全部 `agile-docs/` 内容**——只改受影响文件
 8. **ADR 走替代而非 in-place**（门禁 ②，详见 `references/gate-protocol.md`）

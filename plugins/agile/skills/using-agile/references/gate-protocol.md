@@ -34,7 +34,7 @@
 - 现有 ADR 无合适章节可关联 → 回 agile-strategic 阶段 B 补 ADR 后再回填；**禁止发明"待 ADR-NNN 确认"之类的占位关联**（占位会让门禁 ① 失去校验意义）。
 
 **禁止内容清单（写 ADR 即触发拦截）**：
-- 框架映射表（如 yudao RBAC 映射）→ 代码仓库 `docs/`
+- 框架映射表（如权限框架的 RBAC 角色映射）→ 代码仓库 `docs/`
 - 候选方案对比表 → 代码仓库 `docs/research/` 或删除
 - 详细实现说明 → 代码仓库 `docs/` 或代码注释
 - 安全要求细则 → `DOD.md` 或代码仓库 `SECURITY.md`
@@ -49,7 +49,7 @@
 |---|----------|----------|
 | ① | 无 `agile-docs/` 却请求开 Sprint / 写故事 | 由 using-agile 建目录骨架，再继续 |
 | ② | Backlog 为空（PRODUCT-BACKLOG.yaml 不存在或无条目）却要开 Sprint | 先引导创建至少 1 个条目，不创建空 Sprint |
-| ③ | 请求多 Sprint 并行 | 本模型仅一个 current Sprint；确需并行建议拆两个项目实例 |
+| ③ | 请求多 Sprint 并行 | 本模型仅一个活跃 Sprint；确需并行建议拆两个项目实例 |
 | ④ | Sprint 进行中大量加新需求 | 新需求先入 PRODUCT-BACKLOG 排序，下 Sprint 再纳入；仅用户正式中止重规划方可变更当前 Sprint |
 | ⑤ | 条目过大无法估点（史诗级） | 拆为多个 T-/F- 条目再估斐波那契点 |
 | ⑥ | DoD 未定义却要关闭/交付 Sprint | 先生成 DOD 逐条确认，再允许关闭 |
