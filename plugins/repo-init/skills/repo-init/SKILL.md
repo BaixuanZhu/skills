@@ -11,7 +11,7 @@ description: >-
   （生成 CLAUDE.md / .cursorrules / .windsurfrules / .workbuddy 记忆等）；纯一次性脚本（无协作维护价值）。
   触发方式：仅用户明示触发——用户说"生成/更新 AGENTS.md / init / 初始化或优化项目上下文 / 给 AI 写或改项目说明 / 让工具快速了解项目"时激活。
   本技能不自动监听每次对话、不在每次接手任务时主动检查；与 Claude Code /init 一致，须用户手动调用或明确要求才执行。
-version: 1.3.7
+version: 1.3.8
 slug: repo-init
 displayName: AGENTS.md Pro
 agent_created: true

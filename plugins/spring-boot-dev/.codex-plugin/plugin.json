@@ -1,6 +1,6 @@
 {
   "name": "spring-boot-dev",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Spring Boot 框架层开发助手——三层架构写法与注解隐性陷阱（事务失效、异步线程池、循环依赖等）。写 Controller/Service/配置时使用。",
   "author": {
     "name": "BaixuanZhu",
@@ -10,7 +10,14 @@
   "homepage": "https://github.com/BaixuanZhu/skills",
   "repository": "https://github.com/BaixuanZhu/skills",
   "license": "MIT",
-  "keywords": ["java", "spring-boot", "spring", "transactional", "validation", "async"],
+  "keywords": [
+    "java",
+    "spring-boot",
+    "spring",
+    "transactional",
+    "validation",
+    "async"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Spring Boot 开发助手",
@@ -18,7 +25,13 @@
     "longDescription": "编写 Spring Boot 三层架构（Controller/Service/Repository）代码，处理参数校验、全局异常、事务、异步、定时、事件、配置、自动装配问题，规避 @Transactional 自调用失效、@Async 默认线程池、循环依赖等注解隐性陷阱。",
     "developerName": "BaixuanZhu",
     "category": "Engineering",
-    "capabilities": ["Read", "Write"],
-    "defaultPrompt": ["写一个带参数校验和全局异常的 Controller", "排查 @Transactional 不生效的原因"]
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "写一个带参数校验和全局异常的 Controller",
+      "排查 @Transactional 不生效的原因"
+    ]
   }
 }

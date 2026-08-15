@@ -13,7 +13,7 @@ description: >-
   项目尚无任何认证框架时，先主动询问用户是否引入 Sa-Token 再开发。
   不适用于：已使用 Spring Security / Shiro 的项目（不建议迁移）、纯 JWT 自实现方案、非 Java 语言。
 agent_created: true
-version: 2.1.0
+version: 2.1.1
 slug: sa-token-dev
 displayName: Sa-Token 开发助手
 ---

@@ -18,7 +18,7 @@ description: >-
   Spring Boot 项目走 spring-boot-starter-test（自带 JUnit5+Mockito）。
   不适用：集成测试/E2E/冒烟测试（@SpringBootTest 全量上下文 / Testcontainers / REST Assured / WireMock）→ java-integration-test；
   性能测试、前端测试。
-version: "1.4.0"
+version: "1.4.1"
 last_verified: "2026-08-03"
 ---
 

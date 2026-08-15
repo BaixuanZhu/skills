@@ -11,7 +11,7 @@ description: >-
   直到 Blocker/Critical 清零才算交付。
   完成任意 Java 代码任务后建议激活本技能做交付前门禁。
   不适用：非 JVM 语言、纯前端、无 Maven/Gradle 的项目、DDL / 架构设计。
-version: "1.4.0"
+version: "1.5.0"
 last_verified: "2026-07-31"
 agent_created: true
 ---

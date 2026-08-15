@@ -20,7 +20,7 @@ description: >-
   Java 语言层（判空 / 集合 / 并发 / 异常日志）→ java-coding-guide-pro；
   单元测试 → java-unit-test；前端。
 agent_created: true
-version: 1.0.0
+version: 1.0.1
 slug: spring-boot-dev
 displayName: Spring Boot 开发助手
 ---

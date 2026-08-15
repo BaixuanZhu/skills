@@ -1,6 +1,6 @@
 {
   "name": "java-test",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Java 测试套件（2 技能合一）：单元测试规范对齐 + 集成测试（MockMvc/Testcontainers 替代 curl 仿真）。编写、评审、补全测试时使用。",
   "author": {
     "name": "BaixuanZhu",
@@ -10,7 +10,14 @@
   "homepage": "https://github.com/BaixuanZhu/skills",
   "repository": "https://github.com/BaixuanZhu/skills",
   "license": "MIT",
-  "keywords": ["java", "unit-test", "integration-test", "junit", "mockito", "testcontainers"],
+  "keywords": [
+    "java",
+    "unit-test",
+    "integration-test",
+    "junit",
+    "mockito",
+    "testcontainers"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Java 测试套件",
@@ -18,7 +25,13 @@
     "longDescription": "合并两个 Java 测试技能：java-unit-test（规范对齐——等价类/边界值/决策表/状态迁移 + JUnit 5 原生断言 + Mock 边界）与 java-integration-test（消灭 curl 仿真测试——@SpringBootTest/MockMvc/Testcontainers/REST Assured/WireMock）。",
     "developerName": "BaixuanZhu",
     "category": "Engineering",
-    "capabilities": ["Read", "Write"],
-    "defaultPrompt": ["帮我为这个 Service 方法写单元测试", "把这个 curl 接口测试改成集成测试"]
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "帮我为这个 Service 方法写单元测试",
+      "把这个 curl 接口测试改成集成测试"
+    ]
   }
 }

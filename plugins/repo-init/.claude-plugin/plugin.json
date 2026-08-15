@@ -1,6 +1,6 @@
 {
   "name": "repo-init",
-  "version": "1.3.7",
+  "version": "1.3.8",
   "description": "为项目生成或更新跨工具通用的 AGENTS.md 简报，让 Claude Code、Codex、Cursor 等 60+ AI 编码工具开箱即懂项目。新项目冷启动或既有说明过期时使用。",
   "author": {
     "name": "BaixuanZhu",
