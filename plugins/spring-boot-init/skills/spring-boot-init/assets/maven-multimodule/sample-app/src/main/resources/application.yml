@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: {{ARTIFACT_ID}}
+
+server:
+  port: 8080

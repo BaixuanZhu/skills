@@ -20,7 +20,7 @@ description: >-
   Java 语言层（判空 / 集合 / 并发 / 异常日志）→ java-coding-guide-pro；
   单元测试 → java-unit-test；前端。
 agent_created: true
-version: 1.0.1
+version: 1.0.2
 slug: spring-boot-dev
 displayName: Spring Boot 开发助手
 ---
@@ -29,7 +29,7 @@ displayName: Spring Boot 开发助手
 
 面向日常 Java 开发的 Spring Boot **框架层**编码助手。推荐 **3.5.x**（3.x 末线，2025-05 GA），**2.7.x 仍适用**（差异已注明），4.x 已 GA。采用**完全本地自包含**策略：所有知识沉淀于本地 `references/`，运行时不依赖任何外部文档站点。
 
-**只管框架层**：三层架构写法、配置、校验、全局异常、事务、异步、定时、事件、自动装配、SpringDoc。**不管** ORM（→ mybatis-plus-dev）、Java 语言层（→ java-coding-guide-pro）、单测（→ java-unit-test）、集成测试 / 冒烟 / E2E（→ java-integration-test）。认证鉴权：项目已用 Sa-Token → sa-token-dev；否则本技能提供 HttpSession / ThreadLocal 最小方案。
+**只管框架层**：三层架构写法、配置、校验、全局异常、事务、异步、定时、事件、自动装配、SpringDoc。**不管** 项目初始化 / 脚手架（→ spring-boot-init）、ORM（→ mybatis-plus-dev）、Java 语言层（→ java-coding-guide-pro）、单测（→ java-unit-test）、集成测试 / 冒烟 / E2E（→ java-integration-test）。认证鉴权：项目已用 Sa-Token → sa-token-dev；否则本技能提供 HttpSession / ThreadLocal 最小方案。
 
 ## 版本与命名空间（先判 SpringBoot 版本）
 

@@ -99,7 +99,7 @@
     },
     {
       "name": "spring-boot-dev",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": {
         "name": "BaixuanZhu",
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
@@ -114,6 +114,25 @@
         "transactional",
         "validation",
         "async"
+      ]
+    },
+    {
+      "name": "spring-boot-init",
+      "version": "1.0.0",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/spring-boot-init",
+      "description": "Spring Boot / Maven 项目初始化助手——内置 Maven 父子标准模板，复制+替换占位符即得，不手写 pom、零网络依赖。新建项目 / 搭脚手架 / 建父子工程时使用。",
+      "category": "engineering",
+      "keywords": [
+        "java",
+        "spring-boot",
+        "maven",
+        "scaffold",
+        "project-init",
+        "multimodule"
       ]
     },
     {

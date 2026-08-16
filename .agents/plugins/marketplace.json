@@ -80,7 +80,20 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Engineering",
-      "version": "1.0.1"
+      "version": "1.0.2"
+    },
+    {
+      "name": "spring-boot-init",
+      "source": {
+        "source": "local",
+        "path": "./plugins/spring-boot-init"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Engineering",
+      "version": "1.0.0"
     },
     {
       "name": "agile",
