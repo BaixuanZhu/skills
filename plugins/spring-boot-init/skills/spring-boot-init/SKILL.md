@@ -12,12 +12,13 @@ description: >-
   jacoco 覆盖、spotless 格式化、surefire / failsafe、compiler 显式 release、resources、
   source / javadoc / deploy 按需），版本全部收敛在根 pom，内置国内镜像加速下载；
   lombok 为全局公共依赖，hutool-bom 收敛、按模块按需引。
-  初始依赖按项目类型问询决定（Web API / 全栈 / 定时批处理 / 数据访问等精选组合），不默认堆依赖。
+  生成前引导式问询四检查点（模块划分 / Boot·JDK 版本 / 初始依赖 / 可选插件），
+  禁止静默默认；初始依赖按项目类型组合（Web API / 全栈 / 定时批处理 / 数据访问等），不默认堆。
   不适用（主动让位）：项目已存在后的框架层业务编码（Controller / Service / 配置 / 事务）→ spring-boot-dev；
   ORM CRUD → mybatis-plus-dev；认证鉴权 → sa-token-dev；纯 Java 语言层 → java-coding-guide-pro；单测 → java-unit-test。
-  核心铁律：一律复制内置模板，禁止手写 pom；占位符替换后 grep 必须零残留；JDK 与 Boot 版本必须匹配。
+  核心铁律：一律复制内置模板，禁止手写 pom；占位符替换后 grep 必须零残留；JDK 与 Boot 版本必须匹配；四检查点先问询后生成。
 agent_created: true
-version: 1.3.1
+version: 1.4.0
 slug: spring-boot-init
 displayName: Spring Boot 项目初始化
 ---
@@ -58,20 +59,29 @@ displayName: Spring Boot 项目初始化
 ## 生成流程（唯一路径：复制内置模板）
 
 1. **第 0 步探测**：空目录？单模块还是多模块？Boot / JDK 版本？
-2. **决策检查点**：C1~C3 逐项确认；用户未明确 → 用「默认推荐」，输出中标注"未确认，已用默认"。
+2. **问询（必做，引导式）**：按「决策检查点」**一轮问完** C1~C4，每项附默认推荐；用户逐项答复或一句"都按推荐"后才进入下一步。**禁止不问就静默采用默认。**
 3. **复制模板**：`cp -r <技能目录>/assets/maven-multimodule/ <目标目录>`。
 4. **替换占位符**：5 个占位符全目录文本替换（机械命令见 `references/01-template-usage.md`）。
 5. **按形态调整**：单模块 = 删 `sample-core` 及其全部引用；多模块 = 把 `sample-core` / `sample-app` 重命名为业务模块名并同步 `<modules>`。
 6. **初始依赖**：按 `references/02-dependencies.md` 问询项目类型后，往对应模块加组合。
 7. **自检交付**：`node <技能目录>/scripts/self-check.mjs <项目目录> --validate`（占位符残留 / 包路径 / Maven 结构三查，退出码 0 才算完成）；业务编码指引用户转 spring-boot-dev。
 
-## 决策检查点（生成前必须确认）
+## 决策检查点（生成前必须问询——引导式，禁止静默默认）
 
-| # | 触发 | 必须确认 | 选项差异 | 默认推荐 |
-|---|------|---------|---------|---------|
-| C1 | 模块划分 | 单模块形态还是多模块？各模块叫什么？ | **单模块**：父子结构只留 1 个 app 子模块<br>**多模块**：库模块 + 可执行模块按业务命名 | 明显单服务 → 单模块形态 |
-| C2 | 版本 | Boot / JDK？ | 见下表 | 3.5.x 最新 + JDK 21 |
-| C3 | 初始依赖 | 项目类型是什么？ | 按 `references/02-dependencies.md` 类型组合表 | 类型不明必问，无默认堆依赖 |
+**一轮问完**（示例话术，按上下文裁剪；用户逐项答复或一句"都按推荐"即完成）：
+
+> 初始化 Spring Boot 项目前确认 4 件事：
+> ① 模块划分：单模块（只一个 app）还是多模块（core + app…各叫什么）？
+> ② 版本：Boot 3.5.x + JDK 21（推荐）/ 存量 2.7.x / 4.x（JDK 25 优先），选哪个？
+> ③ 初始依赖：什么类型的服务？（Web API / 全栈 / 定时批处理 / 消息 / 数据访问）
+> ④ 可选插件：要集成测试（failsafe）或发布库模块（source / javadoc）吗？默认都不启用
+
+| # | 必问 | 选项差异 | 默认推荐（用户明示"按推荐"才用） |
+|---|------|---------|---------|
+| C1 | 单模块形态还是多模块？各模块叫什么？ | **单模块**：父子结构只留 1 个 app 子模块<br>**多模块**：库模块 + 可执行模块按业务命名 | 明显单服务 → 单模块形态 |
+| C2 | Boot / JDK？ | 见下表 | 3.5.x 最新 + JDK 21 |
+| C3 | 项目类型（初始依赖）？ | 按 `references/02-dependencies.md` 类型组合表 | 空骨架（web + test 基线） |
+| C4 | 可选构建插件？ | failsafe（集成测试）/ source + javadoc（发布库模块），模块内裸声明即启用 | 都不启用 |
 
 **Boot ↔ JDK 兼容表**（口径与 spring-boot-dev 一致）：
 
@@ -90,6 +100,7 @@ displayName: Spring Boot 项目初始化
 5. **repackage 只归可执行模块**：`spring-boot-maven-plugin` 只在 app 模块启用；库模块保持普通 jar。
 6. **依赖必须真实**：starter 坐标只从 `references/02-dependencies.md` 组合表取；表外依赖先查 Maven Central 确认存在，禁止凭记忆拼 `spring-boot-starter-xxx`。
 7. **JDK ↔ Boot 匹配**（C2 表）；只建骨架不写业务代码（→ spring-boot-dev）。
+8. **引导式问询**：C1~C4 未问询用户前禁止生成；用户逐项答复或明示「按推荐」后才开始。问询一轮问完（含默认推荐），禁止拆成多轮逐项追问。
 
 ## 自检与交付
 
