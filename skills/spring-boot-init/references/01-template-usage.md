@@ -17,7 +17,7 @@ assets/maven-multimodule/
         └── main/resources/application.yml
 ```
 
-根 pom 已收敛：`dependencyManagement`（spring-boot-dependencies BOM `{{BOOT_VERSION}}` + `{{GROUP_ID}}:sample-core` 模块间依赖）+ `pluginManagement`（enforcer / flatten / jacoco / spotless / compiler / surefire / failsafe / resources / spring-boot / source / javadoc / deploy，版本全在 `<properties>`）+ 公共依赖 lombok（optional）。**子模块因此一律不带版本号。**
+根 pom 已收敛：`dependencyManagement`（spring-boot-dependencies BOM `{{BOOT_VERSION}}` + `{{GROUP_ID}}:sample-core` 模块间依赖 + `cn.hutool:hutool-all`）+ `pluginManagement`（enforcer / flatten / jacoco / spotless / compiler / surefire / failsafe / resources / spring-boot / source / javadoc / deploy，版本全在 `<properties>`）+ 公共依赖 lombok（optional，继承全部子模块）+ 内置阿里云 `repositories` / `pluginRepositories`（国内下载加速）。**子模块因此一律不带版本号。**
 
 ## 插件清单（激活 / 按需两档）
 
@@ -108,4 +108,5 @@ rm -rf sample-core
 | 子模块 / `<parent>` 写死具体版本号 | 工程版本统一 `${revision}`（根 `<revision>` 属性），一处定义全工程生效 |
 | 用 maven-release-plugin 管发版 | release plugin 不兼容 CI-friendly 版本——用 `${revision}` + flatten：`mvn deploy -Drevision=1.0.0` |
 | 发布前逐个手改 pom 版本号 | `-Drevision=1.0.0` 一次覆盖根 + 全部子模块 |
+| 公司内网 / 海外环境担心内置阿里云镜像拖慢构建 | 用户级 settings.xml 的 mirror 优先级更高、自动接管；确无需要也可整段删 `<repositories>` / `<pluginRepositories>` |
 | 改根 GAV 后子模块 `<parent>` 不同步 | 根 GAV 与子模块 `<parent>` 三行必须一致（默认 `relativePath ../pom.xml` 正确，勿画蛇添足） |
