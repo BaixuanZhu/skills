@@ -17,7 +17,7 @@ description: >-
   ORM CRUD → mybatis-plus-dev；认证鉴权 → sa-token-dev；纯 Java 语言层 → java-coding-guide-pro；单测 → java-unit-test。
   核心铁律：一律复制内置模板，禁止手写 pom；占位符替换后 grep 必须零残留；JDK 与 Boot 版本必须匹配。
 agent_created: true
-version: 1.2.1
+version: 1.3.0
 slug: spring-boot-init
 displayName: Spring Boot 项目初始化
 ---
@@ -34,7 +34,7 @@ displayName: Spring Boot 项目初始化
 
 | 探测项 | 方法 | 判定 |
 |---|---|---|
-| 是否已有项目 | 当前目录是否已有 `pom.xml` / `build.gradle` | 已有 Maven 工程 → 走「加子模块」（`references/01-template-usage.md` 增删模块节）；空目录 → 整体初始化 |
+| 是否已有项目 | 当前目录是否已有 `pom.xml` / `build.gradle` | 已有 Maven 工程 → **本技能不适用**（加模块 / 加依赖直接参照工程内现有模块的结构即可）；空目录 → 整体初始化 |
 | 子模块划分 | 问用户或看需求（单服务 → 单模块形态；分层 / 多可部署单元 → 多模块） | 决定 `<modules>` 数量与命名（不预设 common/web 等固定划分） |
 | Boot / JDK 版本 | 用户指定；否则按 C2 表默认 | 决定 `{{BOOT_VERSION}}` / `{{JAVA_VERSION}}` |
 
@@ -50,6 +50,7 @@ displayName: Spring Boot 项目初始化
 | 认证 / 鉴权 / token | **不适用** → sa-token-dev |
 | 纯 Java 语言层（判空 / 集合 / 并发） | **不适用** → java-coding-guide-pro |
 | 单元测试 | **不适用** → java-unit-test |
+| 给已有工程加子模块 / 加依赖 | **不适用** → 参照工程内现有模块结构即可，无需本技能 |
 | Gradle / 其他构建工具 | 首版不覆盖 → 告知用户本技能只出 Maven 骨架 |
 
 > **检查点**：判定为「不适用」→ 告知用户该任务属哪个技能，建议切换。
@@ -62,7 +63,7 @@ displayName: Spring Boot 项目初始化
 4. **替换占位符**：5 个占位符全目录文本替换（机械命令见 `references/01-template-usage.md`）。
 5. **按形态调整**：单模块 = 删 `sample-core` 及其全部引用；多模块 = 把 `sample-core` / `sample-app` 重命名为业务模块名并同步 `<modules>`。
 6. **初始依赖**：按 `references/02-dependencies.md` 问询项目类型后，往对应模块加组合。
-7. **自检交付**：`grep -rn '{{'` 零残留 + `mvn -q validate` 通过；业务编码指引用户转 spring-boot-dev。
+7. **自检交付**：`bash <技能目录>/scripts/self-check.sh <项目目录> --validate`（占位符残留 / 包路径 / Maven 结构三查，退出码 0 才算完成）；业务编码指引用户转 spring-boot-dev。
 
 ## 决策检查点（生成前必须确认）
 
@@ -78,7 +79,7 @@ displayName: Spring Boot 项目初始化
 |---|---|---|---|
 | 2.7.x | 8 / 11 | `javax.*` | 仅存量维护，新项目不选 |
 | **3.5.x** | 17 / 21 | `jakarta.*` | **默认推荐**（3.x 末线） |
-| 4.x | 17+ | `jakarta.*` | 已 GA，需用户明示才用 |
+| 4.x | 21 / 25（最低 17） | `jakarta.*` | 已 GA，需用户明示才用 |
 
 ## 核心强约束（Agent 必须遵守）
 
@@ -93,9 +94,9 @@ displayName: Spring Boot 项目初始化
 ## 自检与交付
 
 ```bash
-grep -rn '{{' .            # 必须无输出（占位符零残留）
-grep -rn 'com\.example' .  # 必须无输出（包目录已挪到 groupId 路径）
-mvn -q validate            # 结构合法（Windows Git Bash 用 mvn.cmd）
+bash <技能目录>/scripts/self-check.sh <项目目录> --validate
 ```
+
+脚本三查：①`{{...}}` 占位符零残留；②`com.example` 包路径零残留；③`mvn -q validate`（Windows Git Bash 下自动选 `mvn.cmd`）。退出码 0 = 通过。
 
 - 通过后交付：**只产出骨架**；业务编码指引用户转 `spring-boot-dev`，需要项目说明书（AGENTS.md）转 `repo-init`。

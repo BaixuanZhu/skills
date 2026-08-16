@@ -73,10 +73,8 @@ mv sample-core order-core
 mv sample-app  order-app
 sed -i 's/sample-core/order-core/g; s/sample-app/order-app/g' pom.xml order-core/pom.xml order-app/pom.xml
 
-# 5. 自检（必须全过）
-grep -rn '{{' .            # 无输出
-grep -rn 'com\.example' .  # 无输出
-mvn -q validate            # BUILD SUCCESS（Windows Git Bash 用 mvn.cmd，输出重定向到日志再读）
+# 5. 自检（必须退出码 0）
+bash <技能目录>/scripts/self-check.sh . --validate
 ```
 
 步骤 4 的 sed 同时改掉根 `<modules>`、根 `dependencyManagement` 的模块坐标、app 模块的 `<parent>` 外依赖坐标——三处引用与目录名一次对齐。
@@ -89,7 +87,9 @@ rm -rf sample-core
 
 再手动删三处引用：①根 pom `<modules>` 的 `<module>sample-core</module>` 行；②根 pom `dependencyManagement` 的 `{{GROUP_ID}}:sample-core` 条目；③sample-app pom 里对 `sample-core` 的 `<dependency>`。然后照常执行步骤 2~5（步骤 4 只重命名 sample-app）。
 
-## 增删模块（已有工程加子模块同此法）
+## 多模块扩展（初始化时增删模块）
+
+多模块项目在步骤 4 基础上继续塑形（**只服务本次初始化**——工程建成后再加模块，直接参照工程内现有模块结构即可，不回本技能）：
 
 - **增库模块**：`cp -r sample-core <新名>` → 改其 pom 的 `<artifactId>`/`<name>` → 根 `<modules>` 加行 → 需要被其他模块依赖时，根 `dependencyManagement` 加 `{{GROUP_ID}}:<新名>` 条目。
 - **增可执行模块**：`cp -r sample-app <新名>` → 同上三步（自带 repackage 与主类，记得把包目录与主类也挪到对应路径）。
