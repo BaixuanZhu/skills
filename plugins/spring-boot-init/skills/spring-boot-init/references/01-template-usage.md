@@ -74,7 +74,7 @@ mv sample-app  order-app
 sed -i 's/sample-core/order-core/g; s/sample-app/order-app/g' pom.xml order-core/pom.xml order-app/pom.xml
 
 # 5. 自检（必须退出码 0）
-bash <技能目录>/scripts/self-check.sh . --validate
+node <技能目录>/scripts/self-check.mjs . --validate
 ```
 
 步骤 4 的 sed 同时改掉根 `<modules>`、根 `dependencyManagement` 的模块坐标、app 模块的 `<parent>` 外依赖坐标——三处引用与目录名一次对齐。

@@ -17,7 +17,7 @@ description: >-
   ORM CRUD → mybatis-plus-dev；认证鉴权 → sa-token-dev；纯 Java 语言层 → java-coding-guide-pro；单测 → java-unit-test。
   核心铁律：一律复制内置模板，禁止手写 pom；占位符替换后 grep 必须零残留；JDK 与 Boot 版本必须匹配。
 agent_created: true
-version: 1.3.0
+version: 1.3.1
 slug: spring-boot-init
 displayName: Spring Boot 项目初始化
 ---
@@ -63,7 +63,7 @@ displayName: Spring Boot 项目初始化
 4. **替换占位符**：5 个占位符全目录文本替换（机械命令见 `references/01-template-usage.md`）。
 5. **按形态调整**：单模块 = 删 `sample-core` 及其全部引用；多模块 = 把 `sample-core` / `sample-app` 重命名为业务模块名并同步 `<modules>`。
 6. **初始依赖**：按 `references/02-dependencies.md` 问询项目类型后，往对应模块加组合。
-7. **自检交付**：`bash <技能目录>/scripts/self-check.sh <项目目录> --validate`（占位符残留 / 包路径 / Maven 结构三查，退出码 0 才算完成）；业务编码指引用户转 spring-boot-dev。
+7. **自检交付**：`node <技能目录>/scripts/self-check.mjs <项目目录> --validate`（占位符残留 / 包路径 / Maven 结构三查，退出码 0 才算完成）；业务编码指引用户转 spring-boot-dev。
 
 ## 决策检查点（生成前必须确认）
 
@@ -79,7 +79,7 @@ displayName: Spring Boot 项目初始化
 |---|---|---|---|
 | 2.7.x | 8 / 11 | `javax.*` | 仅存量维护，新项目不选 |
 | **3.5.x** | 17 / 21 | `jakarta.*` | **默认推荐**（3.x 末线） |
-| 4.x | 21 / 25（最低 17） | `jakarta.*` | 已 GA，需用户明示才用 |
+| 4.x | 25 优先（21 可，最低 17） | `jakarta.*` | 已 GA，需用户明示才用 |
 
 ## 核心强约束（Agent 必须遵守）
 
@@ -94,9 +94,9 @@ displayName: Spring Boot 项目初始化
 ## 自检与交付
 
 ```bash
-bash <技能目录>/scripts/self-check.sh <项目目录> --validate
+node <技能目录>/scripts/self-check.mjs <项目目录> --validate
 ```
 
-脚本三查：①`{{...}}` 占位符零残留；②`com.example` 包路径零残留；③`mvn -q validate`（Windows Git Bash 下自动选 `mvn.cmd`）。退出码 0 = 通过。
+脚本三查：①`{{...}}` 占位符零残留；②`com.example` 包路径零残留；③`mvn -q validate`（Windows 下自动调 `mvn.cmd`）。零依赖、跨平台，退出码 0 = 通过。
 
 - 通过后交付：**只产出骨架**；业务编码指引用户转 `spring-boot-dev`，需要项目说明书（AGENTS.md）转 `repo-init`。
