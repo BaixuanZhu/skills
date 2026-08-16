@@ -1,22 +1,14 @@
 ---
 name: spring-boot-init
 description: >-
-  Spring Boot / Maven 项目初始化（脚手架）助手——用内置的 Maven 父子标准模板生成项目骨架：
-  agent 用 init.mjs 一条命令从模板生成（复制 / 替换占位符 / 挪包目录 / 模块塑形一体），
-  绝不从零手写 pom.xml / 主类，也不依赖在线初始化器（零网络，完全本地自包含）。
-  在以下场景使用：用户要新建 / 初始化 / 搭建 Spring Boot、Maven 项目；用户说"建个 Spring Boot 项目 /
-  搭脚手架 / 建父子工程 / 多模块 / 微服务骨架 / init 一个 Java 项目"；或 agent 正准备从零手写 pom、
-  手动创建目录结构与主启动类时。
-  默认产物：根 pom（packaging=pom + <modules>）+ 子模块——单模块项目 = 只保留一个 app 子模块，
-  多模块 = 复制样板模块按业务增删。模板常用插件齐备（enforcer 环境门禁、flatten CI-friendly 版本、
-  jacoco 覆盖、spotless 格式化、surefire / failsafe、compiler 显式 release、resources、
-  source / javadoc / deploy 按需），版本全部收敛在根 pom，内置国内镜像加速下载；
-  lombok 为全局公共依赖，hutool-bom 收敛、按模块按需引。
-  生成前引导式问询四检查点（模块划分 / Boot·JDK 版本 / 初始依赖 / 可选插件），
-  禁止静默默认；初始依赖按项目类型组合（Web API / 全栈 / 定时批处理 / 数据访问等），不默认堆。
-  不适用（主动让位）：项目已存在后的框架层业务编码（Controller / Service / 配置 / 事务）→ spring-boot-dev；
-  ORM CRUD → mybatis-plus-dev；认证鉴权 → sa-token-dev；纯 Java 语言层 → java-coding-guide-pro；单测 → java-unit-test。
-  核心铁律：一律经 init.mjs 从内置模板生成，禁止手写 pom；占位符零残留；JDK 与 Boot 版本必须匹配；四检查点先问询后生成。
+  Spring Boot / Maven 项目初始化（脚手架）助手——用内置 Maven 父子标准模板，经 scripts/init.mjs
+  一条命令生成项目骨架（复制模板 / 替换占位符 / 挪包目录 / 模块塑形一体），零网络、完全本地自包含；
+  禁止从零手写 pom.xml 与主启动类，也不依赖在线初始化器。在以下场景使用：用户要新建 / 初始化 / 搭建
+  Spring Boot、Maven 项目；用户说"建个 Spring Boot 项目 / 搭脚手架 / 建父子工程 / 多模块 /
+  微服务骨架 / init 一个 Java 项目"；或 agent 正准备从零手写 pom、手动创建目录结构与主启动类时。
+  默认产物：根 pom（packaging=pom + <modules>）+ 子模块，单模块（只留一个 app 子模块）与多模块
+  一套模板覆盖；生成前引导式问询四检查点，禁止静默默认。项目已存在后的业务编码、ORM、认证鉴权、
+  单元测试不适用——由 spring-boot-dev / mybatis-plus-dev / sa-token-dev / java-unit-test 承接。
 agent_created: true
 version: 1.4.1
 slug: spring-boot-init
