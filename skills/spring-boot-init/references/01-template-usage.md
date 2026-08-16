@@ -1,6 +1,6 @@
 # 01 · 模板使用（assets/maven-multimodule 机械用法）
 
-本文是 `assets/maven-multimodule/` 的唯一使用说明：结构、占位符、机械步骤、单模块形态、增删模块、自检。命令均为 Git Bash。
+本文是 `assets/maven-multimodule/` 的唯一使用说明：结构、插件清单、占位符、init.mjs 生成、多模块扩展、自检。生成与自检均为零依赖 node 脚本，跨平台。
 
 ## 模板结构
 
@@ -34,7 +34,7 @@ assets/maven-multimodule/
 
 质量门禁插件（PMD / SpotBugs）不内置——归 `java-coding-quality` 技能；容器化用 `mvn spring-boot:build-image`（spring-boot 插件内建）。
 
-## 占位符（5 个，只出现在 pom.xml 与 application.yml 文本中）
+## 占位符（5 个，只出现在 pom.xml 与 application.yml 文本中，全部由 init.mjs 替换，勿手改）
 
 | 占位符 | 含义 | 示例值 |
 |---|---|---|
@@ -44,64 +44,47 @@ assets/maven-multimodule/
 | `{{JAVA_VERSION}}` | JDK 版本（compiler `release` + enforcer 下限） | `21` |
 | `{{BOOT_VERSION}}` | Spring Boot 版本（BOM import） | `3.5.16` |
 
-## 机械步骤（整体初始化）
+## 初始化（scripts/init.mjs 一条命令）
 
 ```bash
-# 1. 复制模板到目标目录
-cp -r <技能目录>/assets/maven-multimodule/. /path/to/order-service/
-cd /path/to/order-service
+# 多模块（库模块 + 可执行模块，名字来自 C1 问询）
+node <技能目录>/scripts/init.mjs /path/to/order-service \
+    --group com.acme.order --artifact order-service \
+    --boot 3.5.16 --jdk 21 --core order-core --app order-app
 
-# 2. 替换占位符（以 com.acme.order / order-service / JDK 21 / Boot 3.5.x 为例）
-#    含占位符的文件固定 4 个，显式列出——Git Bash 下 grep|xargs 管道会丢文件名路径分隔符，勿用
-sed -i \
-    -e 's/{{GROUP_ID}}/com.acme.order/g' \
-    -e 's/{{ARTIFACT_ID}}/order-service/g' \
-    -e 's/{{VERSION}}/1.0.0-SNAPSHOT/g' \
-    -e 's/{{JAVA_VERSION}}/21/g' \
-    -e 's/{{BOOT_VERSION}}/3.5.16/g' \
-    pom.xml sample-core/pom.xml sample-app/pom.xml sample-app/src/main/resources/application.yml
-
-# 3. 挪包目录并改 package 行（com/example → groupId 路径）
-cd sample-app/src/main/java
-mkdir -p com/acme/order
-mv com/example/Application.java com/acme/order/
-sed -i 's/^package com\.example;/package com.acme.order;/' com/acme/order/Application.java
-cd -
-
-# 4. 重命名样板模块为业务模块名（多模块形态；单模块形态见下节）
-mv sample-core order-core
-mv sample-app  order-app
-sed -i 's/sample-core/order-core/g; s/sample-app/order-app/g' pom.xml order-core/pom.xml order-app/pom.xml
-
-# 5. 自检（必须退出码 0）
-node <技能目录>/scripts/self-check.mjs . --validate
+# 单模块（--single 裁掉库模块及其全部引用）
+node <技能目录>/scripts/init.mjs /path/to/ping-api \
+    --group cn.demo.ping --artifact ping-api --single
 ```
 
-步骤 4 的 sed 同时改掉根 `<modules>`、根 `dependencyManagement` 的模块坐标、app 模块的 `<parent>` 外依赖坐标——三处引用与目录名一次对齐。
+| 参数 | 必填 | 默认 | 说明 |
+|---|---|---|---|
+| `--group` | ✓ | — | groupId，同时决定 Java 包路径 |
+| `--artifact` | ✓ | — | 根 artifactId（项目名）+ `spring.application.name` |
+| `--boot` / `--jdk` | | `3.5.16` / `21` | C2 问询结果（兼容表见 SKILL.md） |
+| `--version` | | `1.0.0-SNAPSHOT` | 写入根 `<revision>` 属性 |
+| `--core` / `--app` | | `<artifact>-core` / `<artifact>-app` | 模块名（C1 问询结果） |
+| `--single` | | — | 单模块形态：删库模块及其三处引用（`<modules>` 行 / dependencyManagement 条目 / app 依赖） |
 
-## 单模块形态（只留一个可执行模块）
+脚本内部依次：①复制模板 → ②单模块裁剪（`--single`）→ ③替换 5 个占位符 → ④模块重命名（目录与 pom 引用一次对齐）→ ⑤`com/example` 挪到 groupId 包路径并改 package 行 → ⑥残留终检（`{{...}}` / `com.example`；先剥离声明的 groupId 再匹配，`com.example0.dev` 这类前缀不误伤）。目标目录已有 `pom.xml` 时拒绝执行。
 
-```bash
-rm -rf sample-core
-```
+生成后跑 `node <技能目录>/scripts/self-check.mjs <目标目录> --validate` 收尾（详见 SKILL.md「自检与交付」）。
 
-再手动删三处引用：①根 pom `<modules>` 的 `<module>sample-core</module>` 行；②根 pom `dependencyManagement` 的 `{{GROUP_ID}}:sample-core` 条目；③sample-app pom 里对 `sample-core` 的 `<dependency>`。然后照常执行步骤 2~5（步骤 4 只重命名 sample-app）。
+## 多模块扩展（初始化时增加第 3+ 个模块）
 
-## 多模块扩展（初始化时增删模块）
+`init.mjs` 产出 core + app 两个模块；更多模块在生成后手动补（**只服务本次初始化**——工程建成后再加模块，直接参照工程内现有模块结构即可，不回本技能）：
 
-多模块项目在步骤 4 基础上继续塑形（**只服务本次初始化**——工程建成后再加模块，直接参照工程内现有模块结构即可，不回本技能）：
-
-- **增库模块**：`cp -r sample-core <新名>` → 改其 pom 的 `<artifactId>`/`<name>` → 根 `<modules>` 加行 → 需要被其他模块依赖时，根 `dependencyManagement` 加 `{{GROUP_ID}}:<新名>` 条目。
-- **增可执行模块**：`cp -r sample-app <新名>` → 同上三步（自带 repackage 与主类，记得把包目录与主类也挪到对应路径）。
+- **增库模块**：`cp -r order-core <新名>` → 改其 pom 的 `<artifactId>`/`<name>` → 根 `<modules>` 加行 → 需要被其他模块依赖时，根 `dependencyManagement` 加 `<groupId>:<新名>` 条目。
+- **增可执行模块**：`cp -r order-app <新名>` → 同上三步（自带 repackage 与主类，把包目录与主类挪到不冲突的路径）。
 - **删模块**：`rm -rf <目录>` + 根 `<modules>` 去行 + 其他模块对它的 `<dependency>` 删除。
 
 ## ✗ 禁止 → ✓ 推荐
 
 | ✗ 禁止 | ✓ 推荐 |
 |---|---|
-| 从零手写 pom / 目录 / 主类 | 一律 `cp` 模板 + 替换占位符 |
-| 替换后残留 `{{...}}` | `grep -rn '{{'` 零残留才算完成 |
-| `<modules>` 与目录名不一致 | 增删 / 重命名后同步根 pom `<modules>`（用步骤 4 的 sed 一次对齐） |
+| 从零手写 pom / 目录 / 主类 | 一律 `scripts/init.mjs` 生成 |
+| 生成后残留 `{{...}}` / `com.example` | `init.mjs` 内置终检 + `self-check.mjs --validate` 复核，双零残留才算完成 |
+| `<modules>` 与目录名不一致 | `init.mjs` 重命名时自动对齐；手动增删模块后同步根 `<modules>` |
 | 库模块（如 core）启用 spring-boot repackage | repackage 只在可执行 app 模块；库模块保持普通 jar |
 | 子模块依赖写 `<version>` | 版本一律由根 `dependencyManagement` / BOM 收敛 |
 | 需要资源过滤时直接开 filtering 用 `${...}` | 先配 `@..@` 分隔符（`${}` 与 Spring 占位符冲突）；模板默认不开过滤 |

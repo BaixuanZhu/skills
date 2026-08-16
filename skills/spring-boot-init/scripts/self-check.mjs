@@ -39,6 +39,14 @@ const rel = (f) => relative(target, f).split(sep).join('/');
 let fail = 0;
 
 // ①② 前两查：逐文件逐行找残留（输出 文件:行号:内容 供定位）
+// com.example 检查前先剥离根 pom 声明的 groupId（com.example0.dev 之类前缀不误伤）
+const rootGroup = (() => {
+  const pom = files.find((f) => relative(target, f) === 'pom.xml');
+  if (!pom) return '';
+  const m = readFileSync(pom, 'utf8').match(/<groupId>([^<]+)<\/groupId>/);
+  return m ? m[1] : '';
+})();
+
 for (const { re, bad, ok } of [
   { re: /\{\{/, bad: '✗ 占位符 {{...}} 有残留（见上）', ok: '✓ 占位符零残留' },
   { re: /com\.example/, bad: '✗ 仍有 com.example 残留（包目录未挪到 groupId 路径）', ok: '✓ 包路径无 com.example 残留' },
@@ -47,6 +55,7 @@ for (const { re, bad, ok } of [
   for (const f of files) {
     let text;
     try { text = readFileSync(f, 'utf8'); } catch { continue; }
+    if (rootGroup) text = text.split(rootGroup).join('');
     text.split(/\r?\n/).forEach((line, i) => {
       if (re.test(line)) hits.push(`${rel(f)}:${i + 1}:${line.trim()}`);
     });

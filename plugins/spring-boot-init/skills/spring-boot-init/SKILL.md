@@ -2,8 +2,8 @@
 name: spring-boot-init
 description: >-
   Spring Boot / Maven 项目初始化（脚手架）助手——用内置的 Maven 父子标准模板生成项目骨架：
-  agent 复制模板、替换占位符、按需增删子模块即得，绝不从零手写 pom.xml / 主类，
-  也不依赖在线初始化器（零网络，完全本地自包含）。
+  agent 用 init.mjs 一条命令从模板生成（复制 / 替换占位符 / 挪包目录 / 模块塑形一体），
+  绝不从零手写 pom.xml / 主类，也不依赖在线初始化器（零网络，完全本地自包含）。
   在以下场景使用：用户要新建 / 初始化 / 搭建 Spring Boot、Maven 项目；用户说"建个 Spring Boot 项目 /
   搭脚手架 / 建父子工程 / 多模块 / 微服务骨架 / init 一个 Java 项目"；或 agent 正准备从零手写 pom、
   手动创建目录结构与主启动类时。
@@ -16,7 +16,7 @@ description: >-
   禁止静默默认；初始依赖按项目类型组合（Web API / 全栈 / 定时批处理 / 数据访问等），不默认堆。
   不适用（主动让位）：项目已存在后的框架层业务编码（Controller / Service / 配置 / 事务）→ spring-boot-dev；
   ORM CRUD → mybatis-plus-dev；认证鉴权 → sa-token-dev；纯 Java 语言层 → java-coding-guide-pro；单测 → java-unit-test。
-  核心铁律：一律复制内置模板，禁止手写 pom；占位符替换后 grep 必须零残留；JDK 与 Boot 版本必须匹配；四检查点先问询后生成。
+  核心铁律：一律经 init.mjs 从内置模板生成，禁止手写 pom；占位符零残留；JDK 与 Boot 版本必须匹配；四检查点先问询后生成。
 agent_created: true
 version: 1.4.0
 slug: spring-boot-init
@@ -25,9 +25,9 @@ displayName: Spring Boot 项目初始化
 
 # Spring Boot 项目初始化（脚手架）
 
-面向"新建 Java 项目"场景的**初始化助手**。核心理念：**不从零手写脚手架——复制内置 Maven 父子标准模板。** 零网络依赖，完全本地自包含。补上 `spring-boot-dev`（只管写代码、不管建项目）的空白。
+面向"新建 Java 项目"场景的**初始化助手**。核心理念：**不从零手写脚手架——`scripts/init.mjs` 从内置 Maven 父子标准模板一键生成。** 零网络依赖，完全本地自包含。补上 `spring-boot-dev`（只管写代码、不管建项目）的空白。
 
-- **默认产物**：根 pom（`packaging=pom` + `<modules>`）+ 子模块。**单模块项目 = 只保留一个 app 子模块**；多模块 = 复制样板模块按业务增删。一套模板覆盖全部场景，不分叉。
+- **默认产物**：根 pom（`packaging=pom` + `<modules>`）+ 子模块。**单模块项目 = 只保留一个 app 子模块**（`--single`）；多模块 = 库模块 + 可执行模块（`--core` / `--app` 命名）。一套模板覆盖全部场景，不分叉。
 - **模板** `assets/maven-multimodule/`：常用插件齐备——enforcer（环境门禁）、flatten（`${revision}` CI-friendly 版本）、jacoco（覆盖率）、spotless（格式化）默认激活；failsafe / source / javadoc / deploy 已管理、按需启用。版本全部收敛在根 pom。lombok 为根公共依赖（全局生效）；hutool-bom 在根 import（core / json / http 等按模块按需引，`references/02-dependencies.md`）；内置阿里云镜像加速（用户级 settings.xml 镜像优先生效）。
 - **初始依赖**：按项目类型问询决定（`references/02-dependencies.md`），不默认堆。
 
@@ -37,14 +37,14 @@ displayName: Spring Boot 项目初始化
 |---|---|---|
 | 是否已有项目 | 当前目录是否已有 `pom.xml` / `build.gradle` | 已有 Maven 工程 → **本技能不适用**（加模块 / 加依赖直接参照工程内现有模块的结构即可）；空目录 → 整体初始化 |
 | 子模块划分 | 问用户或看需求（单服务 → 单模块形态；分层 / 多可部署单元 → 多模块） | 决定 `<modules>` 数量与命名（不预设 common/web 等固定划分） |
-| Boot / JDK 版本 | 用户指定；否则按 C2 表默认 | 决定 `{{BOOT_VERSION}}` / `{{JAVA_VERSION}}` |
+| Boot / JDK 版本 | 用户指定；否则按 C2 表默认 | 作为 init.mjs 的 `--boot` / `--jdk` 参数 |
 
 ## 何时使用本技能
 
 | 信号 | 判定 |
 |------|------|
 | 用户说"新建 / 初始化 / 搭建 Spring Boot、Maven 项目""建父子工程""多模块""微服务骨架""init 一个 Java 项目" | 激活 |
-| agent 正准备从零手写 `pom.xml` / 目录结构 / 主启动类 | 激活（改为复制模板） |
+| agent 正准备从零手写 `pom.xml` / 目录结构 / 主启动类 | 激活（改为 init.mjs 生成） |
 | 要给新项目定初始依赖 | 激活 → `references/02-dependencies.md` |
 | 项目已存在，要写 Controller / Service / 事务 / 配置 | **不适用** → spring-boot-dev |
 | ORM CRUD / Mapper / 分页 | **不适用** → mybatis-plus-dev |
@@ -56,15 +56,13 @@ displayName: Spring Boot 项目初始化
 
 > **检查点**：判定为「不适用」→ 告知用户该任务属哪个技能，建议切换。
 
-## 生成流程（唯一路径：复制内置模板）
+## 生成流程（唯一路径：init.mjs 生成）
 
 1. **第 0 步探测**：空目录？单模块还是多模块？Boot / JDK 版本？
 2. **问询（必做，引导式）**：按「决策检查点」**一轮问完** C1~C4，每项附默认推荐；用户逐项答复或一句"都按推荐"后才进入下一步。**禁止不问就静默采用默认。**
-3. **复制模板**：`cp -r <技能目录>/assets/maven-multimodule/ <目标目录>`。
-4. **替换占位符**：5 个占位符全目录文本替换（机械命令见 `references/01-template-usage.md`）。
-5. **按形态调整**：单模块 = 删 `sample-core` 及其全部引用；多模块 = 把 `sample-core` / `sample-app` 重命名为业务模块名并同步 `<modules>`。
-6. **初始依赖**：按 `references/02-dependencies.md` 问询项目类型后，往对应模块加组合。
-7. **自检交付**：`node <技能目录>/scripts/self-check.mjs <项目目录> --validate`（占位符残留 / 包路径 / Maven 结构三查，退出码 0 才算完成）；业务编码指引用户转 spring-boot-dev。
+3. **生成骨架**：`node <技能目录>/scripts/init.mjs <目标目录> --group <g> --artifact <a> --boot <b> --jdk <j> [--core 名 --app 名 | --single]`——复制模板、替换占位符、挪包目录、模块塑形一步完成（参数与内部步骤见 `references/01-template-usage.md`）。
+4. **初始依赖**：按 `references/02-dependencies.md` 组合表往对应模块加；C4 勾选的可选插件（failsafe / source / javadoc）在模块内裸声明。
+5. **自检交付**：`node <技能目录>/scripts/self-check.mjs <项目目录> --validate`（占位符残留 / 包路径 / Maven 结构三查，退出码 0 才算完成）；业务编码指引用户转 spring-boot-dev。
 
 ## 决策检查点（生成前必须问询——引导式，禁止静默默认）
 
@@ -93,14 +91,13 @@ displayName: Spring Boot 项目初始化
 
 ## 核心强约束（Agent 必须遵守）
 
-1. **一律复制内置模板** `assets/maven-multimodule/`，禁止从零手写 `pom.xml` / 主类 / 目录结构。
+1. **一律经 `scripts/init.mjs` 生成**：禁止从零手写 `pom.xml` / 主类 / 目录结构，也不得手跑 sed / mv 复刻脚本步骤。
 2. **聚合规则**：根 pom 必须 `packaging=pom` + `<modules>` 列全子模块；子模块 `<parent>` 指根（GAV 三行一致）；`<modules>` 与实际目录名一一对应。
 3. **版本收敛**：插件版本只在根 `pluginManagement`，依赖版本只在根 `dependencyManagement`（spring-boot-dependencies BOM import）；工程版本统一 `${revision}`（flatten 在 install/deploy 时解析，发布/改版用 `-Drevision=1.0.0` 一次覆盖全工程）；子模块一律不带版本。
-4. **占位符零残留**：替换完成后 `grep -rn '{{'` 必须无输出，否则不算完成。
+4. **占位符零残留**：`init.mjs` 生成时终检 + `self-check.mjs` 复核（含 `com.example` 包路径），任一报残留即失败。
 5. **repackage 只归可执行模块**：`spring-boot-maven-plugin` 只在 app 模块启用；库模块保持普通 jar。
 6. **依赖必须真实**：starter 坐标只从 `references/02-dependencies.md` 组合表取；表外依赖先查 Maven Central 确认存在，禁止凭记忆拼 `spring-boot-starter-xxx`。
 7. **JDK ↔ Boot 匹配**（C2 表）；只建骨架不写业务代码（→ spring-boot-dev）。
-8. **引导式问询**：C1~C4 未问询用户前禁止生成；用户逐项答复或明示「按推荐」后才开始。问询一轮问完（含默认推荐），禁止拆成多轮逐项追问。
 
 ## 自检与交付
 
