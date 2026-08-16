@@ -48,6 +48,13 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-bom</artifactId>
+                <version>${hutool.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
                 <groupId>{{GROUP_ID}}</groupId>
                 <artifactId>sample-core</artifactId>
                 <version>${revision}</version>

@@ -17,7 +17,7 @@ assets/maven-multimodule/
         └── main/resources/application.yml
 ```
 
-根 pom 已收敛：`dependencyManagement`（spring-boot-dependencies BOM `{{BOOT_VERSION}}` + `{{GROUP_ID}}:sample-core` 模块间依赖 + `cn.hutool:hutool-all`）+ `pluginManagement`（enforcer / flatten / jacoco / spotless / compiler / surefire / failsafe / resources / spring-boot / source / javadoc / deploy，版本全在 `<properties>`）+ 公共依赖 lombok（optional，继承全部子模块）+ 内置阿里云 `repositories` / `pluginRepositories`（国内下载加速）。**子模块因此一律不带版本号。**
+根 pom 已收敛：`dependencyManagement`（spring-boot-dependencies BOM `{{BOOT_VERSION}}` + `cn.hutool:hutool-bom` import（hutool 模块按需引）+ `hutool-all` 全量条目 + `{{GROUP_ID}}:sample-core` 模块间依赖）+ `pluginManagement`（enforcer / flatten / jacoco / spotless / compiler / surefire / failsafe / resources / spring-boot / source / javadoc / deploy，版本全在 `<properties>`）+ 公共依赖 lombok（optional，继承全部子模块）+ 内置阿里云 `repositories` / `pluginRepositories`（国内下载加速）。**子模块因此一律不带版本号。**
 
 ## 插件清单（激活 / 按需两档）
 

@@ -11,7 +11,7 @@
 
 ## 项目类型 → 依赖组合
 
-坐标全部不带 `<version>`（Boot 系由根 BOM 收敛，hutool 由根 dependencyManagement 收敛）。加到承载对应职责的模块：Web 类进可执行模块（sample-app），数据访问通常进业务模块。
+坐标全部不带 `<version>`（Boot 系由根 BOM、hutool 由根 hutool-bom 收敛，其余由根 dependencyManagement）。加到承载对应职责的模块：Web 类进可执行模块（sample-app），数据访问通常进业务模块。
 
 | 项目类型 | 初始依赖（groupId 省略 `org.springframework.boot`） | 说明 |
 |---|---|---|
@@ -24,7 +24,7 @@
 | 数据访问 · MyBatis-Plus | **不在本表** → mybatis-plus-dev | 本技能只搭骨架不含 ORM；初始化完成后由该技能接手引入 |
 | 缓存 / 会话 | `starter-data-redis` + `starter-cache` | |
 | 安全 | `starter-security`；国内更常用 Sa-Token → sa-token-dev | security 与 Sa-Token 二选一，勿叠加 |
-| 通用工具库 | `cn.hutool:hutool-all` | StrUtil / CollUtil / DateUtil 等；根已管版本，按需引 |
+| 通用工具库 | `cn.hutool:hutool-core` / `hutool-json` / `hutool-http` / `hutool-crypto` / `hutool-cache` 等按模块引；全量用 `hutool-all` | 根 hutool-bom 已纳管版本（hutool-all 由根直管），均无版本引用 |
 | 测试 / 工具 | 模板已含 `starter-test` + lombok（根收敛） | 无需再加 |
 
 写法示例（无版本）：
