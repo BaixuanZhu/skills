@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "prompt": "帮我建一个简单的 Spring Boot Web API 项目，叫 order-service，包名 com.acme.order，用 Spring Boot 3.5 + JDK 21，单模块就行。",
+    "expected": "问询确认后，经 init.mjs 生成单模块骨架（根 pom packaging=pom + 只留一个 app 子模块），补 starter-validation + starter-actuator，占位符零残留，包路径 com/acme/order"
+  },
+  {
+    "id": 2,
+    "prompt": "我要搭一个多模块 Spring Boot 项目，一个 core 库模块 + 一个 api 可执行模块，版本你按推荐来。",
+    "expected": "问询确认后，多模块骨架：core（普通 jar）+ app/api（repackage 可执行），根 pom <modules> 列全，子模块 <parent> 指根，版本收敛在根 pom"
+  },
+  {
+    "id": 3,
+    "prompt": "公司老项目是 Spring Boot 2.7 + JDK 8，现在要新建一个定时任务项目，需要引入定时调度能力，怎么搭？",
+    "expected": "识别 Boot 2.7 线（javax.* 命名空间），JDK 8；C3 问询判定为定时任务类型，加 starter-quartz（web 可选），不做 3.5 的默认推荐"
+  },
+  {
+    "id": 4,
+    "prompt": "我的 Spring Boot 项目已经建好了，现在想给它加一个用户管理的 Controller 和 Service。",
+    "expected": "判定为「不适用」——已有项目写业务代码，主动让位给 spring-boot-dev，不启动脚手架流程"
+  }
+]
