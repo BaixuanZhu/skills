@@ -10,7 +10,7 @@ description: >-
   一套模板覆盖；生成前引导式问询四检查点，禁止静默默认。项目已存在后的业务编码、ORM、认证鉴权、
   单元测试不适用——由 spring-boot-dev / mybatis-plus-dev / sa-token-dev / java-unit-test 承接。
 agent_created: true
-version: 1.5.0
+version: 1.5.1
 slug: spring-boot-init
 displayName: Spring Boot 项目初始化
 ---
@@ -28,7 +28,7 @@ displayName: Spring Boot 项目初始化
 | 探测项 | 方法 | 判定 |
 |---|---|---|
 | 是否已有项目 | 当前目录是否已有 `pom.xml` / `build.gradle` | 已有 Maven 工程 → **本技能不适用**（加模块 / 加依赖直接参照工程内现有模块的结构即可）；空目录 → 整体初始化 |
-| 子模块划分 | 问用户或看需求（单服务 → 单模块形态；分层 / 多可部署单元 → 多模块） | 决定 `<modules>` 数量与命名（不预设 common/web 等固定划分） |
+| 子模块划分 | 预判（单服务 → 单模块形态；分层 / 多可部署单元 → 多模块），最终以 C1 问询为准 | 决定 `<modules>` 数量与命名（不预设 common/web 等固定划分） |
 | Boot / JDK 版本 | 用户指定；否则按 C2 表默认 | 作为 init.mjs 的 `--boot` / `--jdk` 参数 |
 
 ## 何时使用本技能
@@ -54,21 +54,21 @@ displayName: Spring Boot 项目初始化
 2. **问询（必做，引导式）**：按「决策检查点」**一轮问完** C1~C4，每项附默认推荐；用户逐项答复或一句"都按推荐"后才进入下一步。**禁止不问就静默采用默认。**
 3. **生成骨架**：`node <技能目录>/scripts/init.mjs <目标目录> --group <g> --artifact <a> --boot <b> --jdk <j> [--core 名 --app 名 | --single]`——复制模板、替换占位符、挪包目录、模块塑形一步完成（参数与内部步骤见 `references/01-template-usage.md`）。
 4. **初始依赖**：按 `references/02-dependencies.md` 组合表往对应模块加；C4 勾选的可选插件（failsafe / source / javadoc）在模块内裸声明。
-5. **自检交付**：`node <技能目录>/scripts/self-check.mjs <项目目录> --validate`（占位符残留 / 包路径 / 模块目录 / 主类 / package 一致性 / Maven 结构六查，退出码 0 才算完成）；业务编码指引用户转 spring-boot-dev。
+5. **自检交付**：`node <技能目录>/scripts/self-check.mjs <项目目录> --validate`（六查，明细见「自检与交付」；退出码 0 才算完成）。
 
 ## 决策检查点（生成前必须问询——引导式，禁止静默默认）
 
 **一轮问完**（示例话术，按上下文裁剪；用户逐项答复或一句"都按推荐"即完成）：
 
 > 初始化 Spring Boot 项目前确认 4 件事：
-> ① 模块划分：单模块（只一个 app）还是多模块（core + app…各叫什么）？
+> ① 工程坐标 + 模块划分：包名和项目名（如 org.acme.order / order-service）？单模块（只一个 app）还是多模块（core + app…各叫什么）？
 > ② 版本：Boot 3.5.x + JDK 21（推荐）/ 存量 2.7.x / 4.x（JDK 25 优先），选哪个？
 > ③ 初始依赖：什么类型的服务？（Web API / 全栈 / 定时批处理 / 消息 / 数据访问）
 > ④ 可选插件：要集成测试（failsafe）或发布库模块（source / javadoc）吗？默认都不启用
 
 | # | 必问 | 选项差异 | 默认推荐（用户明示"按推荐"才用） |
 |---|------|---------|---------|
-| C1 | 单模块形态还是多模块？各模块叫什么？ | **单模块**：父子结构只留 1 个 app 子模块<br>**多模块**：库模块 + 可执行模块按业务命名 | 明显单服务 → 单模块形态 |
+| C1 | 工程坐标 + 模块划分：包名（groupId）/ 项目名（artifactId）？单模块还是多模块？各模块叫什么？ | **单模块**：父子结构只留 1 个 app 子模块<br>**多模块**：库模块 + 可执行模块按业务命名 | 项目名可取目录名；**包名无安全默认**——按组织域名反转 + 项目名（如 `org.acme.order`）给建议、用户拍板；明显单服务 → 单模块形态 |
 | C2 | Boot / JDK？ | 见下表 | 3.5.x 最新 + JDK 21 |
 | C3 | 项目类型（初始依赖）？ | 按 `references/02-dependencies.md` 类型组合表 | 空骨架（web + test 基线） |
 | C4 | 可选构建插件？ | failsafe（集成测试）/ source + javadoc（发布库模块），模块内裸声明即启用 | 都不启用 |
@@ -89,7 +89,7 @@ displayName: Spring Boot 项目初始化
 4. **占位符零残留**：`init.mjs` 生成时终检 + `self-check.mjs` 复核（含 `com.example` 包路径），任一报残留即失败。
 5. **repackage 只归可执行模块**：`spring-boot-maven-plugin` 只在 app 模块启用；库模块保持普通 jar。
 6. **依赖必须真实**：starter 坐标只从 `references/02-dependencies.md` 组合表取；表外依赖先查 Maven Central 确认存在，禁止凭记忆拼 `spring-boot-starter-xxx`。
-7. **JDK ↔ Boot 匹配**（C2 表）；只建骨架不写业务代码（→ spring-boot-dev）。
+7. **JDK ↔ Boot 匹配**：按 C2 兼容表选，禁止越线组合（如 Boot 4.x 配 JDK 11）。
 
 ## 自检与交付
 

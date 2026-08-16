@@ -80,16 +80,11 @@ node <技能目录>/scripts/init.mjs /path/to/ping-api \
 
 ## ✗ 禁止 → ✓ 推荐
 
+唯一生成路径、聚合规则、版本收敛、占位符零残留、repackage 归属等核心规则见 SKILL.md「核心强约束」，此处只列强约束未覆盖的模板细节：
+
 | ✗ 禁止 | ✓ 推荐 |
 |---|---|
-| 从零手写 pom / 目录 / 主类 | 一律 `scripts/init.mjs` 生成 |
-| 生成后残留 `{{...}}` / `com.example` | `init.mjs` 内置终检 + `self-check.mjs --validate` 复核，双零残留才算完成 |
-| `<modules>` 与目录名不一致 | `init.mjs` 重命名时自动对齐；手动增删模块后同步根 `<modules>` |
-| 库模块（如 core）启用 spring-boot repackage | repackage 只在可执行 app 模块；库模块保持普通 jar |
-| 子模块依赖写 `<version>` | 版本一律由根 `dependencyManagement` / BOM 收敛 |
 | 需要资源过滤时直接开 filtering 用 `${...}` | 先配 `@..@` 分隔符（`${}` 与 Spring 占位符冲突）；模板默认不开过滤 |
-| 子模块 / `<parent>` 写死具体版本号 | 工程版本统一 `${revision}`（根 `<revision>` 属性），一处定义全工程生效 |
 | 用 maven-release-plugin 管发版 | release plugin 不兼容 CI-friendly 版本——用 `${revision}` + flatten：`mvn deploy -Drevision=1.0.0` |
-| 发布前逐个手改 pom 版本号 | `-Drevision=1.0.0` 一次覆盖根 + 全部子模块 |
 | 公司内网 / 海外环境担心内置阿里云镜像拖慢构建 | 用户级 settings.xml 的 mirror 优先级更高、自动接管；确无需要也可整段删 `<repositories>` / `<pluginRepositories>` |
-| 改根 GAV 后子模块 `<parent>` 不同步 | 根 GAV 与子模块 `<parent>` 三行必须一致（默认 `relativePath ../pom.xml` 正确，勿画蛇添足） |
+| 手动增删模块后漏改根 `<modules>` / 改根 GAV 后 `<parent>` 不同步 | 同步根 `<modules>`（自检第三查会拦孤儿 / 缺失）；根 GAV 与子模块 `<parent>` 三行一致（默认 `relativePath ../pom.xml` 正确，勿画蛇添足） |
