@@ -7,7 +7,7 @@
 ```
 assets/maven-multimodule/
 ├── pom.xml                        # 聚合根：packaging=pom + <modules> + 插件/依赖版本收敛
-├── .gitignore                     # target/、IDE 文件、.flattened-pom.xml
+├── gitignore.txt                  # 生成时改名为 .gitignore（target/、IDE 文件、.flattened-pom.xml）——模板内非点名存放（发布平台只收白名单扩展名与常规文件名）
 ├── sample-core/
 │   └── pom.xml                    # 基础库模块（普通 jar，无 repackage）
 └── sample-app/                    # 可执行模块（spring-boot-maven-plugin repackage）

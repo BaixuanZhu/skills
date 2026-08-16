@@ -144,6 +144,7 @@ if (visibleEntries.length) {
 }
 mkdirSync(target, { recursive: true });
 cpSync(TEMPLATE, target, { recursive: true });
+renameSync(join(target, 'gitignore.txt'), join(target, '.gitignore')); // 模板内非点名存放（发布平台只收白名单扩展名），落地即改回 .gitignore
 
 const rootPom = join(target, 'pom.xml');
 const corePom = join(target, 'sample-core', 'pom.xml');
