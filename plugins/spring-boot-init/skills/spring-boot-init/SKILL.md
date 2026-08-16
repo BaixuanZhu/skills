@@ -10,7 +10,7 @@ description: >-
   一套模板覆盖；生成前引导式问询四检查点，禁止静默默认。项目已存在后的业务编码、ORM、认证鉴权、
   单元测试不适用——由 spring-boot-dev / mybatis-plus-dev / sa-token-dev / java-unit-test 承接。
 agent_created: true
-version: 1.4.1
+version: 1.5.0
 slug: spring-boot-init
 displayName: Spring Boot 项目初始化
 ---
@@ -54,7 +54,7 @@ displayName: Spring Boot 项目初始化
 2. **问询（必做，引导式）**：按「决策检查点」**一轮问完** C1~C4，每项附默认推荐；用户逐项答复或一句"都按推荐"后才进入下一步。**禁止不问就静默采用默认。**
 3. **生成骨架**：`node <技能目录>/scripts/init.mjs <目标目录> --group <g> --artifact <a> --boot <b> --jdk <j> [--core 名 --app 名 | --single]`——复制模板、替换占位符、挪包目录、模块塑形一步完成（参数与内部步骤见 `references/01-template-usage.md`）。
 4. **初始依赖**：按 `references/02-dependencies.md` 组合表往对应模块加；C4 勾选的可选插件（failsafe / source / javadoc）在模块内裸声明。
-5. **自检交付**：`node <技能目录>/scripts/self-check.mjs <项目目录> --validate`（占位符残留 / 包路径 / 模块目录 / Maven 结构四查，退出码 0 才算完成）；业务编码指引用户转 spring-boot-dev。
+5. **自检交付**：`node <技能目录>/scripts/self-check.mjs <项目目录> --validate`（占位符残留 / 包路径 / 模块目录 / 主类 / package 一致性 / Maven 结构六查，退出码 0 才算完成）；业务编码指引用户转 spring-boot-dev。
 
 ## 决策检查点（生成前必须问询——引导式，禁止静默默认）
 
@@ -97,6 +97,6 @@ displayName: Spring Boot 项目初始化
 node <技能目录>/scripts/self-check.mjs <项目目录> --validate
 ```
 
-脚本四查：①`{{...}}` 占位符零残留；②`com.example` 包路径零残留；③模块目录与根 `<modules>` 一一对应（防孤儿 / 缺失）；④`mvn -q validate`（Windows 下自动调 `mvn.cmd`）。零依赖、跨平台，退出码 0 = 通过。
+脚本六查：①`{{...}}` 占位符零残留；②`com.example` 包路径零残留；③模块目录与根 `<modules>` 一一对应（防孤儿 / 缺失）；④可执行模块存在且含主类（`static void main`）；⑤package 声明与目录路径一致；⑥`mvn -q validate`（Windows 下自动调 `mvn.cmd`）。零依赖、跨平台，退出码 0 = 通过。
 
 - 通过后交付：**只产出骨架**；业务编码指引用户转 `spring-boot-dev`，需要项目说明书（AGENTS.md）转 `repo-init`。

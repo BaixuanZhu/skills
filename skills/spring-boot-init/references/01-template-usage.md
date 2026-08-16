@@ -59,14 +59,14 @@ node <技能目录>/scripts/init.mjs /path/to/ping-api \
 
 | 参数 | 必填 | 默认 | 说明 |
 |---|---|---|---|
-| `--group` | ✓ | — | groupId，同时决定 Java 包路径 |
+| `--group` | ✓ | — | groupId，同时决定 Java 包路径（须为合法 Java 包名，非法直接拒绝） |
 | `--artifact` | ✓ | — | 根 artifactId（项目名）+ `spring.application.name` |
 | `--boot` / `--jdk` | | `3.5.16` / `21` | C2 问询结果（兼容表见 SKILL.md） |
 | `--version` | | `1.0.0-SNAPSHOT` | 写入根 `<revision>` 属性 |
 | `--core` / `--app` | | `<artifact>-core` / `<artifact>-app` | 模块名（C1 问询结果） |
 | `--single` | | — | 单模块形态：删库模块目录及其三处引用（`<modules>` 行 / dependencyManagement 条目 / app 依赖） |
 
-脚本内部依次：①复制模板 → ②单模块裁剪（`--single` 删库模块的三处 pom 引用）→ ③替换 5 个占位符 → ④模块重命名（目录与 pom 引用一次对齐；`--single` 时改为删除 sample-core 目录）→ ⑤`com/example` 挪到 groupId 包路径并改 package 行 → ⑥残留终检（`{{...}}` / `com.example`；先剥离声明的 groupId 再匹配，`com.example0.dev` 这类前缀不误伤）。目标目录已有 `pom.xml` 时拒绝执行。
+脚本内部依次：①复制模板 → ②单模块裁剪（`--single` 删库模块的三处 pom 引用）→ ③模块重命名（sample-core/app 的 pom 引用与目录一次对齐；函数替换不回扫，名字互含子串也不腐蚀——**必须在占位符展开之前**，用户值写入后不再经过任何替换）→ ④替换 5 个占位符（最后一步文本改写）→ ⑤主类暂存到 java 根、清掉整个模板包壳 `com/`、再挪到 groupId 包路径改 package 行（目标包嵌在 `com/example` 之下也不误删）→ ⑥残留终检（`{{...}}` / `com.example` / 主类存在 / 顶层目录恰为模块集；仅当 groupId 自身包含 com.example 时先剥离再匹配，不遮蔽真残留）。groupId（含 Java 保留字包段、过长）/ artifact / 模块名（尾点、同名、仅大小写不同、撞 sample-core/sample-app 保留名、pom.xml、target 构建输出目录、与根 artifactId 同名）/ 版本号非法、`--single` 与 `--core` 同给、未知参数或多余位置参数、目标已存在文件而非目录、**目标目录非空（隐藏条目如 .git 不影响）**时直接拒绝。
 
 生成后跑 `node <技能目录>/scripts/self-check.mjs <目标目录> --validate` 收尾（详见 SKILL.md「自检与交付」）。
 
