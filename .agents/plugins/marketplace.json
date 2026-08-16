@@ -93,7 +93,7 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Engineering",
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "name": "agile",

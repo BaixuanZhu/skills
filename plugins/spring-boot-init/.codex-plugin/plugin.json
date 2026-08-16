@@ -1,6 +1,6 @@
 {
   "name": "spring-boot-init",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Spring Boot / Maven 项目初始化助手——内置 Maven 父子标准模板，复制+替换占位符即得，不手写 pom、零网络依赖。新建项目 / 搭脚手架 / 建父子工程时使用。",
   "author": {
     "name": "BaixuanZhu",
@@ -10,7 +10,14 @@
   "homepage": "https://github.com/BaixuanZhu/skills",
   "repository": "https://github.com/BaixuanZhu/skills",
   "license": "MIT",
-  "keywords": ["java", "spring-boot", "maven", "scaffold", "project-init", "multimodule"],
+  "keywords": [
+    "java",
+    "spring-boot",
+    "maven",
+    "scaffold",
+    "project-init",
+    "multimodule"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Spring Boot 项目初始化",
@@ -18,7 +25,10 @@
     "longDescription": "用内置 Maven 父子标准模板初始化 Spring Boot / Maven 项目：复制模板、替换占位符、按需增删子模块即得完整骨架（常用插件齐备、版本收敛在根），不从零手写 pom，也不依赖在线初始化器。单模块项目 = 只保留一个 app 子模块，多模块 = 复制样板模块按业务增删。",
     "developerName": "BaixuanZhu",
     "category": "Engineering",
-    "capabilities": ["Read", "Write"],
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
     "defaultPrompt": [
       "建一个 Spring Boot 父子工程",
       "初始化一个多模块 Maven 项目"

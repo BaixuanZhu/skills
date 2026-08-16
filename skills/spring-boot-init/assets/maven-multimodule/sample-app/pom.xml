@@ -7,12 +7,17 @@
     <parent>
         <groupId>{{GROUP_ID}}</groupId>
         <artifactId>{{ARTIFACT_ID}}</artifactId>
-        <version>{{VERSION}}</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>sample-app</artifactId>
     <name>sample-app</name>
     <description>可执行应用模块（spring-boot repackage）</description>
+
+    <properties>
+        <!-- 可执行 fat jar 不进仓库，deploy 只留给库模块 -->
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
 
     <dependencies>
         <dependency>

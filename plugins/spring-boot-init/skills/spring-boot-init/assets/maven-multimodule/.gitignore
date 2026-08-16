@@ -5,3 +5,4 @@ target/
 *.iml
 .vscode/
 .DS_Store
+.flattened-pom.xml

@@ -7,7 +7,7 @@
 ```
 assets/maven-multimodule/
 ├── pom.xml                        # 聚合根：packaging=pom + <modules> + 插件/依赖版本收敛
-├── .gitignore                     # target/、IDE 文件
+├── .gitignore                     # target/、IDE 文件、.flattened-pom.xml
 ├── sample-core/
 │   └── pom.xml                    # 基础库模块（普通 jar，无 repackage）
 └── sample-app/                    # 可执行模块（spring-boot-maven-plugin repackage）
@@ -17,7 +17,22 @@ assets/maven-multimodule/
         └── main/resources/application.yml
 ```
 
-根 pom 已收敛：`dependencyManagement`（spring-boot-dependencies BOM `{{BOOT_VERSION}}` + `{{GROUP_ID}}:sample-core` 模块间依赖）+ `pluginManagement`（compiler 显式 `release` / surefire / spring-boot / resources / spotless，版本全在 `<properties>`）+ 公共依赖 lombok（optional）。**子模块因此一律不带版本号。**
+根 pom 已收敛：`dependencyManagement`（spring-boot-dependencies BOM `{{BOOT_VERSION}}` + `{{GROUP_ID}}:sample-core` 模块间依赖）+ `pluginManagement`（enforcer / flatten / jacoco / spotless / compiler / surefire / failsafe / resources / spring-boot / source / javadoc / deploy，版本全在 `<properties>`）+ 公共依赖 lombok（optional）。**子模块因此一律不带版本号。**
+
+## 插件清单（激活 / 按需两档）
+
+| 档 | 插件 | 作用 |
+|---|---|---|
+| 激活（根 pom 声明，随构建自动跑） | maven-enforcer-plugin | 环境门禁：Maven ≥ 3.6.3、JDK ≥ `${java.version}`，不达标即构建失败 |
+| 激活 | flatten-maven-plugin | CI-friendly 版本：install/deploy 用解析了 `${revision}` 的 `.flattened-pom.xml`（已 gitignore） |
+| 激活 | jacoco-maven-plugin | 覆盖率：prepare-agent + report（`target/site/jacoco/`） |
+| 激活 | spotless-maven-plugin | 格式化：`mvn spotless:apply`（google-java-format AOSP） |
+| 按需（已管版本+配置，子模块裸声明即用） | maven-failsafe-plugin | 集成测试（`*IT` 类，verify 阶段）——加集成测试的模块声明它 |
+| 按需 | maven-source-plugin | 发布库模块时附源码 jar |
+| 按需 | maven-javadoc-plugin | 发布库模块时附 javadoc jar |
+| 按需 | maven-deploy-plugin | app 模块已设 `maven.deploy.skip=true`（fat jar 不进仓库），deploy 只留给库模块 |
+
+质量门禁插件（PMD / SpotBugs）不内置——归 `java-coding-quality` 技能；容器化用 `mvn spring-boot:build-image`（spring-boot 插件内建）。
 
 ## 占位符（5 个，只出现在 pom.xml 与 application.yml 文本中）
 
@@ -25,9 +40,9 @@ assets/maven-multimodule/
 |---|---|---|
 | `{{GROUP_ID}}` | groupId，同时决定 Java 包路径 | `com.acme.order` |
 | `{{ARTIFACT_ID}}` | 根 artifactId（项目名）+ `spring.application.name` | `order-service` |
-| `{{VERSION}}` | 项目版本 | `1.0.0-SNAPSHOT` |
-| `{{JAVA_VERSION}}` | JDK 版本（compiler `release`） | `21` |
-| `{{BOOT_VERSION}}` | Spring Boot 版本（BOM import） | `3.5.4` |
+| `{{VERSION}}` | 项目版本——写入根 `<revision>` 属性，全工程 GAV / `<parent>` 坐标引用 `${revision}` | `1.0.0-SNAPSHOT` |
+| `{{JAVA_VERSION}}` | JDK 版本（compiler `release` + enforcer 下限） | `21` |
+| `{{BOOT_VERSION}}` | Spring Boot 版本（BOM import） | `3.5.16` |
 
 ## 机械步骤（整体初始化）
 
@@ -43,7 +58,7 @@ sed -i \
     -e 's/{{ARTIFACT_ID}}/order-service/g' \
     -e 's/{{VERSION}}/1.0.0-SNAPSHOT/g' \
     -e 's/{{JAVA_VERSION}}/21/g' \
-    -e 's/{{BOOT_VERSION}}/3.5.4/g' \
+    -e 's/{{BOOT_VERSION}}/3.5.16/g' \
     pom.xml sample-core/pom.xml sample-app/pom.xml sample-app/src/main/resources/application.yml
 
 # 3. 挪包目录并改 package 行（com/example → groupId 路径）
@@ -90,4 +105,7 @@ rm -rf sample-core
 | 库模块（如 core）启用 spring-boot repackage | repackage 只在可执行 app 模块；库模块保持普通 jar |
 | 子模块依赖写 `<version>` | 版本一律由根 `dependencyManagement` / BOM 收敛 |
 | 需要资源过滤时直接开 filtering 用 `${...}` | 先配 `@..@` 分隔符（`${}` 与 Spring 占位符冲突）；模板默认不开过滤 |
+| 子模块 / `<parent>` 写死具体版本号 | 工程版本统一 `${revision}`（根 `<revision>` 属性），一处定义全工程生效 |
+| 用 maven-release-plugin 管发版 | release plugin 不兼容 CI-friendly 版本——用 `${revision}` + flatten：`mvn deploy -Drevision=1.0.0` |
+| 发布前逐个手改 pom 版本号 | `-Drevision=1.0.0` 一次覆盖根 + 全部子模块 |
 | 改根 GAV 后子模块 `<parent>` 不同步 | 根 GAV 与子模块 `<parent>` 三行必须一致（默认 `relativePath ../pom.xml` 正确，勿画蛇添足） |

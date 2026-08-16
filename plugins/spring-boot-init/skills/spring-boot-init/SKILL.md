@@ -8,14 +8,15 @@ description: >-
   搭脚手架 / 建父子工程 / 多模块 / 微服务骨架 / init 一个 Java 项目"；或 agent 正准备从零手写 pom、
   手动创建目录结构与主启动类时。
   默认产物：根 pom（packaging=pom + <modules>）+ 子模块——单模块项目 = 只保留一个 app 子模块，
-  多模块 = 复制样板模块按业务增删。模板常用插件齐备（compiler 显式 release、surefire、
-  spring-boot repackage、resources、spotless 格式化），版本全部收敛在根 pom。
+  多模块 = 复制样板模块按业务增删。模板常用插件齐备（enforcer 环境门禁、flatten CI-friendly 版本、
+  jacoco 覆盖、spotless 格式化、surefire / failsafe、compiler 显式 release、resources、
+  source / javadoc / deploy 按需），版本全部收敛在根 pom。
   初始依赖按项目类型问询决定（Web API / 全栈 / 定时批处理 / 数据访问等精选组合），不默认堆依赖。
   不适用（主动让位）：项目已存在后的框架层业务编码（Controller / Service / 配置 / 事务）→ spring-boot-dev；
   ORM CRUD → mybatis-plus-dev；认证鉴权 → sa-token-dev；纯 Java 语言层 → java-coding-guide-pro；单测 → java-unit-test。
   核心铁律：一律复制内置模板，禁止手写 pom；占位符替换后 grep 必须零残留；JDK 与 Boot 版本必须匹配。
 agent_created: true
-version: 1.0.0
+version: 1.1.0
 slug: spring-boot-init
 displayName: Spring Boot 项目初始化
 ---
@@ -25,7 +26,7 @@ displayName: Spring Boot 项目初始化
 面向"新建 Java 项目"场景的**初始化助手**。核心理念：**不从零手写脚手架——复制内置 Maven 父子标准模板。** 零网络依赖，完全本地自包含。补上 `spring-boot-dev`（只管写代码、不管建项目）的空白。
 
 - **默认产物**：根 pom（`packaging=pom` + `<modules>`）+ 子模块。**单模块项目 = 只保留一个 app 子模块**；多模块 = 复制样板模块按业务增删。一套模板覆盖全部场景，不分叉。
-- **模板** `assets/maven-multimodule/`：常用插件齐备（compiler 显式 `release`、surefire、spring-boot repackage、resources、spotless），版本全部收敛在根 pom。
+- **模板** `assets/maven-multimodule/`：常用插件齐备——enforcer（环境门禁）、flatten（`${revision}` CI-friendly 版本）、jacoco（覆盖率）、spotless（格式化）默认激活；failsafe / source / javadoc / deploy 已管理、按需启用。版本全部收敛在根 pom。
 - **初始依赖**：按项目类型问询决定（`references/02-dependencies.md`），不默认堆。
 
 ## 第 0 步：现状探测（收到任务先做）
@@ -82,7 +83,7 @@ displayName: Spring Boot 项目初始化
 
 1. **一律复制内置模板** `assets/maven-multimodule/`，禁止从零手写 `pom.xml` / 主类 / 目录结构。
 2. **聚合规则**：根 pom 必须 `packaging=pom` + `<modules>` 列全子模块；子模块 `<parent>` 指根（GAV 三行一致）；`<modules>` 与实际目录名一一对应。
-3. **版本收敛**：插件版本只在根 `pluginManagement`，依赖版本只在根 `dependencyManagement`（spring-boot-dependencies BOM import）；子模块一律不带版本。
+3. **版本收敛**：插件版本只在根 `pluginManagement`，依赖版本只在根 `dependencyManagement`（spring-boot-dependencies BOM import）；工程版本统一 `${revision}`（flatten 在 install/deploy 时解析，发布/改版用 `-Drevision=1.0.0` 一次覆盖全工程）；子模块一律不带版本。
 4. **占位符零残留**：替换完成后 `grep -rn '{{'` 必须无输出，否则不算完成。
 5. **repackage 只归可执行模块**：`spring-boot-maven-plugin` 只在 app 模块启用；库模块保持普通 jar。
 6. **依赖必须真实**：starter 坐标只从 `references/02-dependencies.md` 组合表取；表外依赖先查 Maven Central 确认存在，禁止凭记忆拼 `spring-boot-starter-xxx`。
