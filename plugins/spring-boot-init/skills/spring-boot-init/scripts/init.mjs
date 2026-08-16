@@ -5,7 +5,7 @@
 //   node init.mjs <目标目录> --group <groupId> --artifact <artifactId>
 //                 [--version 1.0.0-SNAPSHOT] [--jdk 21] [--boot 3.5.16]
 //                 [--core <库模块名>] [--app <可执行模块名>] [--single]
-// --single   单模块形态：裁掉库模块（sample-core）及其全部引用
+// --single   单模块形态：删掉库模块（sample-core）目录及其全部引用
 // 退出码: 0=成功 1=生成物有残留 2=用法错误
 
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync, cpSync, renameSync, existsSync } from 'node:fs';
@@ -53,7 +53,7 @@ let core = readFileSync(corePom, 'utf8').replace(/\r\n/g, '\n');
 let app = readFileSync(appPom, 'utf8').replace(/\r\n/g, '\n');
 let y = readFileSync(yml, 'utf8').replace(/\r\n/g, '\n');
 
-// ── ② 单模块裁剪：删 sample-core 的三处引用（模块行 / dependencyManagement 条目 / app 依赖）──
+// ── ② 单模块裁剪：删 sample-core 的三处引用（模块行 / dependencyManagement 条目 / app 依赖；目录在④删除）──
 if (opt.single) {
   root = root
     .replace('        <module>sample-core</module>\n', '')
@@ -91,10 +91,13 @@ root = root.split('sample-app').join(appName);
 app = app.split('sample-app').join(appName);
 
 writeFileSync(rootPom, root);
-writeFileSync(corePom, core);
 writeFileSync(appPom, app);
 writeFileSync(yml, y);
-if (!opt.single) renameSync(join(target, 'sample-core'), join(target, coreName));
+if (opt.single) rmSync(join(target, 'sample-core'), { recursive: true, force: true });
+else {
+  writeFileSync(corePom, core);
+  renameSync(join(target, 'sample-core'), join(target, coreName));
+}
 renameSync(join(target, 'sample-app'), join(target, appName));
 
 // ── ⑤ 挪包目录：com/example → groupId 路径，改 package 行 ──

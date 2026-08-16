@@ -64,9 +64,9 @@ node <技能目录>/scripts/init.mjs /path/to/ping-api \
 | `--boot` / `--jdk` | | `3.5.16` / `21` | C2 问询结果（兼容表见 SKILL.md） |
 | `--version` | | `1.0.0-SNAPSHOT` | 写入根 `<revision>` 属性 |
 | `--core` / `--app` | | `<artifact>-core` / `<artifact>-app` | 模块名（C1 问询结果） |
-| `--single` | | — | 单模块形态：删库模块及其三处引用（`<modules>` 行 / dependencyManagement 条目 / app 依赖） |
+| `--single` | | — | 单模块形态：删库模块目录及其三处引用（`<modules>` 行 / dependencyManagement 条目 / app 依赖） |
 
-脚本内部依次：①复制模板 → ②单模块裁剪（`--single`）→ ③替换 5 个占位符 → ④模块重命名（目录与 pom 引用一次对齐）→ ⑤`com/example` 挪到 groupId 包路径并改 package 行 → ⑥残留终检（`{{...}}` / `com.example`；先剥离声明的 groupId 再匹配，`com.example0.dev` 这类前缀不误伤）。目标目录已有 `pom.xml` 时拒绝执行。
+脚本内部依次：①复制模板 → ②单模块裁剪（`--single` 删库模块的三处 pom 引用）→ ③替换 5 个占位符 → ④模块重命名（目录与 pom 引用一次对齐；`--single` 时改为删除 sample-core 目录）→ ⑤`com/example` 挪到 groupId 包路径并改 package 行 → ⑥残留终检（`{{...}}` / `com.example`；先剥离声明的 groupId 再匹配，`com.example0.dev` 这类前缀不误伤）。目标目录已有 `pom.xml` 时拒绝执行。
 
 生成后跑 `node <技能目录>/scripts/self-check.mjs <目标目录> --validate` 收尾（详见 SKILL.md「自检与交付」）。
 

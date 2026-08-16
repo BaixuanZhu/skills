@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // self-check.mjs —— spring-boot-init 初始化自检（零依赖，跨平台）
-// 检查项: ①占位符 {{...}} 零残留 ②com.example 包路径残留 ③(--validate) mvn validate
+// 检查项: ①占位符 {{...}} 零残留 ②com.example 包路径残留 ③模块目录与根 <modules> 一一对应 ④(--validate) mvn validate
 // 用法:   node <技能目录>/scripts/self-check.mjs <项目目录> [--validate]
 // 退出码: 0=全过 1=有失败项 2=用法/目录错误
 
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -40,10 +40,10 @@ let fail = 0;
 
 // ①② 前两查：逐文件逐行找残留（输出 文件:行号:内容 供定位）
 // com.example 检查前先剥离根 pom 声明的 groupId（com.example0.dev 之类前缀不误伤）
+const rootPomPath = files.find((f) => relative(target, f) === 'pom.xml') || null;
 const rootGroup = (() => {
-  const pom = files.find((f) => relative(target, f) === 'pom.xml');
-  if (!pom) return '';
-  const m = readFileSync(pom, 'utf8').match(/<groupId>([^<]+)<\/groupId>/);
+  if (!rootPomPath) return '';
+  const m = readFileSync(rootPomPath, 'utf8').match(/<groupId>([^<]+)<\/groupId>/);
   return m ? m[1] : '';
 })();
 
@@ -69,7 +69,22 @@ for (const { re, bad, ok } of [
   }
 }
 
-// ③ 可选：Maven 结构合法（Windows 下自动调 mvn.cmd）
+// ③ 模块目录与根 <modules> 一一对应（防孤儿目录 / 声明了但目录缺失；只查一级子目录——本技能产物为扁平父子结构）
+if (rootPomPath) {
+  const modules = [...readFileSync(rootPomPath, 'utf8').matchAll(/<module>([^<]+)<\/module>/g)].map((m) => m[1].trim());
+  const pomDirs = readdirSync(target, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && !e.name.startsWith('.') && e.name !== 'target')
+    .map((e) => e.name)
+    .filter((d) => existsSync(join(target, d, 'pom.xml')));
+  const orphan = pomDirs.filter((d) => !modules.includes(d));
+  const missing = modules.filter((m) => !pomDirs.includes(m));
+  for (const d of orphan) console.log(`✗ 孤儿模块目录（含 pom.xml 但不在根 <modules>）: ${d}`);
+  for (const m of missing) console.log(`✗ 根 <modules> 声明了但目录缺失: ${m}`);
+  if (orphan.length || missing.length) fail = 1;
+  else console.log('✓ 模块目录与根 <modules> 一一对应');
+}
+
+// ④ 可选：Maven 结构合法（Windows 下自动调 mvn.cmd）
 if (doValidate) {
   const isWin = process.platform === 'win32';
   const bin = isWin ? 'mvn.cmd' : 'mvn';
