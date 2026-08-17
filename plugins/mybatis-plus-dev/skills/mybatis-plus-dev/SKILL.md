@@ -14,7 +14,7 @@ description: >-
   不适用于：已使用 JPA / Hibernate 的项目（不建议迁移）、数据库表结构设计/DDL、纯 SQL 性能调优
   （连接池/索引/慢查询属 DBA 层）。
 agent_created: true
-version: 2.3.0
+version: 2.3.1
 slug: mybatis-plus-dev
 displayName: MyBatis-Plus 开发助手
 ---

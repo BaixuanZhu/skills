@@ -5,7 +5,7 @@ displayName: Sprint规划
 description: |
   当用户说"开 Sprint""规划迭代""关闭 Sprint"或 using-agile 路由到此，且 PRODUCT-BACKLOG.yaml 已有条目时触发。
 agent_created: true
-version: 4.4.0
+version: 4.4.1
 dependencies:
   - skill: using-agile
     reason: 提供 DOD.md 模板
@@ -66,7 +66,7 @@ dependencies:
 ### 环节 C：关闭
 - 在文件头追加行标注执行结果来源（.done.yaml 文件路径 或 "人工确认"）
 - 将 Sprint 文件头"状态"改为"已关闭"
-- 提示用户：同步到 Backlog 需调用入口（入口会检测 .done.yaml 后自动路由到 agile-backlog）
+- 提示用户完整闭环：关闭后 `.done.yaml` 由入口下次激活时自动检测（.done + Sprint 已关闭）→ 路由到 agile-backlog 同步 → **同步完成后 `.done.yaml` 改后缀为 `.done.processed.yaml` 留痕（不删除，防重复同步）**。链路 lifecycle 见 `using-agile/references/sprint-schema.yaml`
 
 ## 4. 写完即停（结构化审阅）
 
@@ -77,7 +77,8 @@ dependencies:
 - ✅ 写前问询遵循 `using-agile/references/probing-protocol.md`：容量参数（人数/工作日/专注系数）必经用户确认，禁止静默默认；Sprint 目标须可陈述（§2）。
 - ✅ 关闭 Sprint 前逐条过 DoD（独立出口门禁 ③）；关闭即标"已关闭"状态并记录执行结果来源（.done.yaml 或人工确认），不删除。
 - ❌ 不写 RETRO.md / RELEASE.md / FB-NNN.md，不创建 `sprints/archive/` 子目录。
-- ❌ 不在 Sprint 文件中设执行态追踪（不写 checkbox，不记阻塞，不处理执行中变更——归消费 Agent）。
+- ❌ 不在 Sprint 文件中设执行态追踪（任务清单与执行进度不写 checkbox、不记阻塞、不处理执行中变更——归消费 Agent）。
+- ✅ 「闭环检查」清单用 `- [ ]` checkbox，关闭前逐项核对（这是关闭核对清单，非执行态追踪）。
 - ❌ 不直接修改 PRODUCT-BACKLOG.yaml/.md 的 status 字段（所有权属 agile-backlog，由入口检测 .done.yaml 后路由同步）。
 
 ## 6. 门禁

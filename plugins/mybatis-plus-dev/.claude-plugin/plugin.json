@@ -1,6 +1,6 @@
 {
   "name": "mybatis-plus-dev",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "MyBatis-Plus（baomidou）ORM 增强框架开发助手——CRUD、分页、条件构造、Mapper/Service 层、逻辑删除与乐观锁。项目已引入 MyBatis-Plus 时使用。",
   "author": {
     "name": "BaixuanZhu",

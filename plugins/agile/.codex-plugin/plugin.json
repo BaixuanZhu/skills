@@ -1,6 +1,6 @@
 {
   "name": "agile",
-  "version": "4.4.0",
+  "version": "4.4.1",
   "description": "敏捷开发套件（4 技能合一）：入口路由 + 战略层（愿景/架构/ADR）+ 产品待办 + Sprint 规划，文件驱动地做项目规划与迭代管理。",
   "author": {
     "name": "BaixuanZhu",

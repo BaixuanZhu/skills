@@ -13,7 +13,7 @@ sprint_file:
     - header: 回填要求（消费 Agent 必读）
       format: 说明段落 + yaml 示例；明确消费 Agent 执行完毕必须回填 .done.yaml 的硬性义务（免人工提醒）
     - header: 闭环检查
-      format: plain list, no checkboxes
+      format: checklist (`- [ ]`)；关闭前逐项核对，全部通过方可关闭
     - header: 条目状态建议
       format: plain list; 由 agile-sprint 在 DoD 关闭环节追加，规划交付时不存在，消费 Agent 无需读取
 

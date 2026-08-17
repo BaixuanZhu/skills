@@ -12,7 +12,7 @@
 |---|---|---|---|
 | Lambda / 方法引用 / `Optional`/`Stream`/`java.time`/`CompletableFuture` | **8** | 标准 | ✅ JDK 8 即可用 |
 | `var` 局部变量类型推断 | **10** | 标准 | ✅ 局部变量类型明显时用 |
-| JDK 内置 `HttpClient` | **11** | 标准 | 🟡 但本指南 HTTP 推荐 OkHttp3（一致性） |
+| JDK 内置 `HttpClient` | **11** | 标准 | ⚠ 但本指南 HTTP 推荐 OkHttp3（一致性） |
 | `switch` 表达式（箭头、yield） | **14** | 标准 | ✅ 简化多分支 |
 | 文本块 `"""` | **15** | 标准 | ✅ 多行字符串/SQL/JSON |
 | `record`（不可变数据载体） | **16** | 标准 | ✅ 纯数据 DTO |
@@ -25,12 +25,12 @@
 | 未命名变量 & 模式 `_` | **25** | 标准（22 转正） | ✅ 忽略值时用 |
 | Markdown Javadoc | **25** | 标准（23 转正） | ✅ 注释用 Markdown |
 | Stream Gatherers | **25** | 标准（24 转正） | ✅ 自定义中间操作 |
-| Class-File API | **25** | 标准（24 转正） | 🟡 字节码操作替代 ASM |
+| Class-File API | **25** | 标准（24 转正） | ⚠ 字节码操作替代 ASM |
 | 虚拟线程不再被 synchronized 钉住 | **25** | 标准（24 转正） | ✅ 修正旧建议 |
-| Compact Object Headers | **25** | 标准（24 预览→25 转正） | 🟡 JVM 内部 |
-| Compact Source Files & Instance Main | **25** | 标准 | 🟡 学习/脚本场景 |
+| Compact Object Headers | **25** | 标准（24 预览→25 转正） | ⚠ JVM 内部 |
+| Compact Source Files & Instance Main | **25** | 标准 | ⚠ 学习/脚本场景 |
 | Flexible Constructor Bodies | **25** | 标准 | ✅ 参数校验前置 |
-| Module Import Declarations | **25** | 标准 | 🟡 简化导入 |
+| Module Import Declarations | **25** | 标准 | ⚠ 简化导入 |
 | Scoped Values | **25** | 标准 | ✅ ThreadLocal 安全替代 |
 | Key Derivation Function API | **25** | 标准 | ✅ 密钥派生 |
 
@@ -138,7 +138,7 @@ System.setSecurityManager(new MySecurityManager());  // JDK 25 已永久禁用
 ### JDK 10+ `var`（仅局部变量，类型明显时）
 ```java
 var users = new ArrayList<User>();   // ✓ 右侧类型明显
-var name = user.getName();           // 🟡 可读性视情况，简单赋值可省
+var name = user.getName();           // ⚠ 可读性视情况，简单赋值可省
 // ✗ 不要作字段/方法签名/参数（var 仅限局部变量）
 ```
 

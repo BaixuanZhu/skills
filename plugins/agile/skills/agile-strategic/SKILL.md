@@ -5,7 +5,7 @@ displayName: 敏捷战略层（愿景+架构+ADR）
 description: |
   当用户说"写愿景""产品目标""电梯演讲""定位""使命""红线""价值观""画架构图""C4""技术选型""ADR""架构决策""容器图""技术约束"或 using-agile 路由到此，且项目已有 agile-docs/ 时触发。
 agent_created: true
-version: 4.4.0
+version: 4.4.1
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架
@@ -38,7 +38,7 @@ dependencies:
 
 ### 2.0 决策问询（写前必跑，`using-agile/references/interview-protocol.md`）
 
-> ⚠️ **启动问询前先过 §6 写前战略门禁**：若检测到多份矛盾输入或与现有 VISION/ADR 冲突，立即停下生成 `STRATEGY_CONFLICT.md`（模板见 `using-agile/references/strategy-conflict-template.md`），不进入问询。
+> ⚠️ **启动问询前先过 §6 写前战略门禁**：若检测到多份矛盾输入或与现有 VISION/ADR 冲突，立即停下生成 `STRATEGY_CONFLICT.md`（模板见 `using-agile/references/strategy-conflict-template.md`），不进入问询。若该文件已存在（如 using-agile 已生成）→ **跳过不重复生成，仅引用**。
 
 按 `using-agile/references/interview-protocol.md` 用选择题问，本技能落点：
 
@@ -167,4 +167,4 @@ dependencies:
 
 ### 写前战略门禁
 
-冲突 / 歧义即停（见 `using-agile/references/gate-protocol.md`）。若需生成 `STRATEGY_CONFLICT.md`，模板见 `using-agile/references/strategy-conflict-template.md`。
+冲突 / 歧义即停（见 `using-agile/references/gate-protocol.md`）。若需生成 `STRATEGY_CONFLICT.md`，模板见 `using-agile/references/strategy-conflict-template.md`；**发现该文件已存在则跳过不重复生成，仅引用**。

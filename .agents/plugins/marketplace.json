@@ -28,7 +28,7 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Engineering",
-      "version": "3.4.0"
+      "version": "3.4.1"
     },
     {
       "name": "java-test",
@@ -67,7 +67,7 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Engineering",
-      "version": "2.3.0"
+      "version": "2.3.1"
     },
     {
       "name": "spring-boot-dev",
@@ -106,7 +106,7 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity",
-      "version": "4.4.0"
+      "version": "4.4.1"
     }
   ]
 }

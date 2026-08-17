@@ -129,7 +129,7 @@ mybatis-plus:
   global-config:
     db-config:
       insert-strategy: NOT_NULL        # 默认值，null 字段不插入
-      update-strategy: NOT_NULL        # 默认值，null 字段不更新（★ "null 不更新"根因）
+      update-strategy: NOT_NULL        # 默认值，null 字段不更新（"null 不更新"根因）
       where-strategy: NOT_NULL         # 默认值，null 不生成 WHERE 条件
 ```
 

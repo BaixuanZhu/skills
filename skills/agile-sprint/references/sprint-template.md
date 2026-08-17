@@ -48,17 +48,17 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
     - F-002
   moved_next:
     - T-003
-  ```
+```
 
 - **约束**：只能回填本文件「任务清单」中出现的 ID；清单内未出现在 completed/moved_next 的条目视为未执行，DoD 关闭时归入 moved_next
 - **回填即触发闭环**：回填文件放入 `sprints/` 后，用户调用入口 → 规范层据此做 DoD 检查 → 关闭 Sprint → 同步 Backlog
 
-## 闭环检查（关闭前过，纯列表，不使用 checkbox）
+## 闭环检查（关闭前逐项核对，全部通过方可关闭）
 
-- 关联的 .done.yaml 已存在并读取（或无 .done 时用户已人工确认完成情况）
-- DoD 全部通过
-- 文件头标注执行结果来源（.done 路径或"人工确认"）
-- 本文件头"状态"改为"已关闭"
+- [ ] 关联的 .done.yaml 已存在并读取（或无 .done 时用户已人工确认完成情况）
+- [ ] DoD 全部通过
+- [ ] 文件头标注执行结果来源（.done 路径或"人工确认"）
+- [ ] 本文件头"状态"改为"已关闭"
 
 ## 条目状态建议（环节 B DoD 关闭时追加，规划时不写）
 
@@ -82,13 +82,6 @@ Sprint 生命周期 3 环节（规划/DoD 关闭/关闭）的定义详见 `SKILL
 
 `.done.yaml` 的字段格式、命名、路径与约束见 `using-agile/references/sprint-schema.yaml`（初始化时复制到 `agile-docs/interfaces/`），本文件不重复。
 
-### 使用流程
+### 闭环链路（不在此展开）
 
-```
-消费 Agent 读 sprint-NNN-YYYYMMDD.md → 执行 → 产出 sprint-NNN-YYYYMMDD.done.yaml
-
-用户将 .done 放入 sprints/ → 调用入口"关 Sprint"
-    → agile-sprint 读 .done → DoD 检查 → 关文件
-    → 入口下次检测到 .done + sprint 已关闭 → 路由到 agile-backlog 同步
-    → 同步后改后缀为 .done.processed.yaml，留痕
-```
+`.done.yaml` 的完整生命周期——写入（消费 Agent）→ DoD 检查（agile-sprint 环节 B）→ 入口路由同步（.done + Sprint 已关闭 → agile-backlog）→ 改后缀 `.done.processed.yaml` 留痕——定义在 `using-agile/references/sprint-schema.yaml` 的 `lifecycle` 字段与 `SKILL.md §3 环节 C`。**行为细则归技能正文，模板只承载文件结构**，本段为指针非内容。

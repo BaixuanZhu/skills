@@ -24,7 +24,7 @@
 1. 确认环节 B 的 DoD 检查结果已全部落地（「条目状态建议」清单已产出）。
 2. 在本 Sprint 文件头标注执行结果来源（.done.yaml 路径或"人工确认"）。
 3. 本 Sprint 文件头"状态"改为"已关闭"（不删除，自然保留作历史）。
-4. 提示用户：入口下次激活时会检测 .done.yaml + Sprint 已关闭，自动路由到 agile-backlog 同步。
+4. 提示用户：入口下次激活时会检测 .done.yaml + Sprint 已关闭，自动路由到 agile-backlog 同步；**同步完成后 .done.yaml 改后缀为 .done.processed.yaml 留痕（不删除，防重复同步）**。
 5. **不写回顾 / 发布说明 / 反馈记录等附加文件**——临时发现直接转 PRODUCT-BACKLOG 条目。
 
 ## 四、估点体系（默认与异常）

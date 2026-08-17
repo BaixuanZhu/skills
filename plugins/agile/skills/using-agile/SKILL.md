@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户说"开始项目""敏捷""Sprint""待办""Backlog""用户故事""迭代""架构决策""ADR""C4""需求变了""要改故事""依赖检查"或进入含 agile-docs/ 目录的项目时触发。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 4.4.0
+version: 4.4.1
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -51,7 +51,7 @@ version: 4.4.0
    - `VISION.md` + `ARCHITECTURE.md` + `ADR.md` → 战略层
    - `PRODUCT-BACKLOG.md` + `PRODUCT-BACKLOG.yaml` → 执行层待办池
    - `DOD.md` → 完成定义
-   - `sprints/` 下未关闭的 `.md` → 活跃 Sprint
+   - `sprints/` 下未关闭的 `.md` → 活跃 Sprint（若检测到 >1 个活跃 Sprint，警告并请用户选择关闭/合并其一后再继续，见 `references/status-routing.md`）
 2. **双文件一致性检查**：若 `PRODUCT-BACKLOG.md` 和 `.yaml` 均存在，对比 id 集合、条目数、同 id 的 priority/status（唯一权威口径见 `agile-backlog/references/backlog-rules.md §七`）。不一致 → 停下报告差异，请用户确认以哪份为准后再继续路由。
 3. **额外检测 — .done.yaml**：扫描 `sprints/*.done.yaml`
    - 存在 + 对应 Sprint 文件状态为"已关闭" → 路由决策表追加一行"待同步到 Backlog"（自动路由到 `agile-backlog` 执行同步）
@@ -80,7 +80,7 @@ version: 4.4.0
 
 **缺失即问**：若目标层的必答话题存在未覆盖项（用户没提 ≠ 不需要），同样属于门禁触发，但动作是**停下问询**而非停下裁决——用选择题问（`references/interview-protocol.md`），追问/跳过规则见 `references/probing-protocol.md`。
 
-在用户裁决前，不写任何产物文件（仅允许建目录骨架或写 `STRATEGY_CONFLICT.md`）。详见 `references/gate-protocol.md`。
+在用户裁决前，不写任何产物文件（仅允许建目录骨架或写 `STRATEGY_CONFLICT.md`）。**冲突记录去重**：`STRATEGY_CONFLICT.md` 由先检测到冲突的技能生成；后续技能激活时发现已存在 → 跳过不重复生成，仅引用。详见 `references/gate-protocol.md`。
 
 ## 6. 变更协调
 
