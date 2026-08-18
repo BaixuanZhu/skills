@@ -14,8 +14,8 @@ description: >-
   "返回 200 就是通过了"、仿真测试不稳定、反复全量 mvn test、全文读测试输出、跑测试太慢。
   与 java-unit-test 的边界：纯单测（@Mock + @InjectMocks，毫秒级，不起容器）→ java-unit-test；
   跨层协作 + 真实依赖 + 进程内 HTTP 断言 → 本技能。
-version: "1.0.0"
-last_verified: "2026-08-13"
+version: "1.1.0"
+last_verified: "2026-08-18"
 ---
 
 # Java 集成测试
@@ -114,7 +114,7 @@ last_verified: "2026-08-13"
 5. **外部依赖必须 stub**：调用外部 HTTP API（支付 / 短信 / 第三方认证）必须用 WireMock stub，不得真调（理由见 S 级表）。
 6. **`@DirtiesContext` 是最后手段**：重建整个 Context（十秒级，代价见 S 级表），仅在 Bean 内部状态被污染且无法用 `@Sql` / `@Transactional` / Testcontainers 重置时才用。
 7. **Context 缓存友好**：`@MockBean` / `@SpyBean` / `@SpringBootTest` 属性的组合变化会导致 Context 缓存失效并重建。统一测试的 mock 配置，避免每个测试类用不同 `@MockBean` 组合。
-8. **执行测试降噪**：`mvn test` 降噪输出（`-q` + 重定向后 `grep` 关键行），**不全文回传 stdout**；失败读 `target/surefire-reports/*.txt` 定位、`-Dtest` 单测重跑，不反复全量、不每次 `clean`（命令细节见 `references/08`）。
+8. **执行测试降噪**：`mvn test` 分层降噪——`-B -ntp`（下载噪声）+ `-q` 或 `org.slf4j.simpleLogger` 级别（Maven 日志，成功时连 Tests run 摘要一并压掉）+ `logging.level.root`（Spring 日志，`-q` 管不到它）；Maven 层参数可持久化到 `.mvn/maven.config`（≥ 3.3.1，一行一参数），**不全文回传 stdout**；失败读 `target/surefire-reports/*.txt` 定位、`-Dtest` 单测重跑，不反复全量、不每次 `clean`（分层与命令细节见 `references/08` §1-2）。
 
 ## 使用流程
 
