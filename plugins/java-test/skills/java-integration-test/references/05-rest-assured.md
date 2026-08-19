@@ -5,6 +5,7 @@
 ## 依赖
 
 ```xml
+<!-- Boot 4：BOM 已不管理 rest-assured，必须手写 version（6.0.1 为当前最新） -->
 <dependency>
     <groupId>io.rest-assured</groupId>
     <artifactId>rest-assured</artifactId>
@@ -15,7 +16,7 @@
 
 > Spring Boot 项目 `spring-boot-starter-test` **不传递** REST Assured——需单独引入。
 >
-> 版本说明：6.x 需 Java 17+（核心 `rest-assured` 模块不依赖 Spring）。但 6.0 起 `spring-mock-mvc` 子模块 target Spring 7——Spring Boot 3.x（Spring 6）项目用 `RestAssuredMockMvc` 时选 5.5.x。
+> 版本分流：**Boot ≤3.x 的 BOM 管理 rest-assured（3.5 管 5.5.x）——删掉 `<version>` 走 BOM**，且用 `RestAssuredMockMvc`（`spring-mock-mvc` 子模块）时**必须停在 5.5.x**——6.0 起该子模块 target Spring 7，Boot 3.x（Spring 6）项目用 6.x 会不兼容。Boot 4 手写 `6.0.1`（6.x 需 Java 17+，核心 `rest-assured` 模块不依赖 Spring）。
 
 ## RestAssured vs RestAssuredMockMvc
 

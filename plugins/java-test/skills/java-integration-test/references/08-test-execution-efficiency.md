@@ -119,7 +119,7 @@ mvn test -B -ntp -q -Dlogging.level.root=WARN -Dspring.main.banner-mode=off
 @Timeout(10)                       // 默认单位秒
 void should_not_hang() { ... }
 
-@Timeout(30)                       // 类级
+@Timeout(30)                       // 类级（需 JUnit ≥5.9，Boot 3.0+；Boot 2.7 的 5.8 仅方法级）
 class SlowIntegrationTest { ... }
 ```
 

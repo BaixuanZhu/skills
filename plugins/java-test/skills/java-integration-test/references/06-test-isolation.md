@@ -1,6 +1,6 @@
 # 06 · 测试隔离与外部依赖
 
-> 测试隔离是集成测试的头号难题。`@Transactional` 回滚在 `RANDOM_PORT` 下静默失效；外部 API 真调导致测试不可重复。本文件固化隔离陷阱与正确方案。
+> 测试隔离是集成测试的头号难题。`@Transactional` 回滚在 `RANDOM_PORT` 下静默失效；外部 API 真调导致测试不可重复。本文件固化隔离陷阱与正确方案。示例注解 `@MockitoBean` 需 Boot 3.4+（≤3.3 写作 `@MockBean`，4.0 已移除旧注解——版本口径见 `02`）。
 
 ## @Transactional 回滚
 
@@ -65,6 +65,8 @@ class HttpApiTest {
 class HttpApiTest {
     @Container @ServiceConnection
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    @Autowired JdbcTemplate jdbcTemplate;  // Boot 自动配置的 Bean
 
     @AfterEach
     void cleanup() {
@@ -152,15 +154,15 @@ class StatefulBeanTest { }
 
 ## WireMock：外部 HTTP 依赖隔离
 
-### 为什么不用 @MockBean 替代外部调用
+### 为什么不用 @MockitoBean 替代外部调用
 
-| | `@MockBean` | WireMock |
+| | `@MockitoBean` | WireMock |
 |---|---|---|
 | 替换层级 | 替换 Spring Bean | 替换 HTTP 端点 |
 | 测到什么 | Bean 调用逻辑 | HTTP 序列化 / 反序列化 / 超时 / 重试 |
 | 适合 | 内部 Bean 依赖 | 外部 HTTP API |
 
-> `@MockBean` 替换 `PaymentClient` Bean → 跳过 HTTP 序列化。WireMock 起 Mock Server → `PaymentClient` 真发 HTTP，WireMock 返回可控响应。后者能测到 JSON 序列化、连接超时、重试逻辑。
+> `@MockitoBean` 替换 `PaymentClient` Bean → 跳过 HTTP 序列化。WireMock 起 Mock Server → `PaymentClient` 真发 HTTP，WireMock 返回可控响应。后者能测到 JSON 序列化、连接超时、重试逻辑。
 
 ### 基本用法
 
@@ -235,9 +237,9 @@ class PaymentIntegrationTest {
 | `scenario(...)` | 有状态 stub（首次返回 401，第二次返回 200） |
 | `dynamicPort()` | 随机端口（并行测试不冲突） |
 
-### @MockBean vs WireMock 选择
+### @MockitoBean vs WireMock 选择
 
-**判据**：内部 Bean 依赖 → `@MockBean`；外部 HTTP API（序列化 / 超时 / 重试）→ WireMock（机制对比见上表）。
+**判据**：内部 Bean 依赖 → `@MockitoBean`；外部 HTTP API（序列化 / 超时 / 重试）→ WireMock（机制对比见上表）。
 
 ## 异步测试与 Awaitility
 

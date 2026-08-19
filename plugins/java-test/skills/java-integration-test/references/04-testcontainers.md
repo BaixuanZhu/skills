@@ -1,6 +1,6 @@
 # 04 · Testcontainers 真实依赖
 
-> 用 Docker 容器启动真实依赖（PostgreSQL / MySQL / Redis / Kafka），消除"H2 测试 + PostgreSQL 生产"的环境差异。Testcontainers 是集成测试用真实依赖的事实标准。
+> 用 Docker 容器启动真实依赖（PostgreSQL / MySQL / Redis / Kafka），消除"H2 测试 + PostgreSQL 生产"的环境差异。Testcontainers 是集成测试用真实依赖的事实标准。示例基于 TC 1.x（Boot ≤3.x，BOM 3.5 管 1.21.x）；Boot 4 用 TC 2.x——坐标 / 包名 / 泛型差异见「依赖」节对照表。
 
 ## 为什么不用 H2
 
@@ -26,7 +26,9 @@
     <artifactId>spring-boot-testcontainers</artifactId>
     <scope>test</scope>
 </dependency>
-<!-- 特定数据库模块 + JUnit 5 扩展需显式引入；版本由 Spring Boot BOM 管理，不手写 version -->
+<!-- 二选一按 Boot 版本；数据库模块 + JUnit 扩展需显式引入，版本仍由 BOM 管理 -->
+
+<!-- Boot ≤3.x（TC 1.x）：旧名无前缀 -->
 <dependency>
     <groupId>org.testcontainers</groupId>
     <artifactId>postgresql</artifactId>
@@ -37,9 +39,39 @@
     <artifactId>junit-jupiter</artifactId>
     <scope>test</scope>
 </dependency>
+
+<!-- Boot 4（TC 2.x）：模块全部加 testcontainers- 前缀，旧名在 2.x 下不存在（404） -->
+<dependency>
+    <groupId>org.testcontainers</groupId>
+    <artifactId>testcontainers-postgresql</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.testcontainers</groupId>
+    <artifactId>testcontainers-junit-jupiter</artifactId>
+    <scope>test</scope>
+</dependency>
 ```
 
-> 版本由 Spring Boot BOM 管理，**不手写 `<version>`、不显式引 `testcontainers` 核心**（`spring-boot-testcontainers` 已传递）。Docker v29（2026）需 Testcontainers ≥1.21.4——若 BOM 管的是旧版，用 `<testcontainers.version>1.21.4</testcontainers.version>` 属性 override，勿逐模块硬编码。
+> 版本由 Spring Boot BOM 管理，**不手写 `<version>`、不显式引 `testcontainers` 核心**（`spring-boot-testcontainers` 已传递）。Boot 3.5 BOM 管 1.21.3——Docker v29（2026）需 ≥1.21.4（1.x 线末版），用 `<testcontainers.version>1.21.4</testcontainers.version>` 属性 override，勿逐模块硬编码；Boot 4 BOM 管 2.0.x，无此问题。
+
+**TC 1.x → 2.x 差异（Boot 3 → 4 迁移必读）**：
+
+| | TC 1.x（Boot ≤3.x） | TC 2.x（Boot 4） |
+|---|---|---|
+| 模块名 | `postgresql` / `junit-jupiter` / `mysql` … | 加前缀：`testcontainers-postgresql` / `testcontainers-junit-jupiter` …（旧名 2.x 下 404） |
+| 容器类 import | `org.testcontainers.containers.PostgreSQLContainer` | `org.testcontainers.postgresql.PostgreSQLContainer`（每模块独立包） |
+| JUnit 4 | 支持（`@Rule`） | 移除（仅 Jupiter） |
+
+```java
+// TC 2.x（Boot 4）写法对照：import 换包、容器类无泛型，其余不变
+import org.testcontainers.postgresql.PostgreSQLContainer;
+
+@Container
+static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine");
+```
+
+> `@Testcontainers` / `@Container` / `@ServiceConnection` / `withReuse` 等 API 模式两版一致——差异集中在坐标、import 包名、泛型（2.x 容器类不再带 `<>`）三处。核心 artifact `org.testcontainers:testcontainers` 名字不变（Redis 用的 `GenericContainer` 不受影响）。
 
 ### @Container + static：全类共享
 
@@ -151,6 +183,8 @@ testcontainers.reuse.enable=true
 | Kafka | `KafkaContainer` | `org.testcontainers:kafka` |
 | LocalStack (AWS) | `LocalStackContainer` | `org.testcontainers:localstack` |
 | Elasticsearch | `ElasticsearchContainer` | `org.testcontainers:elasticsearch` |
+
+> 上表 artifactId 为 TC 1.x（Boot ≤3.x）名；Boot 4（TC 2.x）除核心 `testcontainers` 外全部加 `testcontainers-` 前缀（如 `testcontainers-mysql`、`testcontainers-kafka`），容器类 import 同步换独立包（见「依赖」节对照表）。
 
 ### Redis 示例
 

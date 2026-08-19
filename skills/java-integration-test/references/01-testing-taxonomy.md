@@ -1,6 +1,6 @@
 # 01 · 测试层次与 curl 反模式
 
-> 根文件，选择测试层次前必读。所有工具链 reference（02-05）建立在本文件的层次模型上。
+> 根文件，选择测试层次前必读。所有工具链 reference（02-05）建立在本文件的层次模型上。示例注解 `@MockitoBean` 需 Boot 3.4+（≤3.3 写作 `@MockBean`，4.0 已移除旧注解——版本口径见 `02`）。
 
 ## 测试层次模型
 
@@ -119,7 +119,7 @@ curl 本身没有错——它是**调试工具**和**探索工具**。以下场�
 | 被测范围 | 单类方法逻辑 | 跨层协作 / 真实依赖 / HTTP 断言 |
 | 容器 | 不起（`@Mock`+`@InjectMocks`） | 起（`@SpringBootTest` / 切片测试） |
 | 速度 | 毫秒 | 秒~十秒 |
-| Mock 方式 | `@Mock`（Mockito 原生） | `@MockBean`（Spring Context 内替换 Bean） |
+| Mock 方式 | `@Mock`（Mockito 原生） | `@MockitoBean`（Spring Context 内替换 Bean） |
 | 典型场景 | `divide(a,b)` 四维度测试 | Controller→Service→Repository 全链路 |
 
-> **`@MockBean` 分界线**：纯单测用 `@Mock`（不起容器）→ java-unit-test；切片 / 集成测试中替换 Bean 用 `@MockBean`（在 Spring Context 内）→ 本技能。`@MockBean` 用于纯单测会启动整个 Context，是 java-unit-test 的 S 级反模式。
+> **`@MockitoBean` 分界线**：纯单测用 `@Mock`（不起容器）→ java-unit-test；切片 / 集成测试中替换 Bean 用 `@MockitoBean`（在 Spring Context 内）→ 本技能。`@MockitoBean` 用于纯单测会启动整个 Context，是 java-unit-test 的 S 级反模式。

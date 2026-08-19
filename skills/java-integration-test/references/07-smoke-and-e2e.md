@@ -1,6 +1,6 @@
 # 07 · 冒烟测试与 API 级 E2E
 
-> 冒烟测试验证"服务能启动 + 核心端点活着"；API 级 E2E 验证完整业务流程（多接口串联）。两者都不是 curl——而是有断言的自动化测试。
+> 冒烟测试验证"服务能启动 + 核心端点活着"；API 级 E2E 验证完整业务流程（多接口串联）。两者都不是 curl——而是有断言的自动化测试。示例注解 `@MockitoBean` 需 Boot 3.4+（≤3.3 写作 `@MockBean`，4.0 已移除旧注解——版本口径见 `02`）。
 
 ## 冒烟测试
 
@@ -247,7 +247,7 @@ E2E 测试慢（十秒+），不宜过多。经验法则：
 @Import(SecurityConfig.class)  // 加载安全配置
 class OrderControllerSecurityTest {
 
-    @MockBean OrderService orderService;
+    @MockitoBean OrderService orderService;
 
     @Test
     @WithMockUser(roles = "ADMIN")
@@ -296,7 +296,7 @@ Sa-Token 不用 Spring Security 的 `@WithMockUser`。测试中模拟登录态�
 @WebMvcTest(OrderController.class)
 class OrderControllerSaTokenTest {
 
-    @MockBean OrderService orderService;
+    @MockitoBean OrderService orderService;
 
     @Test
     void should_allow_logged_in_user() {
@@ -351,7 +351,6 @@ void should_complete_order_flow_with_real_login() {
 
 ```java
 // 部署后冒烟：连接已部署的服务（非进程内）
-@Test
 class DeployedSmokeTest {
 
     @Test

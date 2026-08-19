@@ -1,6 +1,6 @@
 # 03 · 切片测试
 
-> 切片测试只加载某一层（Web / JPA / JSON），不起全量 Context——秒级启动，定位精准。当不需要跨层协作时，切片优于全量 `@SpringBootTest`。
+> 切片测试只加载某一层（Web / JPA / JSON），不起全量 Context——秒级启动，定位精准。当不需要跨层协作时，切片优于全量 `@SpringBootTest`。示例注解 `@MockitoBean` 需 Boot 3.4+（≤3.3 写作 `@MockBean`，4.0 已移除旧注解——版本口径见 `02`）。
 
 ## 切片 vs 全量：何时用什么
 
@@ -24,7 +24,7 @@
 class OrderControllerTest {
     @Autowired MockMvc mockMvc;
 
-    @MockBean OrderService orderService;  // Service 不在切片范围，必须 mock
+    @MockitoBean OrderService orderService;  // Service 不在切片范围，必须 mock
 
     @Test
     void should_return_400_when_qty_is_zero() throws Exception {
@@ -53,21 +53,21 @@ class OrderControllerTest {
 `@WebMvcTest` **只加载 `@Controller` / `@RestController`**，不扫描 `@Service` / `@Repository` / `@Component`。Controller 依赖的 Service 不会被注入 → 启动报 `NoSuchBeanDefinitionException`。
 
 **解法**：
-- `@MockBean` Service（最常见）——测试 Controller 逻辑，Service 行为可控。
+- `@MockitoBean` Service（最常见）——测试 Controller 逻辑，Service 行为可控。
 - `@Import(MyService.class)` ——需要真实 Service 逻辑时。
 
 ```java
 // ① Mock Service（推荐：测 Controller 逻辑）
 @WebMvcTest(OrderController.class)
 class OrderControllerTest {
-    @MockBean OrderService orderService;  // mock → 控制返回值
+    @MockitoBean OrderService orderService;  // mock → 控制返回值
 }
 
 // ② Import 真实 Service（需要真实业务逻辑时）
 @WebMvcTest(OrderController.class)
 @Import(OrderService.class)  // 加载真实 Service，但其依赖仍需 mock
 class OrderControllerWithRealServiceTest {
-    @MockBean OrderRepository orderRepository;  // Service 的依赖 mock
+    @MockitoBean OrderRepository orderRepository;  // Service 的依赖 mock
 }
 ```
 

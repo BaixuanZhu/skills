@@ -1,6 +1,6 @@
 # 02 · Spring Boot Test 核心
 
-> `@SpringBootTest` 配置、`webEnvironment` 选项、MockMvc / WebTestClient / TestRestTemplate 选择、`@MockBean` 在集成测试中的用法。
+> `@SpringBootTest` 配置、`webEnvironment` 选项、MockMvc / WebTestClient / RestTestClient（Boot 4+，TestRestTemplate 迁移）选择、`@MockitoBean` 在集成测试中的用法。
 
 ## @SpringBootTest 基础
 
@@ -13,7 +13,7 @@ class MyIntegrationTest {
 
     @Test
     void should_work_with_real_beans() {
-        // service 的依赖全是真实的——DB / Redis 等需 Testcontainers 或 @MockBean 处理
+        // service 的依赖全是真实的——DB / Redis 等需 Testcontainers 或 @MockitoBean 处理
     }
 }
 ```
@@ -45,18 +45,19 @@ class HttpApiTest {
 
 > MOCK 模式下 `@Transactional` 回滚有效的完整示例见 `references/06`。
 
-## MockMvc vs WebTestClient vs TestRestTemplate
+## MockMvc vs WebTestClient vs RestTestClient
 
 | 工具 | 模式 | 适合 | 真实 HTTP？ | 响应式支持 |
 |---|---|---|---|---|
 | **MockMvc** | MOCK | Spring MVC（Servlet）测试，最轻量 | 否（进程内 Mock Servlet） | ✗ |
 | **WebTestClient** | RANDOM_PORT | Servlet + Reactive 通用，流式断言 | ✓ | ✓ |
-| **TestRestTemplate** | RANDOM_PORT | Servlet 简单场景 | ✓ | ✗ |
+| **RestTestClient**（Boot 4+） | MOCK / RANDOM_PORT | Servlet 统一客户端：MOCK 底层走 MockMvc、RANDOM_PORT 直打真实服务器，流式断言 | 按 webEnvironment | ✗ |
+| **TestRestTemplate**（≤3.x） | RANDOM_PORT | Servlet 简单场景；Boot 4 起废弃（遗留项目才见） | ✓ | ✗ |
 
 **选择规则**：
 - `MOCK` 模式 → MockMvc（最轻量，秒级）。
-- `RANDOM_PORT` + 需要 HTTP 真实性 → WebTestClient（通用）或 REST Assured（见 `05`）。
-- TestRestTemplate 仅用于简单 GET/POST 断言；复杂场景用 REST Assured。
+- `RANDOM_PORT`：Boot 4+ Servlet 栈 → RestTestClient；响应式栈（WebFlux）→ WebTestClient；复杂多步断言（given/when/then）→ REST Assured（见 `05`）。
+- TestRestTemplate 仅限 Boot ≤3.x 遗留项目的简单 GET/POST 断言；Boot 4+ 新测试一律 RestTestClient（迁移见下节），复杂场景用 REST Assured。
 
 ### MockMvc（MOCK 模式）
 
@@ -77,7 +78,7 @@ class ControllerTest {
 }
 ```
 
-> MockMvc 走 Spring MVC 管道（DispatcherServlet → Controller → Validator → ExceptionHandler），但**不开真实 HTTP socket**——无序列化差异、无网络层过滤器。需要测试 HTTP 过滤器 / 序列化用 `RANDOM_PORT`。
+> MockMvc 走 Spring MVC 管道（DispatcherServlet → Controller → Validator → ExceptionHandler），但**不开真实 HTTP socket**——无序列化差异、无网络层过滤器。需要测试 HTTP 过滤器 / 序列化用 `RANDOM_PORT`。**Boot 4 起 `@SpringBootTest` 不再自动配置 MockMvc——必须显式 `@AutoConfigureMockMvc`**（≤3.x 省略也能注入是旧行为）。
 
 ### WebTestClient（RANDOM_PORT）
 
@@ -99,11 +100,52 @@ class ApiTest {
 }
 ```
 
-## @MockBean vs @Mock（关键区分）
+### RestTestClient（Boot 4+，替代 TestRestTemplate）
 
-| | `@Mock` | `@MockBean` |
+Spring Boot 4 起 `TestRestTemplate` 废弃：从 `spring-boot-test` 拆到独立模块，升级 Boot 4 后原有 `@Autowired TestRestTemplate` **直接注入失败**（补依赖才恢复，且官方方向是废弃）。新测试用 `RestTestClient`。
+
+```xml
+<!-- pom.xml（test scope，版本随 Boot 4 BOM） -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-resttestclient</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+> ⚠️ 坐标是 `spring-boot-resttestclient`——**没有** `spring-boot-starter-resttestclient` 这个 starter（部分教程讹传，Maven Central 404）。不加依赖则 `RestTestClient` 与 `TestRestTemplate` 都无法解析。
+
+```java
+@SpringBootTest(webEnvironment = RANDOM_PORT)
+@AutoConfigureRestTestClient  // Boot 4：HTTP 测试客户端不再自动配置，须显式开启
+class ApiTest {
+    @Autowired RestTestClient restTestClient;  // RANDOM_PORT → 直打真实服务器
+
+    @Test
+    void should_create_order() {
+        restTestClient.post().uri("/api/orders")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(Map.of("productId", 1, "qty", 2))
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.data.orderId").isNotEmpty();
+    }
+}
+```
+
+**TestRestTemplate → RestTestClient 迁移要点**：
+- 注入：`@Autowired TestRestTemplate` → `@Autowired RestTestClient` + 类上 `@AutoConfigureRestTestClient`。
+- 遗留项目暂留 TestRestTemplate 的代价：Boot 4 下类移到 `org.springframework.boot.resttestclient.TestRestTemplate`（原 import 失效），且需类上 `@AutoConfigureTestRestTemplate` + runtime 依赖 `spring-boot-restclient`——改动不比迁移到 RestTestClient 少，不推荐。
+- API 风格：命令式 `getForObject` / `exchange` → 流式 `get().uri().exchange().expectStatus().expectBody()`（与 WebTestClient 一致；要拿反序列化对象用 `.expectBody(T.class).returnResult().getResponseBody()`）。
+- 双模式：默认 `MOCK`（MockMvc 在 classpath）底层走 MockMvc，不开真实 socket；`RANDOM_PORT` 直打真实服务器——同一 API 覆盖两种环境。
+- 响应式栈（WebFlux）不用它——仍用 WebTestClient。
+
+## @MockitoBean vs @Mock（关键区分）
+
+| | `@Mock` | `@MockitoBean` |
 |---|---|---|
-| 来源 | Mockito 原生 | Spring Boot Test |
+| 来源 | Mockito 原生 | Spring Framework 6.2+（`org.springframework.test.context.bean.override.mockito`） |
 | 范围 | 纯单元测试 | 切片 / 集成测试 |
 | 作用 | 替换被测对象的依赖字段 | 替换 Spring Context 中的 Bean 定义 |
 | 容器 | 不起容器 | 启动 / 重建 Spring Context |
@@ -117,23 +159,25 @@ class OrderServiceUnitTest {
     @InjectMocks OrderService service;
 }
 
-// 集成测试 → @MockBean
+// 集成测试 → @MockitoBean
 @SpringBootTest
 class OrderIntegrationTest {
-    @MockBean PaymentClient paymentClient;  // 替换 Context 中的 PaymentClient Bean
+    @MockitoBean PaymentClient paymentClient;  // 替换 Context 中的 PaymentClient Bean
     @Autowired OrderService orderService;     // 真实 Bean，但 PaymentClient 被 mock
 }
 ```
 
-> **`@MockBean` 配置变化会重建 Context（十秒级）**——完整缓存机制与统一配置示例见下文「Context 缓存机制」。
+> **版本口径**：Boot 3.4+ 用 `@MockitoBean` / `@MockitoSpyBean`；旧的 `@MockBean` / `@SpyBean` 是 Boot ≤3.3 写法（3.4 废弃，**4.0 已移除——编译错误**）。字段上可直接替换。关键差异：**`@MockitoBean` 不能声明在 `@Configuration` / `@TestConfiguration` 类里**（旧 `@MockBean` 可以）——跨测试类共享 mock 改为测试类上重复标注 `@MockitoBean(types = {...})` 或自定义组合注解。
 
-### @SpyBean：部分真实 + 部分 mock
+> **`@MockitoBean` 配置变化会重建 Context（十秒级）**——完整缓存机制与统一配置示例见下文「Context 缓存机制」。
+
+### @MockitoSpyBean：部分真实 + 部分 mock
 
 ```java
 // 真实 OrderService 运行，但 spy 其 sendNotification 方法
 @SpringBootTest
 class NotificationTest {
-    @SpyBean OrderService orderService;
+    @MockitoSpyBean OrderService orderService;
 
     @Test
     void should_call_notification() {
@@ -143,7 +187,7 @@ class NotificationTest {
 }
 ```
 
-> `@SpyBean` 对真实 Bean 创建 spy——真实方法照常执行，但可 `verify` 调用 / `doReturn` 桩特定方法。与 `@MockBean` 区别：`@MockBean` 完全替换（所有方法返回默认值），`@SpyBean` 保留真实行为。
+> `@MockitoSpyBean` 对真实 Bean 创建 spy——真实方法照常执行，但可 `verify` 调用 / `doReturn` 桩特定方法。与 `@MockitoBean` 区别：`@MockitoBean` 完全替换（所有方法返回默认值），`@MockitoSpyBean` 保留真实行为。
 
 ## @TestConfiguration
 
@@ -181,7 +225,7 @@ class MyTest { }
 Spring Test 会缓存 ApplicationContext——**相同配置的测试类共享同一个 Context 实例**。缓存命中 = 零启动开销。
 
 **什么会破坏缓存**（导致重建 Context，每次十秒）：
-- 不同的 `@MockBean` / `@SpyBean` 组合
+- 不同的 `@MockitoBean` / `@MockitoSpyBean` 组合
 - 不同的 `@SpringBootTest` 属性（`properties` / `webEnvironment`）
 - 不同的 `@ActiveProfiles`
 - `@DirtiesContext`（显式标记 Context 被污染）
@@ -190,15 +234,15 @@ Spring Test 会缓存 ApplicationContext——**相同配置的测试类共享�
 
 ```java
 // ✗ 每个测试类 mock 不同 Bean → 3 个 Context → 30s 启动
-class TestA { @MockBean Repo repo; }
-class TestB { @MockBean Service service; }
-class TestC { @MockBean Repo repo; @MockBean Service service; }
+class TestA { @MockitoBean Repo repo; }
+class TestB { @MockitoBean Service service; }
+class TestC { @MockitoBean Repo repo; @MockitoBean Service service; }
 
 // ✓ 统一 Base 类 → 1 个 Context → 10s 启动
 @SpringBootTest
 abstract class BaseIntegrationTest {
-    @MockBean Repo repo;
-    @MockBean Service service;
+    @MockitoBean Repo repo;
+    @MockitoBean Service service;
 }
 class TestA extends BaseIntegrationTest { }
 class TestB extends BaseIntegrationTest { }
