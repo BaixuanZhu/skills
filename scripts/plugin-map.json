@@ -1,5 +1,5 @@
 {
-  "_comment": "声明 skills/ → plugins/ 的多对一映射。不在 groups 里的 skill 走默认 1:1 逻辑（plugins/<name>/skills/<name>/）。version 策略：max = 取组内所有 skill 版本的最大值作为 plugin 版本。",
+  "_comment": "声明 skills/ → plugins/ 的多对一映射。不在 groups 里的 skill 走默认 1:1 逻辑（plugins/<name>/skills/<name>/）。version 策略：max = 取组内所有 skill 版本的最大值作为 plugin 版本；组内容有变化但 max 未超过当前插件版本时（低版本成员更新），sync 脚本自动 bump patch 位，保证插件市场版本号反映内容更新。",
   "groups": {
     "agile": {
       "skills": ["using-agile", "agile-strategic", "agile-backlog", "agile-sprint"],

@@ -46,13 +46,31 @@ function loadPluginMap() {
 
 const { skillToGroup, groups: PLUGIN_GROUPS } = loadPluginMap();
 
-// 版本聚合:max 策略 = 取组内所有 skill 版本的最大值
-function aggregateGroupVersion(groupName, skillVersions) {
+// 版本聚合:max 策略 = 取组内所有 skill 版本的最大值;
+// 组内容有变化但聚合版本 ≤ 插件当前版本时(低版本成员更新,max 不动),bump patch 保证插件版本反映内容变化,
+// 否则插件市场版本号不变、已装用户收不到更新提示。
+function aggregateGroupVersion(groupName, skillVersions, currentPluginVersion, anyContentChanged) {
   const strategy = PLUGIN_GROUPS[groupName]?.version || 'max';
+  let agg;
   if (strategy === 'max') {
-    return skillVersions.sort((a, b) => compareVersions(b, a))[0];
+    agg = skillVersions.sort((a, b) => compareVersions(b, a))[0];
+  } else {
+    throw new Error(`未知 version 策略: ${strategy} (group ${groupName})`);
   }
-  throw new Error(`未知 version 策略: ${strategy} (group ${groupName})`);
+  if (currentPluginVersion && compareVersions(agg, currentPluginVersion) < 0) {
+    agg = currentPluginVersion;  // 版本只升不降(成员 version 回退时不降插件版本)
+  }
+  if (anyContentChanged && currentPluginVersion && compareVersions(agg, currentPluginVersion) <= 0) {
+    agg = bumpPatch(currentPluginVersion);
+  }
+  return agg;
+}
+
+// patch 位 +1(1.4.1 → 1.4.2)
+function bumpPatch(version) {
+  const p = String(version).split('.');
+  p[2] = (Number(p[2]) || 0) + 1;
+  return p.join('.');
 }
 
 // 语义化版本比较(a > b → 正数)
@@ -113,8 +131,8 @@ function sync() {
   const marketplaceByName = new Map(marketplace.plugins.map(p => [p.name, p]));
   const agentsByName = new Map((agentsMarketplace?.plugins || []).map(p => [p.name, p]));
 
-  // 收集每个 group 的成员 skill 版本(用于版本聚合)
-  const groupSkillVersions = {};  // groupName → [{name, version}]
+  // 收集每个 group 的成员 skill 版本与内容变化标志(用于版本聚合)
+  const groupSkillVersions = {};  // groupName → [{name, version, changed}]
 
   for (const name of skillDirs) {
     const skillDir = join(SKILLS_DIR, name);
@@ -155,7 +173,7 @@ function sync() {
 
     // 收集 group 成员版本(稍后统一聚合);非 group skill 收集自身版本供 1:1 同步
     if (mapping) {
-      (groupSkillVersions[mapping.group] = groupSkillVersions[mapping.group] || []).push({ name, version: fm.version });
+      (groupSkillVersions[mapping.group] = groupSkillVersions[mapping.group] || []).push({ name, version: fm.version, changed: contentChanged });
     } else {
       // ② 1:1 插件:双 manifest(Claude + Codex)version 同步(只改 version,保留其余字段)
       syncManifestVersion(pluginJsonPath, fm.version, `${name} .claude-plugin/plugin.json`, report);
@@ -170,10 +188,16 @@ function sync() {
   // ②③ group 插件:版本聚合后统一同步 plugin.json + marketplace.json
   for (const [groupName, members] of Object.entries(groupSkillVersions)) {
     if (members.length === 0) continue;
-    const versions = members.map(m => m.version);
-    const aggVersion = aggregateGroupVersion(groupName, versions);
     const pluginDir = join(PLUGINS_DIR, groupName);
     const pluginJsonPath = join(pluginDir, '.claude-plugin', 'plugin.json');
+    const versions = members.map(m => m.version);
+    const anyContentChanged = members.some(m => m.changed);
+    // 当前插件版本:读 .claude-plugin/plugin.json(不存在时跳过 bump 判定,直接用聚合值)
+    let currentPluginVersion = null;
+    if (existsSync(pluginJsonPath)) {
+      currentPluginVersion = JSON.parse(readFileSync(pluginJsonPath, 'utf8')).version || null;
+    }
+    const aggVersion = aggregateGroupVersion(groupName, versions, currentPluginVersion, anyContentChanged);
 
     // 双 manifest(Claude + Codex)version 同步(只改 version,保留其余字段)
     syncManifestVersion(pluginJsonPath, aggVersion, `${groupName} .claude-plugin/plugin.json`, report);
