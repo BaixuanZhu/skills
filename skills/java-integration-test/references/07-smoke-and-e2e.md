@@ -125,7 +125,7 @@ class OrderFlowE2ETest {
 
     @LocalServerPort int port;
     @Container @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.11-alpine");
 
     RequestSpecification spec;
 

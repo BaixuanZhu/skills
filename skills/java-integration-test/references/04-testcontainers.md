@@ -1,8 +1,43 @@
 # 04 · Testcontainers 真实依赖
 
-> 用 Docker 容器启动真实依赖（PostgreSQL / MySQL / Redis / Kafka），消除"H2 测试 + PostgreSQL 生产"的环境差异。Testcontainers 是集成测试用真实依赖的事实标准。示例基于 TC 1.x（Boot ≤3.x，BOM 3.5 管 1.21.x）；Boot 4 用 TC 2.x——坐标 / 包名 / 泛型差异见「依赖」节对照表。
+> 用 Docker 容器启动真实依赖（PostgreSQL / MySQL / Redis / Kafka）。需要真实依赖的集成测试**默认**用它——**不取决于项目当前是否已引 H2**（没用 H2、测试未搭，同样引入）；H2 是反面教材（方言差异），不是前提。Testcontainers 是集成测试用真实依赖的事实标准。示例基于 TC 1.x（Boot ≤3.x，BOM 3.5 管 1.21.x）；Boot 4 用 TC 2.x——坐标 / 包名 / 泛型差异见「依赖」节对照表。**镜像版本按「依赖选择」节落定，不静默照抄示例。**
+
+## 依赖选择：探测 → 推荐 → 询问用户（写容器前必做，不静默）
+
+写 Testcontainers 前先定「起什么容器、什么镜像版本」。三步走，禁止直接照抄示例镜像：
+
+1. **探测生产依赖**（读项目，不重复问用户已知信息）：
+
+| 探测源 | 判定 |
+|---|---|
+| `pom.xml` / `build.gradle` | `org.postgresql:postgresql` → PostgreSQL；`mysql-connector-j` → MySQL；`spring-boot-starter-data-redis` / `lettuce` → Redis；`spring-kafka` → Kafka |
+| `application.yml` / `.properties` | `spring.datasource.url` 前缀 `jdbc:postgresql://` / `jdbc:mysql://`；`spring.data.redis.host` |
+| `docker-compose.yml` / 部署配置 | 生产容器镜像 tag（对齐生产优先） |
+
+2. **给候选 + 推荐，询问用户**（选择题式，不开放式；一次一问）：
+
+> 生产 PostgreSQL，测试容器镜像用哪个？
+> - A. `postgres:17.11-alpine`（推荐——对齐主流生产 17.x，alpine 体积小、启动快）
+> - B. 对齐生产具体版本（如生产是 16 → `postgres:16-alpine`）
+> - C. 其他（用户指定）
+
+用户不答复时：用推荐值，并在交付说明中明示「默认取 X，如需对齐生产版本请告知」——不静默，也不卡流程。
+
+3. **推荐版本表**（常用容器；探测不到时用推荐值，对齐生产优先）：
+
+| 依赖 | 推荐镜像 | 说明 |
+|---|---|---|
+| PostgreSQL | `postgres:17.11-alpine` | 对齐主流生产 17.x |
+| MySQL | `mysql:8.4.11` | 8.4 LTS 线 |
+| Redis | `redis:8.2.8-alpine` | 8.x 当前主线 |
+| MongoDB | 对齐生产；无则 `mongo:8` | 版本差异大，务必对齐生产 |
+| Kafka | 对齐生产；无则官方 `apache/kafka` latest | 协议强绑定版本，必须对齐生产 |
+
+> 镜像 tag 随上游更新——「对齐生产」是第一原则，推荐值是探测不到时的兜底，不是金标准。
 
 ## 为什么不用 H2
+
+> 本节解释 H2 为什么不能替代生产数据库——但 H2 不是触发前提：即使项目当前没引 H2，需要真实依赖的测试同样**默认** Testcontainers。
 
 | 差异 | H2 | PostgreSQL |
 |---|---|---|
@@ -68,7 +103,7 @@
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @Container
-static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine");
+static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17.11-alpine");
 ```
 
 > `@Testcontainers` / `@Container` / `@ServiceConnection` / `withReuse` 等 API 模式两版一致——差异集中在坐标、import 包名、泛型（2.x 容器类不再带 `<>`）三处。核心 artifact `org.testcontainers:testcontainers` 名字不变（Redis 用的 `GenericContainer` 不受影响）。
@@ -82,7 +117,7 @@ class PostgresIntegrationTest {
 
     @Container
     static PostgreSQLContainer<?> postgres =
-        new PostgreSQLContainer<>("postgres:16-alpine");
+        new PostgreSQLContainer<>("postgres:17.11-alpine");
 
     // 容器全类共享——只启动一次，所有测试方法共用
 }
@@ -99,7 +134,7 @@ class PostgresTest {
 
     @Container
     static PostgreSQLContainer<?> postgres =
-        new PostgreSQLContainer<>("postgres:16-alpine")
+        new PostgreSQLContainer<>("postgres:17.11-alpine")
             .withReuse(true);  // 跨测试类复用容器
 
     @ServiceConnection  // 自动注入 datasource.url / username / password
@@ -113,7 +148,7 @@ class PostgresTest {
 
 ```java
 @Container
-static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.11-alpine");
 
 @DynamicPropertySource
 static void configure(DynamicPropertyRegistry registry) {
@@ -136,7 +171,7 @@ class OrderRepositoryIT {
     @Container
     @ServiceConnection
     static PostgreSQLContainer<?> postgres =
-        new PostgreSQLContainer<>("postgres:16-alpine");
+        new PostgreSQLContainer<>("postgres:17.11-alpine");
 
     @Autowired OrderRepository orderRepository;
 
@@ -159,7 +194,7 @@ class OrderRepositoryIT {
 ```java
 @Container
 static PostgreSQLContainer<?> postgres =
-    new PostgreSQLContainer<>("postgres:16-alpine")
+    new PostgreSQLContainer<>("postgres:17.11-alpine")
         .withReuse(true);  // 标记可复用
 ```
 
@@ -174,17 +209,17 @@ testcontainers.reuse.enable=true
 
 ## 常用容器速查
 
-| 依赖 | 容器类 | Maven artifactId |
-|---|---|---|
-| PostgreSQL | `PostgreSQLContainer` | `org.testcontainers:postgresql` |
-| MySQL | `MySQLContainer` | `org.testcontainers:mysql` |
-| Redis | `GenericContainer("redis:7-alpine")` | `org.testcontainers:testcontainers` |
-| MongoDB | `MongoDBContainer` | `org.testcontainers:mongodb` |
-| Kafka | `KafkaContainer` | `org.testcontainers:kafka` |
-| LocalStack (AWS) | `LocalStackContainer` | `org.testcontainers:localstack` |
-| Elasticsearch | `ElasticsearchContainer` | `org.testcontainers:elasticsearch` |
+| 依赖 | 容器类 | Maven artifactId | 推荐镜像（对齐生产优先） |
+|---|---|---|---|
+| PostgreSQL | `PostgreSQLContainer` | `org.testcontainers:postgresql` | `postgres:17.11-alpine` |
+| MySQL | `MySQLContainer` | `org.testcontainers:mysql` | `mysql:8.4.11` |
+| Redis | `GenericContainer` | `org.testcontainers:testcontainers` | `redis:8.2.8-alpine` |
+| MongoDB | `MongoDBContainer` | `org.testcontainers:mongodb` | 对齐生产 / `mongo:8` |
+| Kafka | `KafkaContainer` | `org.testcontainers:kafka` | 对齐生产 |
+| LocalStack (AWS) | `LocalStackContainer` | `org.testcontainers:localstack` | 默认 latest |
+| Elasticsearch | `ElasticsearchContainer` | `org.testcontainers:elasticsearch` | 对齐生产 |
 
-> 上表 artifactId 为 TC 1.x（Boot ≤3.x）名；Boot 4（TC 2.x）除核心 `testcontainers` 外全部加 `testcontainers-` 前缀（如 `testcontainers-mysql`、`testcontainers-kafka`），容器类 import 同步换独立包（见「依赖」节对照表）。
+> 上表 artifactId 为 TC 1.x（Boot ≤3.x）名；Boot 4（TC 2.x）除核心 `testcontainers` 外全部加 `testcontainers-` 前缀（如 `testcontainers-mysql`、`testcontainers-kafka`），容器类 import 同步换独立包（见「依赖」节对照表）。镜像版本按「依赖选择」节流程落定。
 
 ### Redis 示例
 
@@ -192,7 +227,7 @@ testcontainers.reuse.enable=true
 @Container
 @ServiceConnection
 static GenericContainer<?> redis =
-    new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
+    new GenericContainer<>("redis:8.2.8-alpine").withExposedPorts(6379);
 ```
 
 > `@ServiceConnection` 对 Redis 的支持（Spring Boot 3.1+）自动注入 `spring.data.redis.host` / `port`。3.0 及以下手动 `@DynamicPropertySource`。
@@ -218,7 +253,7 @@ static GenericContainer<?> redis =
 ```java
 @Container
 @ServiceConnection
-static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.11-alpine");
 
 // application-test.yml 中正常配置（与生产一致）
 // spring.flyway.enabled: true （默认 true，不需要额外配置）
@@ -261,13 +296,19 @@ void should_changelog_run_cleanly() throws Exception {
 
 集成测试已隐式验证迁移脚本（容器启动时 Flyway/Liquibase 执行，脚本有问题则容器初始化阶段就炸）——单独写测试只在验证**可重放**（clean + migrate）时才有意义。
 
-## Docker 要求
+## Docker 环境 checklist（跑 Testcontainers 前逐项核对）
 
-Testcontainers 依赖 Docker daemon：
-- **本地开发**：装 Docker Desktop（Windows/macOS）或 Docker Engine（Linux）。
-- **CI 环境**：GitHub Actions / GitLab CI 预装 Docker；自建 Jenkins 需配 Docker-in-Docker 或远程 Docker。
+Testcontainers 依赖 Docker daemon。任一未过，容器起不来：
 
-> **CI 无 Docker 的降级方案**：如果 CI 环境无法跑 Docker，可退回 H2 + 接受方言差异风险，但须在团队内明确标注"集成测试覆盖不完整"。这不应是默认状态。
+- [ ] **本地**：Docker Desktop（Windows/macOS）或 Docker Engine（Linux）已安装
+- [ ] **daemon 运行**：`docker info` 返回正常（未运行 → 启动 Docker Desktop / `systemctl start docker`）
+- [ ] **Windows 容器模式**：Docker Desktop 处于 **Linux 容器**模式（Testcontainers 不支持 Windows 容器；WSL2 backend 需开启）
+- [ ] **CI（GitHub Actions / GitLab CI）**：runner 预装 Docker，无需额外配置
+- [ ] **CI（自建 Jenkins）**：已配 Docker-in-Docker（DinD）或远程 daemon（`DOCKER_HOST` 指向可达地址）
+- [ ] **内网 / 代理环境**：镜像可拉取——配 registry mirror 或 `HTTPS_PROXY`；首次拉取慢（~150MB）属正常，CI 可预拉镜像加速
+- [ ] **无 Docker 降级**：仅 CI 无法跑 Docker 时退回 H2——须在团队内明确标注「集成测试覆盖不完整」，**不得静默降级**（这不是默认状态）
+
+> 核对失败（daemon 未起 / 无 Docker 环境）：先解决环境，或按最后一项显式降级并声明——不要直接把测试改回 H2 当无事发生。
 
 ## 隐蔽坑
 
@@ -276,17 +317,17 @@ Testcontainers 依赖 Docker daemon：
 ```java
 // ✗ 不写 static：每个 @Test 启动 + 停止容器
 @Container
-PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.11-alpine");
 // 10 个测试方法 = 启停 10 次容器 = 数分钟
 
 // ✓ static：全类共享一次
 @Container
-static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.11-alpine");
 ```
 
 ### ② 镜像首次拉取慢
 
-首次使用 `postgres:16-alpine` 会拉镜像（~150MB），耗时数十秒。后续从本地 Docker 缓存启动（秒级）。CI 中可预拉镜像加速。
+首次使用 `postgres:17.11-alpine` 会拉镜像（~150MB），耗时数十秒。后续从本地 Docker 缓存启动（秒级）。CI 中可预拉镜像加速。
 
 ### ③ @ServiceConnection 需要 spring-boot-testcontainers 依赖
 

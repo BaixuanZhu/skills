@@ -10,12 +10,13 @@ description: >-
   TestRestTemplate（Boot 4 迁移）、REST Assured API 断言、Testcontainers 真实依赖、WireMock 外部服务 stub、
   测试隔离（@Transactional 回滚 / @Sql / @DirtiesContext）、冒烟测试（Actuator health）。
   次级触发信号：用 curl 测接口、手动启动应用再调接口、@SpringBootTest 全量上下文
-  测单层 Controller、测试间数据互相污染、H2 测试 + PostgreSQL 生产、外部 API 真调、
-  "返回 200 就是通过了"、仿真测试不稳定、反复全量 mvn test、全文读测试输出、跑测试太慢。
+  测单层 Controller、测试间数据互相污染、集成测试需要真实数据库 / Redis / Kafka、
+  测试基础设施待搭建（生产用 PostgreSQL / MySQL / Redis）、测试用 H2 替代生产数据库、
+  外部 API 真调、"返回 200 就是通过了"、仿真测试不稳定、反复全量 mvn test、全文读测试输出、跑测试太慢。
   与 java-unit-test 的边界：纯单测（@Mock + @InjectMocks，毫秒级，不起容器）→ java-unit-test；
   跨层协作 + 真实依赖 + 进程内 HTTP 断言 → 本技能。
-version: "1.2.0"
-last_verified: "2026-08-19"
+version: "1.3.0"
+last_verified: "2026-08-21"
 ---
 
 # Java 集成测试
@@ -59,6 +60,7 @@ last_verified: "2026-08-19"
    - "验证服务能不能正常启动"→ Actuator health 冒烟测试
    - 多接口串联的业务流程 → API 级 E2E
 3. **curl 检测**：如果正在用 curl 或打算用 curl 调接口"测试"→ **立即拦截**，按路由表引导到正确工具。
+4. **真实依赖需求判定**（测试涉及 DB / Redis / Kafka 且需要真实行为时）：**默认 Testcontainers**——不取决于项目当前是否已引 H2（项目没用 H2、测试未搭，同样引入；H2 只是反例，不是触发前提，详见 `04`）。依赖选择（探测生产 → 询问用户）见「使用流程」第 2 步。
 
 ## 测试层次路由
 
@@ -86,7 +88,7 @@ last_verified: "2026-08-19"
 | 手动启动应用再 curl "测试" | `@SpringBootTest(webEnvironment=RANDOM_PORT)` 进程内启动 + 自动断言 |
 | 全量 `@SpringBootTest` 测单层 Controller | `@WebMvcTest` 切片测试——只加载 Web 层，秒级启动 |
 | `@Transactional` 回滚用于 `RANDOM_PORT` 场景 | `RANDOM_PORT` 下 HTTP 请求走独立线程，`@Transactional` 回滚**失效**→ 用 `@Sql` 清理 or Testcontainers 重置（见 `06`） |
-| H2 测试 + PostgreSQL 生产 | Testcontainers 用真实数据库——消除方言差异（`jsonb`/`ARRAY`/`SERIAL` 等 H2 不支持） |
+| 用 H2 替代生产数据库（无论当前是否已引 H2） | 需要真实依赖的测试**默认** Testcontainers 真实容器——消除方言差异（`jsonb`/`ARRAY`/`SERIAL` 等 H2 不支持）；H2 仅限 CI 无 Docker 降级（见 `04`） |
 | 外部 API 真调（第三方支付 / 短信） | WireMock stub——可控、可重复、不产生费用 |
 | 无断言测试（调一下接口即算"覆盖"） | 每个测试必须有结构化断言：HTTP status + 响应体字段值 |
 | `@DirtiesContext` 每个测试都加 | 只在 Context 状态确实被污染时用——它会重建整个 Spring Context（十秒级），优先 `@Sql` / `@Transactional` |
@@ -110,7 +112,7 @@ last_verified: "2026-08-19"
 1. **禁止 curl 测试**：生成测试不得用 `curl` / `httpie` / 手动 HTTP 客户端；必须用 MockMvc / WebTestClient / REST Assured / RestTestClient（Boot 4+，替代 TestRestTemplate）编写含结构化断言的测试（本质见铁律 1）。
 2. **`@Transactional` 回滚仅限 `MOCK` 模式**：MOCK 有效、`RANDOM_PORT` 失效（根因见 S 级表 + `references/06`），改用 `@Sql(execution=AFTER_TEST_METHOD)` 或 Testcontainers 重置。
 3. **切片测试优先**：只测单层时用 `@WebMvcTest`（Controller）/ `@DataJpaTest`（Repository），不起全量 Context。全量 `@SpringBootTest` 只用于真正需要跨层协作的场景。
-4. **Testcontainers 消除环境差异**：生产用 PostgreSQL/MySQL/Redis → 测试用 Testcontainers 起同款容器，不用 H2 替代（方言差异是"测试绿生产炸"头号来源，差异表见 `references/04`）。
+4. **真实依赖默认 Testcontainers**：需要真实数据库 / Redis / Kafka 的集成测试 → **默认**用 Testcontainers 起同款容器——**不取决于项目当前是否已引 H2**（没用 H2、测试未搭，同样引入）。H2 仅限 CI 无 Docker 时的显式降级（见 `references/04` checklist）；方言差异是"测试绿生产炸"头号来源。
 5. **外部依赖必须 stub**：调用外部 HTTP API（支付 / 短信 / 第三方认证）必须用 WireMock stub，不得真调（理由见 S 级表）。
 6. **`@DirtiesContext` 是最后手段**：重建整个 Context（十秒级，代价见 S 级表），仅在 Bean 内部状态被污染且无法用 `@Sql` / `@Transactional` / Testcontainers 重置时才用。
 7. **Context 缓存友好**：`@MockitoBean` / `@MockitoSpyBean` / `@SpringBootTest` 属性的组合变化会导致 Context 缓存失效并重建。统一测试的 mock 配置，避免每个测试类用不同 `@MockitoBean` 组合。
@@ -118,19 +120,20 @@ last_verified: "2026-08-19"
 
 ## 使用流程
 
-1. **第 0 步探测**：工具栈 + 测试场景 + curl 检测。
-2. **读 `references/01`**：确认测试层次（切片 / 集成 / 冒烟 / E2E）。
-3. **定位工具 reference**：按路由表读 `02`-`05` 对应文件。
-4. **隔离策略**：读 `references/06`，确定数据清理方案（`@Transactional` / `@Sql` / Testcontainers 重置 / WireMock）。
-5. **执行效率**：读 `references/08`——`mvn test` 降噪输出、`-Dtest` 单测迭代、失败读 surefire 报告，不全文读输出。
-6. **输出前自检**：逐项核对下方「输出前自检清单」——任一项未过，不得交付。
+1. **第 0 步探测**：工具栈 + 测试场景 + curl 检测 + 真实依赖需求判定。
+2. **依赖选择询问**：涉及真实依赖时——探测生产依赖（驱动 / datasource / docker-compose）→ 给候选版本询问用户（对齐生产优先，推荐值见 `04` §依赖选择）→ 落定后写代码。**不静默选镜像 tag。**
+3. **读 `references/01`**：确认测试层次（切片 / 集成 / 冒烟 / E2E）。
+4. **定位工具 reference**：按路由表读 `02`-`05` 对应文件。
+5. **隔离策略**：读 `references/06`，确定数据清理方案（`@Transactional` / `@Sql` / Testcontainers 重置 / WireMock）。
+6. **执行效率**：读 `references/08`——`mvn test` 降噪输出、`-Dtest` 单测迭代、失败读 surefire 报告，不全文读输出。
+7. **输出前自检**：逐项核对下方「输出前自检清单」——任一项未过，不得交付。
 
 ## 输出前自检清单（交付测试代码前逐项核对，任一未过不得交付）
 
 - [ ] 无 `curl` / `httpie` / 手动启动应用调接口——测试用 MockMvc / WebTestClient / REST Assured / RestTestClient（Boot 4+）编写
 - [ ] 每个测试有结构化断言：HTTP status + 响应体字段值（jsonPath / expectBody）
 - [ ] `@Transactional` 回滚仅用于 `MOCK` 模式——`RANDOM_PORT` / `DEFINED_PORT` 场景已改 `@Sql` / Testcontainers 重置
-- [ ] 生产库 PostgreSQL / MySQL 时未用 H2 替代——Testcontainers 起同款容器
+- [ ] 需要真实依赖的测试用 Testcontainers 真实容器——未静默用 H2 替代；容器镜像版本已探测生产 + 询问用户确认（`04` §依赖选择）
 - [ ] 外部 HTTP 依赖（支付 / 短信 / 三方认证）全部 WireMock stub，无真调
 - [ ] 单层测试用切片（`@WebMvcTest` / `@DataJpaTest`），未用全量 `@SpringBootTest` 测单层
 - [ ] `@DirtiesContext` 仅在状态无法用 `@Sql` / `@Transactional` / Testcontainers 重置时使用

@@ -64,7 +64,7 @@ class HttpApiTest {
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 class HttpApiTest {
     @Container @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.11-alpine");
 
     @Autowired JdbcTemplate jdbcTemplate;  // Boot 自动配置的 Bean
 
