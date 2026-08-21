@@ -1,8 +1,8 @@
-# 10 条 test-prompt（java-integration-test 达尔文评估输入）
+# 11 条 test-prompt（java-integration-test 达尔文评估输入）
 
 > 这些 prompt 模拟真实用户场景。盲评 agent 假设自己是"接到这个用户请求的 coding agent，手里只有 java-integration-test 技能"，判断能否产出合格代码/解答。
 >
-> 设计原则：每个 prompt 针对一条或多条核心强约束 + 隐性陷阱。T1-T5 是竞争场景（验证触发 + 选层次 + 边界让位）；T6-T10 是独占陷阱场景（验证技能的核心价值，尤其是 curl 反模式、@Transactional 失效、执行效率）。
+> 设计原则：每个 prompt 针对一条或多条核心强约束 + 隐性陷阱。T1-T5 + T11 是竞争场景（验证触发 + 选层次 + 边界让位 + 定位修复）；T6-T10 是独占陷阱场景（验证技能的核心价值，尤其是 curl 反模式、@Transactional 失效、执行效率）。
 
 ## T1 — 写 Controller 测试（竞争场景·选层次 + 切片优先）
 
@@ -68,7 +68,7 @@ Controller 的参数校验和返回格式是否正确，不关心数据库。
 **验证点**（SKILL.md 第 0 步边界判定 + 版本与范围）：
 - ①单元测试 → **让位 java-unit-test**（不越界包办 @Mock 纯单测设计）
 - ②集成测试 → 本技能（@SpringBootTest + Testcontainers + REST Assured）
-- ③前端页面点击 → **前端 E2E（Selenium/Playwright/Cypress），明确声明不适用** —— SKILL.md 第 130 行
+- ③前端页面点击 → **前端 E2E（Selenium/Playwright/Cypress），明确声明不适用** —— SKILL.md 「版本与范围」节
 - 越界包办单元测试设计或前端 E2E → 扣分
 
 ## T6 — @Transactional 在 RANDOM_PORT 失效（独占陷阱·头号坑）
