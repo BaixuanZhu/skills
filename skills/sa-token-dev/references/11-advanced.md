@@ -139,6 +139,8 @@ StpUtil.checkDisableLevel(10001, "comment", 3);
 封禁信息默认存 Redis。如需查库，实现 `StpInterface.isDisabled`：
 
 ```java
+import cn.dev33.satoken.model.wrapperInfo.SaDisableWrapperInfo;  // 注意包名是 model.wrapperInfo（非 stp 包）
+
 @Component
 public class StpInterfaceImpl implements StpInterface {
     @Override
@@ -151,6 +153,8 @@ public class StpInterfaceImpl implements StpInterface {
     }
 }
 ```
+
+> `isDisabled` 是接口 default 方法（默认返回未封禁），不实现也能编译；需要数据库封禁数据时才实现。
 
 ### 最佳实践
 - **封禁前先踢下线**：`kickout(id)` → `disable(id, time)`，否则已登录用户仍可操作。
@@ -321,9 +325,12 @@ public void setSaTokenConfig() {
     SaTokenConfig userConfig = new SaTokenConfig();
     userConfig.setTokenName("satoken-user");
     userConfig.setTimeout(2592000);
-    StpKit.USER.setStpLogic(new StpLogic("user").setConfig(userConfig));
+    // StpKit.USER 是 StpLogic 实例（自定义门面类字段），直接 setConfig
+    StpKit.USER.setConfig(userConfig);
 }
 ```
+
+> **勿用 `StpKit.USER.setStpLogic(new StpLogic(...))`**：`StpLogic` 没有 `setStpLogic` 方法（编译错误）。`StpKit` 是自定义门面类（`public static final StpLogic USER = new StpLogic("user")`），配置体系直接对实例调 `setConfig`。
 
 ### 多账号混合鉴权（路由拦截）
 
@@ -364,6 +371,8 @@ String plaintext = SaSecureUtil.aesDecrypt(key, ciphertext);
 ```
 
 ### BCrypt 加密（推荐用于密码存储）
+
+> Sa-Token 自带 BCrypt：`cn.dev33.satoken.secure.BCrypt`（无需额外依赖，与 Spring Security 的 `org.springframework.security.crypto.bcrypt.BCrypt` 同名不同包，勿混淆）。
 
 ```java
 // 加密

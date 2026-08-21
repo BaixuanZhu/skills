@@ -193,10 +193,11 @@ sa-token:
     secret-key: SSO-C3-kQwIOrYvnXmSDkwEiFngrKidMcdrgKor
 
 spring:
-  redis:        # Client 自己的 Redis（与 Server 不同）
-    database: 3
-    host: 127.0.0.1
-    port: 6379
+  data:         # SB3.x 前缀；SB2.x 用 spring.redis。Client 自己的 Redis（与 Server 不同）
+    redis:
+      database: 3
+      host: 127.0.0.1
+      port: 6379
 ```
 
 **模式三特点**：

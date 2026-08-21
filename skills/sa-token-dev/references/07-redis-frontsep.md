@@ -29,31 +29,29 @@ Gradle：`implementation "cn.dev33:sa-token-redis-template:${saTokenVersion}"` <
 
 ```yaml
 spring:
-  redis:
-    database: 1
-    host: 127.0.0.1
-    port: 6379
-    # password:
-    timeout: 10s
-    lettuce:
-      pool:
-        max-active: 200
-        max-wait: -1ms
-        max-idle: 10
-        min-idle: 0
+  data:             # SB3.x / SB4.x 前缀；SB2.x 用 spring.redis
+    redis:
+      database: 1
+      host: 127.0.0.1
+      port: 6379
+      # password:
+      timeout: 10s
+      lettuce:
+        pool:
+          max-active: 200
+          max-wait: -1ms
+          max-idle: 10
+          min-idle: 0
 ```
-
-> **SpringBoot 3.x：前缀 `spring.redis` 改为 `spring.data.redis`。**
 
 ### 3. 要点
 - 引入依赖 + 配好 Redis 连接即可，**框架自动保存**，所有上层 API 不变。
-- 默认以 JSON 格式存储（Jackson）。可换 Fastjson/Fastjson2/Snack3（引对应 `sa-token-fastjson2` 等依赖）；或自定义 String 序列化（`SaManager.setSaSerializerTemplate(...)`）。
+- 默认以 JSON 格式存储（`sa-token-redis-template` 内部 `String 序列化 → JSON 序列化`，实跑确认序列化器为 `SaSerializerTemplateForJson`）。可换 Fastjson2/Snack3（引对应 `sa-token-redis-fastjson2` 等依赖）；或自定义 String 序列化（`SaManager.setSaSerializerTemplate(...)`）。
 
-> **序列化安全（v1.46.0+）**：Jackson 多态反序列化 RCE 漏洞已修复，自定义类型存入 Session 时**必须**先注册类型白名单，否则反序列化报错：
-> ```java
-> import cn.dev33.satoken.strategy.SaJsonStrategy;
-> SaJsonStrategy.instance.registerAllowType(SysUser.class);   // 注册业务类型
-> ```
+> **序列化安全（v1.46.0+）**：多态反序列化 RCE 已修复——业务实体默认**不在**类型白名单内，存入 Session 后反序列化会报「无法反序列化的类型，请先注册到 JSON 全局类型白名单」。注册白名单三种方式（任选其一）：
+> 1. **实体实现 `SaJsonType` 标记接口（推荐，零配置）**：`public class SysUser implements SaJsonType {...}`，自动入白名单。
+> 2. **启动前注册**：在 `main` 方法里、`SpringApplication.run` **之前**调 `SaJsonStrategy.instance.registerAllowType(SysUser.class)`。⚠️ **`@PostConstruct` 时机太晚**——集成 Redis 时 JSON 插件已初始化，会报「已初始化，无法再注册」。
+> 3. **SPI 文件**：`resources/META-INF/satoken/sa-json-type.list` 按行写完整类名（`#` 开头为注释）。
 > 白名单首次构建 JSON 插件时初始化，之后不可再注册；`fastjson2`/`snack3`/`fory-json` 默认不写类型信息，一般无此问题。
 
 ---

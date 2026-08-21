@@ -1,0 +1,17 @@
+spring:
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 16379
+
+server:
+  port: 8081
+
+sa-token:
+  token-name: satoken
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  is-log: false

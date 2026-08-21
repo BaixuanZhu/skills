@@ -15,7 +15,7 @@
 > **Servlet 与 Reactor 依赖不可同时引入同一项目，否则项目无法启动。** 网关用 Reactor，子服务用 Servlet，各自单独引入。
 > 其他相关依赖：`sa-token-forest`（HTTP 工具，SSO 模式三需要）、`sa-token-alone-redis`（权限缓存与业务缓存隔离，见 `14-plugin.md` §6）。
 
-### 1.4 Redis 集成（必须）
+### 1.2 Redis 集成（必须）
 
 网关和子服务通过 Redis 同步会话数据，Redis 集成包必须引入：
 ```xml
@@ -69,7 +69,7 @@ spring:
 ### 3.1 依赖（SpringCloud Gateway 为例）
 
 ```xml
-<!-- Reactor 依赖（Gateway 是 WebFlux 模型）；另需引入 §1.4 的 Redis 集成依赖（必须） -->
+<!-- Reactor 依赖（Gateway 是 WebFlux 模型）；另需引入 §1.2 的 Redis 集成依赖（必须） -->
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-reactor-spring-boot-starter</artifactId>

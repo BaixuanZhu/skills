@@ -1,0 +1,68 @@
+{
+  "skill": "sa-token-dev",
+  "version": "v2.2.0",
+  "date": "2026-08-21",
+  "note": "覆盖 1.46.0 跟版后新增 API / 破坏性变更 / 版本收敛后的典型开发场景",
+  "prompts": [
+    {
+      "id": "T1",
+      "scenario": "登录认证基础",
+      "prompt": "SpringBoot 3 项目要接入 Sa-Token 做登录。项目用 Maven，请给出依赖引入、最小配置和登录/登出示例。"
+    },
+    {
+      "id": "T2",
+      "scenario": "注解鉴权",
+      "prompt": "实现基于注解的权限校验：需要 @SaCheckPermission 和 @SaCheckRole 生效，并自定义 StpInterface 提供权限数据。"
+    },
+    {
+      "id": "T3",
+      "scenario": "前后端分离",
+      "prompt": "小程序前后端分离场景，登录后前端要拿到 token 存本地，后续请求塞 header，请给出后端返回 token 和前端提交的完整方案。"
+    },
+    {
+      "id": "T4",
+      "scenario": "Redis 集成与序列化安全",
+      "prompt": "生产环境要集成 Redis 做分布式会话，并且会把自定义业务对象（如 SysUser）存入 Session，需要注意什么？"
+    },
+    {
+      "id": "T5",
+      "scenario": "SSO 单点登录",
+      "prompt": "三个子系统要统一登录，前端不同域、后端共享同一 Redis，选哪种 SSO 模式？给出 Client/Server 关键配置。"
+    },
+    {
+      "id": "T6",
+      "scenario": "OAuth2 授权码",
+      "prompt": "搭建 OAuth2.0 授权码模式授权服务器，从数据库加载 Client 信息，客户端配置在哪声明？"
+    },
+    {
+      "id": "T7",
+      "scenario": "JWT 无状态",
+      "prompt": "项目要求完全无状态、不依赖 Redis、token 自包含可读，怎么用 Sa-Token 实现？踢人还支持吗？"
+    },
+    {
+      "id": "T8",
+      "scenario": "多账号体系",
+      "prompt": "一个系统里用户端和管理员端是两套独立登录体系，不同 timeout 配置，怎么实现？"
+    },
+    {
+      "id": "T9",
+      "scenario": "封禁/踢人/二级认证",
+      "prompt": "用户违规后要封禁账号，且把已登录的踢下线；封禁信息要从数据库读取而非 Redis，如何实现？另外敏感操作要做二级认证。"
+    },
+    {
+      "id": "T10",
+      "scenario": "微服务网关鉴权",
+      "prompt": "SpringCloud Gateway + 多个子服务，网关统一鉴权，子服务要防止外网直连（Same-Token），依赖怎么引入？"
+    },
+    {
+      "id": "T11",
+      "scenario": "1.46.0 升级适配",
+      "prompt": "项目从 Sa-Token 1.45.0 升级到 1.46.0，编译报错说 StpInterface 的 isDisabled 方法签名不对，怎么办？另外登录突然报 loginId 含冒号的错误。"
+    },
+    {
+      "id": "T12",
+      "scenario": "版本统一管理",
+      "prompt": "项目里引入多个 sa-token 模块（starter、redis-template、sso），版本怎么统一管理才不用每次升级改一堆 pom？"
+    }
+  ]
+}
