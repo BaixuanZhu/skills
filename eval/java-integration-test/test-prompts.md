@@ -90,7 +90,7 @@ Controller 的参数校验和返回格式是否正确，不关心数据库。
 有一段 SQL 报错了。为什么？
 ```
 
-**验证点**（`03` 指针 + `04` §1）：
+**验证点**（`03` 隐蔽坑 + `04` 依赖选择）：
 - 识别 H2 方言 ≠ PostgreSQL（`jsonb` / `ARRAY` / 序列 / 函数 / 大小写）—— 强约束 4
 - 给出 Testcontainers 真实数据库替代 H2 —— `@AutoConfigureTestDatabase(replace = NONE)` + `@ServiceConnection`
 - 是否点明「测试绿生产炸」是 H2 替代的头号来源

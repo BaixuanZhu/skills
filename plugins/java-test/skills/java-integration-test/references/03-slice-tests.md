@@ -116,7 +116,7 @@ class OrderRepositoryTest {
 
 ### 隐蔽坑：默认替换为 H2
 
-`@DataJpaTest` 默认 `@AutoConfigureTestDatabase` → 用 H2 替换生产数据库。H2 与 PostgreSQL 的方言差异（`jsonb` / `ARRAY` / `CREATE TYPE AS ENUM` 等 H2 不支持）导致"测试绿生产炸"——完整差异表见 `04` §为什么不用 H2。
+`@DataJpaTest` 默认 `@AutoConfigureTestDatabase` → 用 H2 替换生产数据库。H2 与 PostgreSQL 的方言差异（`jsonb` / `ARRAY` / `CREATE TYPE AS ENUM` 等 H2 不支持）导致"测试绿生产炸"——需要真实行为的测试用 Testcontainers 真实库（`04`），H2 仅限 CI 无 Docker 显式降级。
 
 **解法**：用 Testcontainers 替代 H2。
 

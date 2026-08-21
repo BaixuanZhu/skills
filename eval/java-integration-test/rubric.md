@@ -77,7 +77,7 @@ curl 前置动作反模式：
 - **D4**：能否识别 H2 ≠ PostgreSQL（jsonb/ARRAY/序列/函数），根因是方言差异
 - **D5**：能否给出 Testcontainers 真实库（@AutoConfigureTestDatabase(NONE) + @ServiceConnection）
 
-**判分锚点**：建议"改 SQL 让 H2 也兼容"（治标不治本）→ D4/D5 扣。未提方言差异表 → D3 扣。
+**判分锚点**：建议"改 SQL 让 H2 也兼容"（治标不治本）→ D4/D5 扣。未提方言差异（`jsonb` / `ARRAY` 等 H2 不支持的具体例子）→ D3 扣。
 
 ### T8（@MockBean vs @Mock·独占陷阱）—— 重点 D4/D5
 

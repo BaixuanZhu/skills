@@ -30,25 +30,11 @@
 | PostgreSQL | `postgres:17.11-alpine` | 对齐主流生产 17.x |
 | MySQL | `mysql:8.4.11` | 8.4 LTS 线 |
 | Redis | `redis:8.2.8-alpine` | 8.x 当前主线 |
-| MongoDB | 对齐生产；无则 `mongo:8` | 版本差异大，务必对齐生产 |
-| Kafka | 对齐生产；无则官方 `apache/kafka` latest | 协议强绑定版本，必须对齐生产 |
+| MongoDB | `mongo:8.3.8` | 8.x 当前主线 |
+| Kafka | `apache/kafka:4.3.1` | 协议强绑定版本，务必对齐生产 |
+| RabbitMQ | `rabbitmq:4.3.5-management-alpine` | 4.x 当前主线；management 含管理 UI |
 
 > 镜像 tag 随上游更新——「对齐生产」是第一原则，推荐值是探测不到时的兜底，不是金标准。
-
-## 为什么不用 H2
-
-> 本节解释 H2 为什么不能替代生产数据库——但 H2 不是触发前提：即使项目当前没引 H2，需要真实依赖的测试同样**默认** Testcontainers。
-
-| 差异 | H2 | PostgreSQL |
-|---|---|---|
-| `jsonb` 类型 | ✗ 不支持 | ✓ |
-| `ARRAY` 类型 | ✗ | ✓ |
-| `SERIAL` / `GENERATED ... AS IDENTITY` | 语义部分不同 | ✓ |
-| 大小写敏感 | 默认不敏感 | 敏感（需引号） |
-| 窗口函数 / CTE | 部分支持 | 完整支持 |
-| 存储过程 / 函数 | 语法不同 | ✓ |
-
-> H2 与 PostgreSQL 的方言差异是"测试绿生产炸"的头号来源。H2 测试通过的 SQL，在 PostgreSQL 上可能直接报语法错误或行为不同。Testcontainers 用真实数据库消除这个差异。
 
 ## 基本用法
 
@@ -214,12 +200,13 @@ testcontainers.reuse.enable=true
 | PostgreSQL | `PostgreSQLContainer` | `org.testcontainers:postgresql` | `postgres:17.11-alpine` |
 | MySQL | `MySQLContainer` | `org.testcontainers:mysql` | `mysql:8.4.11` |
 | Redis | `GenericContainer` | `org.testcontainers:testcontainers` | `redis:8.2.8-alpine` |
-| MongoDB | `MongoDBContainer` | `org.testcontainers:mongodb` | 对齐生产 / `mongo:8` |
-| Kafka | `KafkaContainer` | `org.testcontainers:kafka` | 对齐生产 |
+| MongoDB | `MongoDBContainer` | `org.testcontainers:mongodb` | `mongo:8.3.8` |
+| Kafka | `KafkaContainer` | `org.testcontainers:kafka` | `apache/kafka:4.3.1`（对齐生产优先） |
+| RabbitMQ | `RabbitMQContainer` | `org.testcontainers:rabbitmq` | `rabbitmq:4.3.5-management-alpine` |
 | LocalStack (AWS) | `LocalStackContainer` | `org.testcontainers:localstack` | 默认 latest |
 | Elasticsearch | `ElasticsearchContainer` | `org.testcontainers:elasticsearch` | 对齐生产 |
 
-> 上表 artifactId 为 TC 1.x（Boot ≤3.x）名；Boot 4（TC 2.x）除核心 `testcontainers` 外全部加 `testcontainers-` 前缀（如 `testcontainers-mysql`、`testcontainers-kafka`），容器类 import 同步换独立包（见「依赖」节对照表）。镜像版本按「依赖选择」节流程落定。
+> 上表 artifactId 为 TC 1.x（Boot ≤3.x）名；Boot 4（TC 2.x）除核心 `testcontainers` 外全部加 `testcontainers-` 前缀（如 `testcontainers-mysql`、`testcontainers-kafka`、`testcontainers-rabbitmq`），容器类 import 同步换独立包（见「依赖」节对照表）。镜像版本按「依赖选择」节流程落定。Kafka 的 `KafkaContainer` 默认 `confluentinc/cp-kafka` 镜像——用 `apache/kafka:4.3.1` 需 `.withImage(...)` 覆盖。
 
 ### Redis 示例
 

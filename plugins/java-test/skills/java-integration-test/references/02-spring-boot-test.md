@@ -113,8 +113,6 @@ Spring Boot 4 起 `TestRestTemplate` 废弃：从 `spring-boot-test` 拆到独�
 </dependency>
 ```
 
-> ⚠️ 坐标是 `spring-boot-resttestclient`——**没有** `spring-boot-starter-resttestclient` 这个 starter（部分教程讹传，Maven Central 404）。不加依赖则 `RestTestClient` 与 `TestRestTemplate` 都无法解析。
-
 ```java
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @AutoConfigureRestTestClient  // Boot 4：HTTP 测试客户端不再自动配置，须显式开启
