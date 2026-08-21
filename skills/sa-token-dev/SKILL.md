@@ -141,6 +141,6 @@ displayName: Sa-Token 开发助手
 
 ## 版本注意
 
-- **前向兼容**：核心 API 保持向后兼容；新版本 API 签名变更以官方 `StpUtil` 源码为准，本 skill 未覆盖的新增功能参考 `sa-token.com` 官方文档。
+- **前向兼容**：新版本 API 签名变更以官方 `StpUtil` 源码为准，本 skill 未覆盖的新增功能参考 `sa-token.com` 官方文档。
 - **1.46.0 升级必查**：`StpInterface.isDisabled` 改 3 参（`11-advanced.md` §3.5）；`allowLoginIdColon` 默认禁 loginId 冒号（`09-pitfalls.md` §10）；JWT `extraData` 禁保留字段（`14-plugin.md`）。
 - `sa-token-jwt` 显式依赖 `hutool-jwt`，hutool 5.8.13/5.8.14 存在类型转换问题，建议避开。

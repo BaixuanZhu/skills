@@ -1,8 +1,6 @@
 # 插件
 
-> 适用于 Sa-Token 1.46.0+（1.40.x 及以上，核心 API 向后兼容）。本文覆盖 JWT、API-Key、API 签名、AOP 注解、临时 Token、Alone Redis、SpEL 表达式七大常用插件 + v1.46.0+ 新增插件。
->
-> **依赖引入通用规则**：所有插件 Maven 坐标均为 `cn.dev33:<artifactId>`，artifactId 见文末「插件汇总」表，版本与核心 sa-token 依赖保持一致（最新稳定版，1.40.x+ 均适用）。除特别说明（JWT、temp-jwt）外，下文不再逐个列依赖 XML。
+> **依赖引入通用规则**：所有插件 Maven 坐标均为 `cn.dev33:<artifactId>`，artifactId 见文末「插件汇总」表，版本与核心 sa-token 依赖保持一致。除特别说明（JWT、temp-jwt）外，下文不再逐个列依赖 XML。
 
 ## 1. JWT 整合（sa-token-jwt）
 

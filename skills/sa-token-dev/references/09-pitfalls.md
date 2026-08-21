@@ -14,35 +14,9 @@
 | -6 | `TOKEN_FREEZE` | token 已被冻结（active-timeout 超时）|
 | -7 | `NO_PREFIX` | 未按指定前缀提交 token |
 
-定制化处理：
-```java
-@ExceptionHandler(NotLoginException.class)
-public SaResult handler(NotLoginException nle) {
-    String msg;
-    if (nle.getType().equals(NotLoginException.NOT_TOKEN))        msg = "未读取到有效 token";
-    else if (nle.getType().equals(NotLoginException.INVALID_TOKEN)) msg = "token 无效";
-    else if (nle.getType().equals(NotLoginException.TOKEN_TIMEOUT)) msg = "token 已过期";
-    else if (nle.getType().equals(NotLoginException.BE_REPLACED))   msg = "token 已被顶下线";
-    else if (nle.getType().equals(NotLoginException.KICK_OUT))      msg = "token 已被踢下线";
-    else if (nle.getType().equals(NotLoginException.TOKEN_FREEZE))  msg = "token 已被冻结";
-    else if (nle.getType().equals(NotLoginException.NO_PREFIX))     msg = "未按指定前缀提交 token";
-    else msg = "当前会话未登录";
-    return SaResult.error(msg);
-}
-```
-
 ## 2. 异常细分状态码 code
 
 所有异常继承 `SaTokenException`，均可 `e.getCode()` 获取细分码，用于同类异常的不同情形区分（尤其 SSO/OAuth2）。
-
-```java
-@ExceptionHandler(SaTokenException.class)
-public SaResult handler(SaTokenException e) {
-    if (e.getCode() == 30001) return SaResult.error("redirect url 无效");
-    if (e.getCode() == 30004) return SaResult.error("ticket 无效");
-    return SaResult.error("服务器繁忙");
-}
-```
 
 常用码段：核心包 11011~11016（token 无效/过期/被顶/被踢/冻结）、11041 缺角色、11051 缺权限、11071 二级认证未过；SSO 30001~30011；OAuth2 30101+；JWT 30201+。
 
@@ -131,9 +105,15 @@ new SaServletFilter()
 └─ loginId 含冒号报错 → v1.46.0+ 默认禁止，配 allowLoginIdColon: true（见 §10）
 ```
 
-## 10. loginId 含冒号校验（v1.46.0+ 行为变更）
+## 10. 版本破坏性更新
 
-v1.46.0 新增 `allowLoginIdColon` 配置，**默认 `false`**：loginId 含冒号 `:` 时登录/校验直接报错。原因：Sa-Token 持久化 key 用冒号分段，loginId 含冒号导致 key 难以解析。
+| 版本 | 变更 | 现象 | 处理 |
+|---|---|---|---|
+| v1.46.0 | `StpInterface.isDisabled` 新增 `loginType` 参数 | 实现类编译失败 | 改 3 参（`11-advanced.md` §3.5）|
+| v1.46.0 | `allowLoginIdColon` 默认 `false` | loginId 含冒号 `:` 登录/校验失败 | 配 `allowLoginIdColon: true`（见下）|
+| v1.46.0 | JWT 集成 `extraData` 禁止保留字段 | 运行时抛异常 | 删保留字段（`14-plugin.md`）|
+
+**allowLoginIdColon 详解**：v1.46.0 新增配置默认 `false`，loginId 含冒号直接报错——Sa-Token 持久化 key 用冒号分段，含冒号难以解析。
 
 ```yaml
 sa-token:
@@ -141,6 +121,6 @@ sa-token:
 ```
 
 - 升级到 v1.46.0+ 后登录突然失败，优先排查 loginId 是否含 `:`。
-- 新项目**不要**用含冒号的 loginId；需要分隔符场景改用下划线或其他字符。
+- 新项目**不要**用含冒号的 loginId；需要分隔符场景改用下划线等其他字符。
 
 > **更多常见错误**：见 `10-antipattern.md`（28 条 Agent 常见错误纠偏）。
