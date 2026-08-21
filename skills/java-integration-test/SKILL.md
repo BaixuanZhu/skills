@@ -3,18 +3,19 @@ name: java-integration-test
 slug: java-integration-test
 displayName: Java 集成测试
 description: >-
-  Java/Spring Boot 集成测试助手——在编写、评审、补全集成测试 / E2E / 冒烟测试 /
-  接口测试时使用本技能。核心：消灭 curl 仿真测试——用可断言、可重复、可版本控制
-  的测试替代 curl 调接口 + 肉眼判断。覆盖：Spring Boot Test（@SpringBootTest /
-  @WebMvcTest / @DataJpaTest 切片测试）、MockMvc / WebTestClient / RestTestClient /
-  TestRestTemplate（Boot 4 迁移）、REST Assured API 断言、Testcontainers 真实依赖、WireMock 外部服务 stub、
-  测试隔离（@Transactional 回滚 / @Sql / @DirtiesContext）、冒烟测试（Actuator health）。
-  次级触发信号：用 curl 测接口、手动启动应用再调接口、@SpringBootTest 全量上下文
-  测单层 Controller、测试间数据互相污染、集成测试需要真实数据库 / Redis / Kafka、
-  测试基础设施待搭建（生产用 PostgreSQL / MySQL / Redis）、测试用 H2 替代生产数据库、
-  外部 API 真调、"返回 200 就是通过了"、仿真测试不稳定、反复全量 mvn test、全文读测试输出、跑测试太慢。
-  与 java-unit-test 的边界：纯单测（@Mock + @InjectMocks，毫秒级，不起容器）→ java-unit-test；
-  跨层协作 + 真实依赖 + 进程内 HTTP 断言 → 本技能。
+  Java/Spring Boot 集成测试 / 冒烟测试 / API 级 E2E 助手——在编写、评审、补全
+  集成测试时使用本技能，无论用户是否提到具体框架（集成测试 / 接口测试 / E2E /
+  冒烟测试 / @SpringBootTest / MockMvc / REST Assured / Testcontainers / WireMock）。
+  核心：消灭仿真测试——用可断言、可重复、可版本控制的测试替代 curl 调接口 +
+  肉眼判断；需要真实数据库 / Redis / Kafka 时默认 Testcontainers（不取决于项目
+  是否已引 H2）。覆盖：跨层协作（Controller→Service→Repository）、真实依赖容器、
+  进程内 HTTP 断言、外部依赖 stub、测试隔离、Actuator 冒烟。
+  次级触发信号：用 curl 或手动启动应用调接口"测试"、@SpringBootTest 全量上下文
+  测单层 Controller、测试间数据互相污染、@Transactional 回滚失效、测试基础设施
+  待搭建（生产 PostgreSQL / MySQL / Redis）、测试用 H2 替代生产数据库、外部 API
+  真调、"返回 200 就是通过了"、跑测试太慢（反复全量 / 全文读输出）。
+  边界：纯单测（@Mock + @InjectMocks，毫秒级，不起容器）→ java-unit-test；
+  前端 E2E（Selenium / Playwright）/ 性能 / 安全 → 不适用。
 version: "1.3.0"
 last_verified: "2026-08-21"
 ---
