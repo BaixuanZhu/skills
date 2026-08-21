@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    # 生产形态的 PostgreSQL 配置（测试时被 Testcontainers @ServiceConnection 覆盖）
+    url: jdbc:postgresql://localhost:5432/orders
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false

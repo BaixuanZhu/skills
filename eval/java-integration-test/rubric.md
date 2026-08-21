@@ -1,6 +1,6 @@
 # 评分标准（java-integration-test 达尔文盲评用）
 
-> 你是独立盲评 agent。你手里有：java-integration-test 技能（SKILL.md + 8 个 references）、10 条 test-prompt。
+> 你是独立盲评 agent。你手里有：java-integration-test 技能（SKILL.md + 8 个 references）、11 条 test-prompt。
 >
 > 对每个 prompt，假设你是"接到该请求的 coding agent，手里只有这套技能"，判断能否产出合格结果。按 9 维度打分。
 
@@ -38,7 +38,7 @@
 - **D4 可执行**：@ServiceConnection 语法正确（Spring Boot 3.1+），隔离策略明确
 - **D8 范围**：是否把「发消息」这类跨外部依赖正确交给 WireMock（不真调）
 
-**判分锚点**：默认用 H2 替代 PostgreSQL（未用 Testcontainers）→ D3/D5 重扣。未说明 @ServiceConnection 的版本门槛（3.1+）→ D4 扣。
+**判分锚点**：默认用 H2 替代 PostgreSQL（未用 Testcontainers）→ D3/D5 重扣。未说明 @ServiceConnection 的版本门槛（3.1+）→ D4 扣。**未探测生产依赖 + 询问用户镜像版本（静默写死 tag）→ D4 扣**。
 
 ### T3（curl 反模式·独占陷阱）—— 重点 D1/D5
 
@@ -100,6 +100,15 @@ curl 前置动作反模式：
 - **D4 可执行**：命令是否可直接照做（具体 flag、路径）
 
 **判分锚点**：只答"用 IDE 跑"或"减少测试数量"（未命中 -Dtest/-q/报告定位）→ D3/D4 扣。
+
+### T11（无 H2 项目搭集成测试·定位回归核心）—— 重点 D1/D4/D5
+
+v1.3.0 定位修复的核心验证（此前技能以「H2 已存在」为前提，导致无 H2 项目被跳过）：
+- **D1 触发**：项目没引 H2、测试未搭 → 技能是否仍激活（不被「没 H2 就不需要」误导跳过）
+- **D4 可执行**：是否探测生产依赖（驱动 / datasource）→ 给候选版本**询问用户**（不静默写死镜像 tag）
+- **D5 防错**：是否默认 Testcontainers 而非默认 H2；无 Docker 时是否显式降级声明（非静默）
+
+**判分锚点**：以「项目没引 H2」为由跳过 / 默认引 H2 → D1/D5 重扣（≤4）。静默写死镜像 tag 未询问用户 → D4 扣。把「询问版本」做成开放式提问（无候选无推荐）→ D4 扣。
 
 ## 打分输出格式（每个 prompt 必填）
 

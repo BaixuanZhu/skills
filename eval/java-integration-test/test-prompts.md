@@ -26,7 +26,8 @@ Controller 的参数校验和返回格式是否正确，不关心数据库。
 
 **验证点**：
 - `@SpringBootTest` 全量上下文 —— `02`
-- **Testcontainers 真实 PostgreSQL**（不用 H2）—— 强约束 4 + `04`
+- **Testcontainers 真实 PostgreSQL**（不用 H2；默认选择，不取决于项目是否已引 H2）—— 强约束 4 + `04`
+- **探测生产依赖后询问用户确认镜像版本**（候选 + 推荐，不静默写 tag）—— `04` §依赖选择
 - `@ServiceConnection`（Spring Boot 3.1+）—— `04`
 - 隔离策略（`@Transactional` MOCK 模式 / `@Sql` 清理）—— `06`
 
@@ -128,3 +129,16 @@ Controller 的参数校验和返回格式是否正确，不关心数据库。
 - `-q` 降噪 + 重定向 grep/tail，不全文读输出 —— §1
 - 失败读 `target/surefire-reports/*.txt` 定位，不瞎改重跑 —— §3
 - 是否提及 `@Timeout` 兜底防挂住 —— §4
+
+## T11 — 无 H2 项目搭建集成测试（竞争场景·定位回归核心）
+
+```
+项目里没引 H2，测试也还没搭。订单服务生产用 PostgreSQL，有积分变动、库存扣减。
+帮我写 Service 到数据库的集成测试，把测试基础设施一起搭起来。
+```
+
+**验证点**（第 0 步第 4 项 + `04` §依赖选择）：
+- **技能不被跳过**：项目没用 H2 ≠ 不需要本技能——需要真实依赖 → **默认** Testcontainers（强约束 4）
+- 探测生产依赖（`org.postgresql:postgresql` / `spring.datasource.url`）→ 给候选版本**询问用户**（不静默写镜像 tag）—— `04` §依赖选择
+- 落定后：`@SpringBootTest` + Testcontainers + `@ServiceConnection` + 隔离策略全套 —— `02`+`04`+`06`
+- Docker 环境 checklist 核对（daemon 可用 / 无 Docker 则显式降级声明）—— `04` §Docker checklist
