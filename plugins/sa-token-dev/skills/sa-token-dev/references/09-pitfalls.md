@@ -127,7 +127,20 @@ new SaServletFilter()
 ├─ 跨域报错 → ① 配了 CORS？② 过滤器 setError 加了 CORS 头？
 ├─ SSO 回调 URL 不对 → 反代 uri 丢失，配 sa-token.curr-domain
 ├─ 踢人后仍可访问 → 封禁未踢下线，先 kickout 再 disable
-└─ active-timeout 莫名冻结 → 未触发自动续签（接口未走 Sa-Token 鉴权链）
+├─ active-timeout 莫名冻结 → 未触发自动续签（接口未走 Sa-Token 鉴权链）
+└─ loginId 含冒号报错 → v1.46.0+ 默认禁止，配 allowLoginIdColon: true（见 §10）
 ```
+
+## 10. loginId 含冒号校验（v1.46.0+ 行为变更）
+
+v1.46.0 新增 `allowLoginIdColon` 配置，**默认 `false`**：loginId 含冒号 `:` 时登录/校验直接报错。原因：Sa-Token 持久化 key 用冒号分段，loginId 含冒号导致 key 难以解析。
+
+```yaml
+sa-token:
+  allowLoginIdColon: true    # 存量项目 loginId 含冒号时开启（如 "user:001" 风格）
+```
+
+- 升级到 v1.46.0+ 后登录突然失败，优先排查 loginId 是否含 `:`。
+- 新项目**不要**用含冒号的 loginId；需要分隔符场景改用下划线或其他字符。
 
 > **更多常见错误**：见 `10-antipattern.md`（28 条 Agent 常见错误纠偏）。

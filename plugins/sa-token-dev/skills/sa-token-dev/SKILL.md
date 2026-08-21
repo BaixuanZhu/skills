@@ -13,14 +13,14 @@ description: >-
   项目尚无任何认证框架时，先主动询问用户是否引入 Sa-Token 再开发。
   不适用于：已使用 Spring Security / Shiro 的项目（不建议迁移）、纯 JWT 自实现方案、非 Java 语言。
 agent_created: true
-version: 2.1.1
+version: 2.2.0
 slug: sa-token-dev
 displayName: Sa-Token 开发助手
 ---
 
 # Sa-Token 开发助手
 
-面向日常 Java 开发的 Sa-Token 编码助手。推荐 **1.45.0+**（最新稳定版），**1.40.x 及以上全线适用**，核心 API（StpUtil / SaInterceptor / StpInterface / SaSession 等）保持向后兼容，新版本可能在已有基础上新增方法，本 skill 中的示例在 1.40.x ~ 最新版均可直接使用。历史版本差异已在文中以 `v1.xx.0+` 标注。
+面向日常 Java 开发的 Sa-Token 编码助手。推荐 **1.46.0+**（最新稳定版），**1.40.x 及以上全线适用**。历史版本差异已在文中以 `v1.xx.0+` 标注。
 采用**完全本地自包含**策略：所有知识沉淀于本地 `references/`，运行时不依赖任何外部文档站点。
 
 ## 版本与依赖（先判 SpringBoot 版本）
@@ -73,14 +73,14 @@ displayName: Sa-Token 开发助手
 | 注解鉴权（@SaCheck*、SaMode、orRole、@SaIgnore、@SaCheckOr）、注解 vs 路由选型 | `references/04-annotation.md` | 必须先注册 SaInterceptor 否则注解无效；粗粒度用路由、细粒度用注解、可混用 |
 | 路由拦截鉴权（SaInterceptor / SaRouter / match / free / stop / back）、全局白名单 | `references/05-interceptor-route.md` | SaInterceptor 注册后注解才生效；路由做白名单 + 注解做细粒度（推荐混用） |
 | Session 会话（Account/Token/Custom）、三大作用域 | `references/06-session.md` | SaSession ≠ HttpSession，不可混用 |
-| 集成 Redis、前后端分离 token 传递、Redis 部署模式 | `references/07-redis-frontsep.md` | SB3.x 前缀 spring.data.redis；前端塞 header，参数名即 tokenName；分布式场景必须 |
+| 集成 Redis、前后端分离 token 传递、Redis 部署模式 | `references/07-redis-frontsep.md` | SB3.x 前缀 spring.data.redis；前端塞 header，参数名即 tokenName；分布式场景必须；自定义类型存 Session 需注册 `SaJsonStrategy` 白名单（v1.46.0+，防 RCE） |
 | StpUtil 常用 API（登录/踢人/封禁/二级认证/身份切换/多账号） | `references/08-api-stputil.md` | 踢人 vs 注销 vs 顶人场景值不同；kickout 与 disable 不同、封禁需先踢下线 |
 | 排错：NotLoginException 场景值、异常码、注解不生效、跨域、反代 uri、过滤器异常 | `references/09-pitfalls.md` | NotLoginException 7 种场景值；过滤器/跨域异常不进 @ExceptionHandler |
 | **Agent 常见错误与最佳实践（核心价值，每次生成代码前必看）** | `references/10-antipattern.md` | 28 条 antipattern，生成代码前必对照 |
 | 高级特性：记住我、同端互斥、账号封禁、二级认证、身份切换、多账号、密码加密、Token 风格/前缀、全局侦听器/过滤器、Http Basic/Digest | `references/11-advanced.md` | v1.31.0+ login 不再自动校验封禁需显式 checkDisable；记住我本质是 Cookie 持久 vs 临时（前后端分离需前端控制）；同端互斥需 is-concurrent=false + device；二级认证 openSafe+checkSafe（@SaCheckSafe）；多账号推荐 StpKit 门面、LoginType 不可运行时改；Token 前缀与值间必须有空格、Cookie 模式需额外配置 |
 | SSO 单点登录（三种模式）、OAuth2.0（四种授权模式）、SSO vs OAuth2 选型 | `references/12-sso-oauth2.md` | 三种模式选型看前端是否同域+后端是否同 Redis；SSO vs OAuth2 选型；allow-url 生产必须配详细地址 |
 | 微服务：分布式 Session、网关统一鉴权、内部服务隔离（Same-Token）、依赖引入 | `references/13-micro-service.md` | 网关用 Reactor 依赖、子服务用 Servlet；SaReactorFilter 全局过滤器；Redis 必须；Feign 内部调用需传 Same-Token |
-| 插件：JWT、API-Key、API 签名、AOP 注解、临时 Token、Alone Redis、SpEL 表达式 | `references/14-plugin.md` | **JWT 是可选 token 风格（非默认）**：有状态场景用 `simple-uuid` token 风格（不引 JWT）即可；仅当用户要 JWT 格式时才在 Simple/Mixin/Stateless 中选——Simple=JWT+Redis（推荐），Mixin=JWT+Redis 且登录数据内嵌 Token，Stateless=JWT 无 Redis 不支持踢人；网关用 Reactor 依赖 |
+| 插件：JWT、API-Key、API 签名、AOP 注解、临时 Token、Alone Redis、SpEL 表达式 | `references/14-plugin.md` | **JWT 是可选 token 风格（非默认）**：有状态场景用 `simple-uuid` token 风格（不引 JWT）即可；仅当用户要 JWT 格式时才在 Simple/Mixin/Stateless 中选——Simple=JWT+Redis（推荐），Mixin=JWT+Redis 且登录数据内嵌 Token，Stateless=JWT 无 Redis 不支持踢人；网关用 Reactor 依赖；v1.46.0+ 新增 fory-json/rest-client/rest-template/alone-redisson 插件 |
 
 
 ## 主动行为触发（代码审查护栏）
@@ -141,5 +141,6 @@ displayName: Sa-Token 开发助手
 
 ## 版本注意
 
-- **前向兼容**：核心 API 保持向后兼容；新版本 API 签名变更以官方 `StpUtil` 源码为准，本 skill 未覆盖的新增功能参考 `sa-token.cc` 官方文档。
+- **前向兼容**：核心 API 保持向后兼容；新版本 API 签名变更以官方 `StpUtil` 源码为准，本 skill 未覆盖的新增功能参考 `sa-token.com` 官方文档。
+- **1.46.0 升级必查**：`StpInterface.isDisabled` 改 3 参（`11-advanced.md` §3.5）；`allowLoginIdColon` 默认禁 loginId 冒号（`09-pitfalls.md` §10）；JWT `extraData` 禁保留字段（`14-plugin.md`）。
 - `sa-token-jwt` 显式依赖 `hutool-jwt`，hutool 5.8.13/5.8.14 存在类型转换问题，建议避开。

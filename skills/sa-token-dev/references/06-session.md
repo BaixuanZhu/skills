@@ -49,6 +49,10 @@ session.getInt("age");
 session.getLong("age");
 session.getString("name");
 session.getModel("key", Student.class);
+// v1.46.0+ 类型安全集合读取（带 lazy 函数参数，无值时执行并缓存）
+session.getList("tagList", String.class, () -> List.of("a", "b"));
+session.getSet("roleSet", String.class, () -> Set.of("admin"));
+session.getMap("scoreMap", String.class, Integer.class, () -> Map.of("math", 90));
 
 session.has("key");
 session.delete("name");

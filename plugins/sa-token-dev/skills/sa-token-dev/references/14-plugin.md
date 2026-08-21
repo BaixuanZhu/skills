@@ -1,6 +1,6 @@
 # 插件
 
-> 适用于 Sa-Token 1.45.0+（1.40.x 及以上，核心 API 向后兼容）。本文覆盖 JWT、API-Key、API 签名、AOP 注解、临时 Token、Alone Redis、SpEL 表达式七大常用插件。
+> 适用于 Sa-Token 1.46.0+（1.40.x 及以上，核心 API 向后兼容）。本文覆盖 JWT、API-Key、API 签名、AOP 注解、临时 Token、Alone Redis、SpEL 表达式七大常用插件 + v1.46.0+ 新增插件。
 >
 > **依赖引入通用规则**：所有插件 Maven 坐标均为 `cn.dev33:<artifactId>`，artifactId 见文末「插件汇总」表，版本与核心 sa-token 依赖保持一致（最新稳定版，1.40.x+ 均适用）。除特别说明（JWT、temp-jwt）外，下文不再逐个列依赖 XML。
 
@@ -15,7 +15,7 @@
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-jwt</artifactId>
-    <version>1.45.0</version>
+    <version>1.46.0</version>
 </dependency>
 ```
 
@@ -89,6 +89,7 @@ public void setUserStpLogic() {
 - **Simple 模式 `is-share` 恒为 `false`**：与 per-token Extra 数据不兼容。
 - **Mixin 模式 `is-concurrent` 必须为 `true`**：token 不记录在持久库，无法踢/顶。
 - **Mixin 模式 `max-try-times` 恒为 `-1`**：防止框架错误判断 token 唯一性。
+- **v1.46.0+ 不向下兼容**：集成 JWT 时 `extraData` 禁止包含保留字段（如 `tokenValue`、`loginId` 等框架内部字段），写入会直接报错。
 
 ---
 
@@ -276,6 +277,7 @@ List<String> tokens = SaTempUtil.getTempTokenList(10004);
 ## 6. Alone 独立 Redis（sa-token-alone-redis）
 
 > Spring Boot 4.x 用 `sa-token-alone-redis-by-spring-boot4` 替代。
+> **Redisson 用户**（非 RedisTemplate）：v1.46.0+ 用 `sa-token-alone-redisson` 插件（支持指定 Codec，update 用 `setAndKeepTTL` 原子保留原过期时间），见 §8。
 
 ### 6.1 配置
 
@@ -351,6 +353,24 @@ public void rewriteSaStrategy() {
 
 ---
 
+## 8. v1.46.0+ 新增插件
+
+| 插件 | 说明 |
+|------|------|
+| `sa-token-fory-json` | 集成 Apache Fory JSON（高性能 JSON 编解码），**不在 JSON 中写入类型信息**，用法同 Fastjson2 |
+| `sa-token-rest-template` | 整合 Spring `RestTemplate` 作为 HTTP 请求处理器，SB 2/3/4 可用 |
+| `sa-token-rest-client` | 整合 Spring `RestClient` 作为 HTTP 请求处理器，SB 3.2+ / Spring Framework 6.1+ 可用 |
+| `sa-token-alone-redisson` | Redisson 版独立连接插件（权限缓存与业务缓存分离），含 Boot 3/4 示例 |
+
+**典型用途**：
+- **fory-json**：对 JSON 序列化有高性能要求、或不想在存储中携带类型信息时，替代默认 Jackson 序列化。
+- **rest-template / rest-client**：替换 `sa-token-forest` 作为 SSO 模式三 / 单点注销的 HTTP 请求处理器（跟随项目现有 Spring HTTP 客户端技术栈）。
+- **alone-redisson**：项目已用 Redisson 时，做权限缓存与业务缓存隔离（`SaTokenDaoForRedisson` 支持指定 Codec；update 改用 `setAndKeepTTL` 原子保留原过期时间，避免 TTL 偏移）。
+
+> **安全提示**：fory-json 默认不写类型信息，配合 v1.46.0+ 的 `SaJsonStrategy` 白名单机制，多态反序列化更安全（见 `07-redis-frontsep.md`）。
+
+---
+
 ## 插件汇总
 
 | 插件 | artifactId | 核心场景 |
@@ -362,3 +382,6 @@ public void rewriteSaStrategy() {
 | 临时 Token | `sa-token-temp`（内嵌） | 短时效授权/邀请链接 |
 | 独立 Redis | `sa-token-alone-redis` | 权限缓存与业务缓存隔离 |
 | SpEL 表达式 | `sa-token-spring-el` | 复杂条件组合鉴权 |
+| Fory JSON | `sa-token-fory-json`（v1.46.0+） | 高性能 JSON 序列化，不写类型信息 |
+| HTTP 扩展 | `sa-token-rest-template` / `sa-token-rest-client`（v1.46.0+） | 替换 forest 的 HTTP 请求处理器 |
+| 独立 Redisson | `sa-token-alone-redisson`（v1.46.0+） | Redisson 版权限/业务缓存隔离 |

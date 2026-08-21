@@ -1,6 +1,6 @@
 # 微服务架构
 
-> 适用于 Sa-Token 1.45.0+（1.40.x 及以上，核心 API 向后兼容）。本文覆盖分布式 Session、网关统一鉴权、内部服务隔离（Same-Token）、依赖引入规则。
+> 适用于 Sa-Token 1.46.0+（1.40.x 及以上，核心 API 向后兼容）。本文覆盖分布式 Session、网关统一鉴权、内部服务隔离（Same-Token）、依赖引入规则。
 
 ## 1. 依赖引入规则（关键）
 
@@ -25,7 +25,7 @@
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-redis-template</artifactId>
-    <version>1.45.0</version>
+    <version>1.46.0</version>
 </dependency>
 <dependency>
     <groupId>org.apache.commons</groupId>
@@ -75,7 +75,7 @@ spring:
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-reactor-spring-boot-starter</artifactId>
-    <version>1.45.0</version>
+    <version>1.46.0</version>
 </dependency>
 ```
 

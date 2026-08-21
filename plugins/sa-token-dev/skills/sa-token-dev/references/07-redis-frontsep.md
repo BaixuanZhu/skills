@@ -12,7 +12,7 @@
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-redis-template</artifactId>
-    <version>1.45.0</version>
+    <version>1.46.0</version>
 </dependency>
 <!-- Redis 连接池 -->
 <dependency>
@@ -21,7 +21,7 @@
 </dependency>
 ```
 
-Gradle：`implementation 'cn.dev33:sa-token-redis-template:1.45.0'` <!-- 版本号请使用最新稳定版 -->
+Gradle：`implementation 'cn.dev33:sa-token-redis-template:1.46.0'` <!-- 版本号请使用最新稳定版 -->
 
 > Redis 集成包版本尽量与 sa-token-starter 一致，否则可能兼容性问题。
 
@@ -48,6 +48,13 @@ spring:
 ### 3. 要点
 - 引入依赖 + 配好 Redis 连接即可，**框架自动保存**，所有上层 API 不变。
 - 默认以 JSON 格式存储（Jackson）。可换 Fastjson/Fastjson2/Snack3（引对应 `sa-token-fastjson2` 等依赖）；或自定义 String 序列化（`SaManager.setSaSerializerTemplate(...)`）。
+
+> **序列化安全（v1.46.0+）**：Jackson 多态反序列化 RCE 漏洞已修复，自定义类型存入 Session 时**必须**先注册类型白名单，否则反序列化报错：
+> ```java
+> import cn.dev33.satoken.strategy.SaJsonStrategy;
+> SaJsonStrategy.instance.registerAllowType(SysUser.class);   // 注册业务类型
+> ```
+> 白名单首次构建 JSON 插件时初始化，之后不可再注册；`fastjson2`/`snack3`/`fory-json` 默认不写类型信息，一般无此问题。
 
 ---
 
@@ -138,6 +145,8 @@ spring:
       port: 6379
 ```
 
+> Redisson 用户（非 RedisTemplate）做权限/业务缓存隔离时，用 v1.46.0+ 新增的 `sa-token-alone-redisson` 插件（见 `14-plugin.md` §8）。
+
 ## 最佳实践
 - **生产必须集成 Redis**：内存模式重启丢失、无法分布式共享。
 - **Redis 前缀注意版本**：SB2.x `spring.redis`，SB3.x `spring.data.redis`。
@@ -145,5 +154,6 @@ spring:
 - **序列化**：默认 JSON（Jackson），可换 Fastjson2（引 `sa-token-fastjson2`）。
 - **连接池**：必须引 `commons-pool2`，配置 `lettuce.pool.*` 参数。
 - **前后端分离**：token 传递封装进统一请求函数，参数名即 `tokenName`（默认 `satoken`）。
+- **v1.46.0+**：`searchData` 改用 SCAN（大库不再阻塞）；RedisTemplate Dao 可重写 `wrapKey` 自定义键前缀。
 
 > **常见错误**：Redis 前缀配错、前后端分离未返回 tokenValue → 见 `10-antipattern.md` §10、§3。

@@ -1,6 +1,6 @@
 {
   "name": "sa-token-dev",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "Sa-Token（cn.dev33）权限认证框架开发助手——登录鉴权、权限角色、SSO、JWT、会话与接口保护。项目已引入 Sa-Token 时使用。",
   "author": {
     "name": "BaixuanZhu",

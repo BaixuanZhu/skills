@@ -1,6 +1,6 @@
 # 高级特性
 
-> 适用于 Sa-Token 1.45.0+（1.40.x 及以上，核心 API 向后兼容）。本文覆盖记住我、同端互斥、账号封禁、二级认证、身份切换、多账号、密码加密、Token 风格/前缀、全局侦听器/过滤器、Http Basic/Digest。
+> 适用于 Sa-Token 1.46.0+（1.40.x 及以上，核心 API 向后兼容）。本文覆盖记住我、同端互斥、账号封禁、二级认证、身份切换、多账号、密码加密、Token 风格/前缀、全局侦听器/过滤器、Http Basic/Digest。
 
 ## 1. 记住我（Remember Me）
 
@@ -144,7 +144,8 @@ StpUtil.checkDisableLevel(10001, "comment", 3);
 @Component
 public class StpInterfaceImpl implements StpInterface {
     @Override
-    public SaDisableWrapperInfo isDisabled(Object loginId, String service) {
+    public SaDisableWrapperInfo isDisabled(Object loginId, String service, String loginType) {
+        // v1.46.0+ 接口新增第三个参数 loginType（登录体系名）；v1.46.0 以下为 2 参
         // 查库...
         return SaDisableWrapperInfo.createDisabled(86400, 1);  // 被封禁
         // return SaDisableWrapperInfo.createNotDisabled();    // 未封禁
@@ -500,6 +501,9 @@ public class MySaTokenListener extends SaTokenListenerForSimple {
 | 注销 | `doLogout(loginType, loginId, tokenValue)` |
 | 踢下线 | `doKickout(loginType, loginId, tokenValue)` |
 | 顶下线 | `doReplaced(loginType, loginId, tokenValue)` |
+| **注销前（v1.46.0+）** | `doBeforeLogout(loginType, loginId, tokenValue, logoutParameter)` |
+| **踢下线前（v1.46.0+）** | `doBeforeKickout(loginType, loginId, tokenValue, logoutParameter)` |
+| **顶下线前（v1.46.0+）** | `doBeforeReplaced(loginType, loginId, tokenValue, logoutParameter)` |
 | 封禁 | `doDisable(loginType, loginId, service, level, disableTime)` |
 | 解封 | `doUntieDisable(loginType, loginId, service)` |
 | 开启二级认证 | `doOpenSafe(loginType, tokenValue, service, safeTime)` |
@@ -507,6 +511,8 @@ public class MySaTokenListener extends SaTokenListenerForSimple {
 | 创建 Session | `doCreateSession(id)` |
 | 注销 Session | `doLogoutSession(id)` |
 | 续期 | `doRenewTimeout(tokenValue, loginId, timeout)` |
+
+> **注销前钩子用途**（v1.46.0+）：在会话真正失效前执行（如清理用户在线状态、记录操作日志）。可区分三个动作来源：登出（Logout）/ 踢下线（Kickout）/ 顶下线（Replaced）。
 
 ### 事件中心 API
 
@@ -627,3 +633,27 @@ public SaResult test() { return SaResult.ok(); }
 - Digest 比 Basic 更安全（不明文传输密码）。
 - 适合内部系统或 API 的简单认证，不适合面向用户的登录场景。
 - URL 直接拼接：`http://sa:123456@127.0.0.1:8081/test`。
+
+---
+
+## 13. 配置来源自定义（v1.46.0+）
+
+默认配置从 `application.yml` 的 `sa-token.*` 读取。v1.46.0+ 可通过 `SaStrategy.setGetSaTokenConfig` 重写配置获取策略，实现**从数据库动态读取配置**（如按租户/环境区分 timeout）：
+
+```java
+@Configuration
+public class SaTokenConfigSource {
+    @PostConstruct
+    public void rewriteGetSaTokenConfig() {
+        SaStrategy.instance.setGetSaTokenConfig(loginType -> {
+            // 从数据库/配置中心读取配置，返回 SaTokenConfig
+            SaTokenConfig config = configService.getByLoginType(loginType);
+            return config != null ? config : new SaTokenConfig();  // null 时返回默认配置
+        });
+    }
+}
+```
+
+### 注意
+- 返回 `null` 会导致 NPE，数据库查无配置时必须返回默认 `new SaTokenConfig()`。
+- 同一策略对登录、踢人、封禁等所有场景生效，配置项语义与 yml 一致。

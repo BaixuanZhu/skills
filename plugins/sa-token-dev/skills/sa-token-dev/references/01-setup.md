@@ -1,6 +1,6 @@
 # 集成与配置（SpringBoot）
 
-> 适用于 Sa-Token 1.45.0+（1.40.x 及以上，核心 API 向后兼容）。核心一句话：引依赖 → （可选）配 yml → 直接用 `StpUtil`。
+> 适用于 Sa-Token 1.46.0+（1.40.x 及以上，核心 API 向后兼容）。核心一句话：引依赖 → （可选）配 yml → 直接用 `StpUtil`。
 
 ## 1. 添加依赖
 
@@ -11,7 +11,7 @@
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-spring-boot-starter</artifactId>
-    <version>1.45.0</version>
+    <version>1.46.0</version>
 </dependency>
 ```
 
@@ -22,7 +22,7 @@
 **Gradle：**
 ```gradle
 // 版本号请使用最新稳定版，1.40.x+ 均适用
-implementation 'cn.dev33:sa-token-spring-boot-starter:1.45.0'
+implementation 'cn.dev33:sa-token-spring-boot-starter:1.46.0'
 ```
 
 ## 2. 配置文件（可零配置启动）

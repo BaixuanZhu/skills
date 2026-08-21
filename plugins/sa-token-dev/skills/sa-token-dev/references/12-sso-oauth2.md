@@ -1,6 +1,6 @@
 # SSO 单点登录与 OAuth2.0
 
-> 适用于 Sa-Token 1.45.0+（1.40.x 及以上，核心 API 向后兼容）。本文覆盖 SSO 三种模式 + OAuth2 四种授权模式 + 选型对比。
+> 适用于 Sa-Token 1.46.0+（1.40.x 及以上，核心 API 向后兼容）。本文覆盖 SSO 三种模式 + OAuth2 四种授权模式 + 选型对比。
 
 ## 一、SSO 单点登录
 
@@ -29,29 +29,29 @@
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-spring-boot-starter</artifactId>
-    <version>1.45.0</version>
+    <version>1.46.0</version>
 </dependency>
 <!-- SSO 模块 -->
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-sso</artifactId>
-    <version>1.45.0</version>
+    <version>1.46.0</version>
 </dependency>
 <!-- Redis（必须） -->
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-redis-template</artifactId>
-    <version>1.45.0</version>
+    <version>1.46.0</version>
 </dependency>
 <dependency>
     <groupId>org.apache.commons</groupId>
     <artifactId>commons-pool2</artifactId>
 </dependency>
-<!-- HTTP 请求工具（模式三单点注销需要） -->
+<!-- HTTP 请求工具（模式三单点注销需要）；v1.46.0+ 可用 sa-token-rest-template / sa-token-rest-client 替代 -->
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-forest</artifactId>
-    <version>1.45.0</version>
+    <version>1.46.0</version>
 </dependency>
 ```
 
@@ -302,7 +302,7 @@ OAuth2 相比 SSO 增加了对**应用授权范围**的控制，适合搭建对�
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-oauth2</artifactId>
-    <version>1.45.0</version>
+    <version>1.46.0</version>
 </dependency>
 ```
 
@@ -423,7 +423,7 @@ public class SaOAuth2DataLoaderImpl implements SaOAuth2DataLoader {
 ## 最佳实践总结
 
 1. **模式选型先判**：前端是否同域 + 后端是否同 Redis → 决定 SSO 模式。
-2. **allow-url 生产必配**：测试用 `"*"`，生产必须详细 URL 白名单。
+2. **allow-url 生产必配**：测试用 `"*"`，生产必须详细 URL 白名单。v1.46.0+ 已修复 `redirect` 参数绕过 `allow-url` 校验的漏洞，但**白名单仍然必须**（Open Redirect 风险依然存在）。
 3. **secret-key 一致**：Client 和 Server 的 secret-key 必须一致。
 4. **alone-redis 同库**：模式一/二的 Client 和 Server 必须连同一个 Redis。
 5. **模式一 cookie.domain 测完即删**：影响模式二/三。
