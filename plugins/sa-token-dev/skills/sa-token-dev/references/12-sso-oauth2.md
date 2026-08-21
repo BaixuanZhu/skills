@@ -23,23 +23,23 @@
 
 **SSO-Server 端**：
 ```xml
-<!-- 版本号请使用最新稳定版，1.40.x+ 均适用；各 sa-token-* 依赖版本保持一致 -->
+<!-- 版本由 sa-token.version 统一管理（见 01-setup.md §0） -->
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-spring-boot-starter</artifactId>
-    <version>1.46.0</version>
+    <version>${sa-token.version}</version>
 </dependency>
 <!-- SSO 模块 -->
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-sso</artifactId>
-    <version>1.46.0</version>
+    <version>${sa-token.version}</version>
 </dependency>
 <!-- Redis（必须） -->
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-redis-template</artifactId>
-    <version>1.46.0</version>
+    <version>${sa-token.version}</version>
 </dependency>
 <dependency>
     <groupId>org.apache.commons</groupId>
@@ -49,7 +49,7 @@
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-forest</artifactId>
-    <version>1.46.0</version>
+    <version>${sa-token.version}</version>
 </dependency>
 ```
 
@@ -300,7 +300,7 @@ OAuth2 相比 SSO 增加了对**应用授权范围**的控制，适合搭建对�
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-oauth2</artifactId>
-    <version>1.46.0</version>
+    <version>${sa-token.version}</version>
 </dependency>
 ```
 

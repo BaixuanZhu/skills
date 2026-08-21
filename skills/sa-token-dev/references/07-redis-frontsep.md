@@ -8,11 +8,11 @@
 
 ```xml
 <!-- Sa-Token 整合 RedisTemplate（官方推荐） -->
-<!-- 版本号请使用最新稳定版，1.40.x+ 均适用；与 sa-token-starter 版本保持一致 -->
+<!-- 版本由 sa-token.version 统一管理（见 01-setup.md §0） -->
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-redis-template</artifactId>
-    <version>1.46.0</version>
+    <version>${sa-token.version}</version>
 </dependency>
 <!-- Redis 连接池 -->
 <dependency>
@@ -21,9 +21,9 @@
 </dependency>
 ```
 
-Gradle：`implementation 'cn.dev33:sa-token-redis-template:1.46.0'` <!-- 版本号请使用最新稳定版 -->
+Gradle：`implementation "cn.dev33:sa-token-redis-template:${saTokenVersion}"` <!-- 版本由 saTokenVersion 统一管理（见 01-setup.md §0） -->
 
-> Redis 集成包版本尽量与 sa-token-starter 一致，否则可能兼容性问题。
+> Redis 集成包与 starter 共用同一 `sa-token.version`，勿单独指定版本。
 
 ### 2. 配置 Redis 连接（必须）
 

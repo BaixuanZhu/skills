@@ -9,11 +9,11 @@
 ### 1.1 依赖
 
 ```xml
-<!-- 版本号请使用最新稳定版，1.40.x+ 均适用；各 sa-token-* 依赖版本保持一致 -->
+<!-- 版本由 sa-token.version 统一管理（见 01-setup.md §0） -->
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-jwt</artifactId>
-    <version>1.46.0</version>
+    <version>${sa-token.version}</version>
 </dependency>
 ```
 

@@ -2,16 +2,29 @@
 
 > 核心一句话：引依赖 → （可选）配 yml → 直接用 `StpUtil`。
 
+## 0. 版本统一管理（升级只改一处）
+
+所有依赖坐标**不写死版本**，统一用 `${sa-token.version}` 占位符。版本值只在父 pom 的 `<properties>` 声明一次，与 SKILL.md 顶部版本声明保持一致：
+
+```xml
+<properties>
+    <sa-token.version>1.46.0</sa-token.version>  <!-- 升级时与 SKILL.md 声明同步，只改这里 -->
+</properties>
+```
+
+Gradle 在 `build.gradle` 顶部声明 `ext { saTokenVersion = '1.46.0' }`，坐标写 `:${saTokenVersion}`。
+
+> 各 reference 的依赖示例均用 `${sa-token.version}` 占位符，升级 Sa-Token 版本时无需逐个改动。
+
 ## 1. 添加依赖
 
 **Maven：**
 ```xml
-<!-- Sa-Token 权限认证 -->
-<!-- 版本号请使用最新稳定版，1.40.x+ 均适用；各 sa-token-* 依赖版本保持一致 -->
+<!-- Sa-Token 权限认证（版本由 §0 的 sa-token.version 统一管理） -->
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-spring-boot-starter</artifactId>
-    <version>1.46.0</version>
+    <version>${sa-token.version}</version>
 </dependency>
 ```
 
@@ -21,8 +34,8 @@
 
 **Gradle：**
 ```gradle
-// 版本号请使用最新稳定版，1.40.x+ 均适用
-implementation 'cn.dev33:sa-token-spring-boot-starter:1.46.0'
+// 版本由 §0 的 saTokenVersion 统一管理
+implementation "cn.dev33:sa-token-spring-boot-starter:${saTokenVersion}"
 ```
 
 ## 2. 配置文件（可零配置启动）
