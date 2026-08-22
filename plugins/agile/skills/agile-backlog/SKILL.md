@@ -56,7 +56,7 @@ dependencies:
 
 0. **需求探索（新增需求场景必跑；更新已有 Backlog 按 `change-matrix.md` 分级，L2 只重问受影响项）**
 
-   先读 VISION/ADR/项目画像补事实（文档优先），**自检六项 checklist**（机械项不需用户参与）——每项能查则查、查不到用选择题问（候选 + 推荐 + 自定义），缺项标 `{待确认}` 不许脑补：
+   先读 VISION/ADR/项目画像补事实（文档优先），**自检六项 checklist**（机械项不需用户参与）——每项能查则查、查不到用选择题问，缺项标 `{待确认}` 不许脑补：
 
    | # | 探索项 | 查 / 问 |
    |---|--------|---------|
@@ -180,7 +180,7 @@ items:
 - ❌ 不使用 INVEST / Given-When-Then 仪式，不拆 epics/enablers 子目录，不用 US/EN/EPIC 命名。
 - ✅ 涉及架构决策的 T-NNN 必须关联 ADR（门禁 ①，判定细则见 `using-agile/references/gate-protocol.md §二 ①`）。
 - ✅ **关键决策落盘带来源标注**（用户给出 / agent 推断 / agent 推荐待确认）。
-- ✅ **Backlog 条目只写范围**（可观察验收行为 / 业务与非功能约束 / 边界 / 依赖关联），❌ **不写实现**（技术方案 / 框架选型 / 代码结构 / SQL / 伪代码）——实现规划归消费 Agent 在代码上下文中判断，backlog 产出方对仓库了解不全，写了必然误导；技术决策由 ADR 承载，T-NNN 关联即可（细则见 `references/backlog-rules.md §四`）。
+- ✅ **Backlog 条目只写范围**（可观察验收行为 / 业务与非功能约束 / 边界 / 依赖关联），❌ **不写实现**（技术方案 / 框架选型 / 代码结构 / SQL / 伪代码）——技术决策由 ADR 承载，实现归消费 Agent 判断（细则见 `references/backlog-rules.md §四`）。
 - ✅ `.yaml` 已存在后，每次编辑 .md 必须同步更新 .yaml（id/priority/status 字段）。
 
 ## 6. 门禁

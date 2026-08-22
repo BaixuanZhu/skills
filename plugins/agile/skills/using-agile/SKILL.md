@@ -47,12 +47,12 @@ version: 4.5.1
 
 ## 3. 激活流程（有 agile-docs/ 时）
 
-1. **.done.yaml 回填检测（必做，第 1 步）**：扫描 `sprints/*.done.yaml`。存在即视为用户意图"处理回填闭环"，**默认执行，不问"是否先关 Sprint"**（用户把回填文件交给入口本身就是明确指令）：
-   - 对应 Sprint 文件状态非"已关闭" → 路由 `agile-sprint` 环节 B/C 做 DoD 关闭（读取 feedback：`reason` 作 moved_next 依据展示，`issue`/`decision` 汇总列出，需裁决的停下请用户拍板）
-   - Sprint 已关闭 → 跳过关闭环节，直接进入同步
-   - 路由 `agile-backlog` 阶段 5 同步 Backlog（completed/moved_next 更新 status + feedback 处理：`issue` 转新条目候选、`decision` 停下请用户裁决）
-   - 闭环完成后 `.done.yaml` 改后缀 `.done.processed.yaml` 留痕（不删除）
-   - **机械步骤（DoD 核对 / 关闭 / 同步 / 改名）自动执行，仅裁决点停下确认**；多个 `.done.yaml` 逐个闭环处理；处理完输出闭环结果报告，再回到第 2 步继续常规检测
+1. **.done.yaml 回填检测（必做，第 1 步）**：扫描 `sprints/*.done.yaml`。存在即视为用户意图"处理回填闭环"，**默认执行，不问"是否先关 Sprint"**：
+   - 对应 Sprint 非"已关闭" → 路由 `agile-sprint` 环节 B/C 做 DoD 关闭（含 feedback 读取）
+   - Sprint 已关闭 → 跳过关闭，直接进入同步
+   - 路由 `agile-backlog` 阶段 5 同步 Backlog（更新 status；`issue` 转新条目候选、`decision` 停下请用户裁决）
+   - 闭环完成 → `.done.yaml` 改后缀 `.done.processed.yaml` 留痕（不删除）
+   - **机械步骤（DoD 核对 / 关闭 / 同步 / 改名）自动执行，仅裁决点停下确认**；多个 `.done.yaml` 逐个处理；完成输出结果报告，再回到第 2 步
    - 无 `.done.yaml` → 直接进入第 2 步
 2. 检测 `agile-docs/` 下各文件存在性：
    - `VISION.md` + `ARCHITECTURE.md` + `ADR.md` → 战略层
