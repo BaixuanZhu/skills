@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户说"开始项目""敏捷""Sprint""待办""Backlog""用户故事""迭代""架构决策""ADR""C4""需求变了""要改故事""依赖检查"或进入含 agile-docs/ 目录的项目时触发。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 4.4.1
+version: 4.5.1
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -14,7 +14,7 @@ version: 4.4.1
 
 本技能是敏捷套件的**唯一入口**，承担三件事：
 - **初始化**：项目无 `agile-docs/` 时，建空骨架 + `DOD.md` 模板 + `interfaces/sprint-schema.yaml`。
-- **检测路由**：项目有 `agile-docs/` 时，扫描三层状态 → 输出状态表 → 逐层询问"更新 or 继续" → 路由到对应业务技能。
+- **检测路由**：项目有 `agile-docs/` 时，先做 .done.yaml 回填检测（存在即默认执行闭环），再扫描三层状态 → 输出状态表 → 逐层询问"更新 or 继续" → 路由到对应业务技能。
 - **变更协调**：当用户说"需求变了"时，引用 `references/change-matrix.md` 做变更分级 + 影响面评估 → 路由到对应业务技能就地更新。
 
 **本技能绝不自己 Write 任何业务 `.md` 文档**（VISION / ARCHITECTURE / ADR / PRODUCT-BACKLOG / Sprint 等）。所有业务文档由对应业务技能在用户确认后产出。
@@ -47,15 +47,19 @@ version: 4.4.1
 
 ## 3. 激活流程（有 agile-docs/ 时）
 
-1. 检测 `agile-docs/` 下各文件存在性：
+1. **.done.yaml 回填检测（必做，第 1 步）**：扫描 `sprints/*.done.yaml`。存在即视为用户意图"处理回填闭环"，**默认执行，不问"是否先关 Sprint"**（用户把回填文件交给入口本身就是明确指令）：
+   - 对应 Sprint 文件状态非"已关闭" → 路由 `agile-sprint` 环节 B/C 做 DoD 关闭（读取 feedback：`reason` 作 moved_next 依据展示，`issue`/`decision` 汇总列出，需裁决的停下请用户拍板）
+   - Sprint 已关闭 → 跳过关闭环节，直接进入同步
+   - 路由 `agile-backlog` 阶段 5 同步 Backlog（completed/moved_next 更新 status + feedback 处理：`issue` 转新条目候选、`decision` 停下请用户裁决）
+   - 闭环完成后 `.done.yaml` 改后缀 `.done.processed.yaml` 留痕（不删除）
+   - **机械步骤（DoD 核对 / 关闭 / 同步 / 改名）自动执行，仅裁决点停下确认**；多个 `.done.yaml` 逐个闭环处理；处理完输出闭环结果报告，再回到第 2 步继续常规检测
+   - 无 `.done.yaml` → 直接进入第 2 步
+2. 检测 `agile-docs/` 下各文件存在性：
    - `VISION.md` + `ARCHITECTURE.md` + `ADR.md` → 战略层
    - `PRODUCT-BACKLOG.md` + `PRODUCT-BACKLOG.yaml` → 执行层待办池
    - `DOD.md` → 完成定义
    - `sprints/` 下未关闭的 `.md` → 活跃 Sprint（若检测到 >1 个活跃 Sprint，警告并请用户选择关闭/合并其一后再继续，见 `references/status-routing.md`）
-2. **双文件一致性检查**：若 `PRODUCT-BACKLOG.md` 和 `.yaml` 均存在，对比 id 集合、条目数、同 id 的 priority/status（唯一权威口径见 `agile-backlog/references/backlog-rules.md §七`）。不一致 → 停下报告差异，请用户确认以哪份为准后再继续路由。
-3. **额外检测 — .done.yaml**：扫描 `sprints/*.done.yaml`
-   - 存在 + 对应 Sprint 文件状态为"已关闭" → 路由决策表追加一行"待同步到 Backlog"（自动路由到 `agile-backlog` 执行同步）
-   - 存在 + 对应 Sprint 文件状态非"已关闭"（即仍活跃） → 提示"消费 Agent 已回传结果，是否先关 Sprint？"，确认后路由到 `agile-sprint`
+3. **双文件一致性检查**：若 `PRODUCT-BACKLOG.md` 和 `.yaml` 均存在，对比 id 集合、条目数、同 id 的 priority/status（唯一权威口径见 `agile-backlog/references/backlog-rules.md §七`）。不一致 → 停下报告差异，请用户确认以哪份为准后再继续路由。
 4. 输出三层状态表（见 `references/status-routing.md`）。
 5. **逐层询问**"更新 or 继续下一步"（话术见 reference）。
 6. 按用户选择路由到对应业务技能，**不自己写**。
@@ -93,7 +97,7 @@ version: 4.4.1
    - 改 PRODUCT-BACKLOG 任务 / 加新任务到 Backlog → `agile-backlog`（即使 Sprint 执行中提出，不路由到 agile-sprint）
    - 改 Sprint 规划 / 关闭 → `agile-sprint`（执行期状态变更由消费 Agent 自行处理，不进规范层）
    - 改 DoD 模板 → 本入口（DoD 模板就是本技能生成的）
-   - 同步 Sprint 执行结果到 Backlog → `agile-backlog`（检测 .done.yaml 文件后触发）
+   - 同步 Sprint 执行结果到 Backlog → `agile-backlog`（检测 .done.yaml 后默认闭环时触发）
 4. **跨层变更按依赖顺序逐层路由**：如改 VISION 原则影响 Backlog 排序 → 先 agile-strategic 改 VISION，再回本入口做状态检测，再路由 agile-backlog 改标注（不要并行触发多个业务技能）
 5. **L2 走增量问询、L3 走完整问询**（`references/change-matrix.md §二/§三`）：L2 只重问受影响维度，已确认维度复用现有文档；L3 走完整问询 + 变更传播评估，跨层按依赖顺序逐层路由。
 6. **底层变更做下游影响评估**（`references/change-matrix.md §四`）：如 Backlog 变更后评估 Sprint 是否需调整，作为审阅清单一项，由用户裁决是否触发下游重规划。

@@ -5,7 +5,7 @@ displayName: Sprint规划
 description: |
   当用户说"开 Sprint""规划迭代""关闭 Sprint"或 using-agile 路由到此，且 PRODUCT-BACKLOG.yaml 已有条目时触发。
 agent_created: true
-version: 4.4.1
+version: 4.5.1
 dependencies:
   - skill: using-agile
     reason: 提供 DOD.md 模板
@@ -22,7 +22,7 @@ dependencies:
 | `agile-docs/PRODUCT-BACKLOG.yaml` 存在且 ≥1 条目 | → agile-backlog |
 | `agile-docs/DOD.md` 存在 | → using-agile 补 DoD 模板 |
 
-**条目来源硬约束**：Sprint 任务清单必须从 `PRODUCT-BACKLOG.yaml` 按 priority 取顶部条目。条目须经 `agile-backlog` 流程产出并写入 PRODUCT-BACKLOG.yaml；**口头/临时任务清单不能直接进入 Sprint**。若用户跳过 agile-backlog 给临时清单且坚持不回退，按渐进式节奏停下提示风险，由用户显式确认是否仍要回 agile-backlog 走正规流程。
+**条目来源硬约束**：Sprint 任务清单必须从 `PRODUCT-BACKLOG.yaml` 按 priority 取顶部条目。条目须经 `agile-backlog` 流程产出并写入 PRODUCT-BACKLOG.yaml；**口头/临时任务清单不能直接进入 Sprint**。若用户跳过 agile-backlog 给临时清单且坚持不回退，按渐进式节奏停下提示风险（`using-agile/references/gate-protocol.md §四`），由用户显式确认是否仍要回 agile-backlog 走正规流程。
 
 ## 1. 定位
 
@@ -45,32 +45,34 @@ dependencies:
 - **容量检查**：按 id 回读 `PRODUCT-BACKLOG.md` 获取每个条目的 point（YAML 不含 point 数据，仅含 priority/status），计算承诺点是否 ≤ 可用点。可用点计算见 `references/sprint-rules.md §一`
 - 确认本 Sprint 序号：扫描 `sprints/` 目录下已有 `sprint-NNN-*.md`，取最大序号 +1；目录为空则从 001 起（用于命名 `sprint-{序号:03d}-{日期}.md`）
 - 确认起始日期（用于命名）
+- **交接点识别**：多仓库项目按 id 回读 `PRODUCT-BACKLOG.md` 取条目的仓库归属；识别跨仓库依赖组（不同仓库 + 先后开发关系，如 `api-server` 后端接口 → `web-app` 前端页面）→ 规划时生成「交接契约」段；无跨仓库依赖 → 跳过（判定与契约段模板见 `references/sprint-template.md` §交接契约，交接文档模板见 `references/handoff-template.md`）
 - 确认 DoD（读 `agile-docs/DOD.md`，若缺失回 using-agile 补）
 
 ## 3. 产出（按环节，每环节写完即停）
 
 ### 环节 A：规划
-- 从 `agile-docs/PRODUCT-BACKLOG.yaml` 按 priority 取顶部条目（经 §2 Sprint 目标反问确认）
+- 从 `agile-docs/PRODUCT-BACKLOG.yaml` 按 priority 取顶部条目（经 §2 Sprint 目标反问确认）；按 id 回读 `PRODUCT-BACKLOG.md` 取 point 与仓库归属
+- **生成「交接契约」段**：§2 识别出跨仓库依赖组时，按 `references/sprint-template.md` 交接契约模板生成（交接点 / 上游任务 / 下游任务 / 交接文档位置）；无跨仓库依赖 → 不生成
 - 在 `sprints/` 下新建 `sprint-{序号:03d}-{日期}.md`
-- 按模板（`references/sprint-template.md`）填写：周期/目标/容量/任务清单（纯列表）/**回填要求（消费 Agent 必读段）**/闭环检查清单
-- 写完停，按结构化审阅（§4）列出容量假设与取条依据，确认后问"是否交付消费 Agent 执行？"（执行完毕回填 .done.yaml 后再回来走环节 B 关闭）
+- 按模板（`references/sprint-template.md`）填写：周期/目标/容量/任务清单（纯列表，多仓库条目标注 `[repo: xxx]`）/**交接契约（如有）**/回填要求（消费 Agent 必读段）/闭环检查清单
+- 写完停，按结构化审阅（§4）列出容量假设、取条依据与交接点（如有），确认后问"是否交付消费 Agent 执行？"（执行完毕回填 .done.yaml 后再回来走环节 B 关闭）
 
 ### 环节 B：DoD 关闭
 - 读取 `sprints/{sprint文件}.done.yaml`：
-  - 存在 → 按 completed / moved_next 列表核对 DoD
+  - 存在 → 按 completed / moved_next 列表核对 DoD + **读取 feedback**：`reason` 类作 moved_next 依据展示（未完成原因随条目状态建议列出），`issue`/`decision` 类汇总列出，需产品层裁决的停下请用户拍板
   - 不存在 → 提示用户人工确认每条任务的完成情况
-- 逐条过 `agile-docs/DOD.md` 的 Sprint 完成标准
+- 逐条过 `agile-docs/DOD.md` 的 Sprint 完成标准；**含交接契约的任务**，completed 前须已产出对应交接文档（见「交接契约」段），未产出的归入 moved_next
 - 在本 Sprint 文件内追加「条目状态建议」清单（通过 → 已完成；未达标 → 移至下个Sprint），格式见 `references/sprint-template.md §二`
 - 写完停，问"是否关闭本 Sprint？"
 
 ### 环节 C：关闭
 - 在文件头追加行标注执行结果来源（.done.yaml 文件路径 或 "人工确认"）
 - 将 Sprint 文件头"状态"改为"已关闭"
-- 提示用户完整闭环：关闭后 `.done.yaml` 由入口下次激活时自动检测（.done + Sprint 已关闭）→ 路由到 agile-backlog 同步 → **同步完成后 `.done.yaml` 改后缀为 `.done.processed.yaml` 留痕（不删除，防重复同步）**。链路 lifecycle 见 `using-agile/references/sprint-schema.yaml`
+- 提示用户完整闭环：入口下次激活时检测到 `.done.yaml` 即**默认执行闭环**（Sprint 已由本环节关闭 → 路由到 agile-backlog 同步 + 反馈处理）→ **同步完成后 `.done.yaml` 改后缀为 `.done.processed.yaml` 留痕（不删除，防重复同步）**。链路 lifecycle 见 `using-agile/references/sprint-schema.yaml`
 
 ## 4. 写完即停（结构化审阅）
 
-按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列容量参数：人数/工作日/专注系数 / 取条依据 / Sprint 目标 × 来源），问"**继续下一环节**还是**更新**当前产出？"。
+按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列容量参数：人数/工作日/专注系数 / 取条依据 / Sprint 目标 / 交接点（如有） × 来源），问"**继续下一环节**还是**更新**当前产出？"。
 
 ## 5. 硬约束
 - ✅ 单文件产出 `sprints/sprint-{序号:03d}-{日期}.md`（命名含序号+日期，不用 `current.md`）；❌ **不顺手写** VISION / ARCHITECTURE / ADR / PRODUCT-BACKLOG 业务正文。
@@ -79,7 +81,7 @@ dependencies:
 - ❌ 不写 RETRO.md / RELEASE.md / FB-NNN.md，不创建 `sprints/archive/` 子目录。
 - ❌ 不在 Sprint 文件中设执行态追踪（任务清单与执行进度不写 checkbox、不记阻塞、不处理执行中变更——归消费 Agent）。
 - ✅ 「闭环检查」清单用 `- [ ]` checkbox，关闭前逐项核对（这是关闭核对清单，非执行态追踪）。
-- ❌ 不直接修改 PRODUCT-BACKLOG.yaml/.md 的 status 字段（所有权属 agile-backlog，由入口检测 .done.yaml 后路由同步）。
+- ❌ 不直接修改 PRODUCT-BACKLOG.yaml/.md 的 status 字段（所有权属 agile-backlog，由入口检测 .done.yaml 默认闭环时路由同步）。
 
 ## 6. 门禁
 - **DoD 出口门禁（③）**：有未估算/未过 DoD/未验收条目时要关闭 Sprint → 停下，逐条过 DoD。

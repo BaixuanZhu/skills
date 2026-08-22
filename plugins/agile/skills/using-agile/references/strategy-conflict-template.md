@@ -1,17 +1,11 @@
 # 战略冲突待裁决模板（using-agile 参考）
 
 > 本模板由 `using-agile` 或 `agile-strategic` 在「写前战略门禁」触发时生成。
-> 写完即停，请用户裁决。裁决后由对应业务技能吸收结论，本文件可删。
+> 写完即停，请用户裁决。
 
 ## 一、何时生成
 
-满足以下任一条件即生成本文件（详见 `references/gate-protocol.md` §一 写前战略门禁）：
-
-- 多份输入文档战略方向矛盾（如一份主张 B2B、一份主张 C 端零售+分销）
-- 需求存在未界定的关键规则（MVP 边界、支付线上/线下、佣金比例等）
-- 待写内容与现有 VISION / ADR 冲突
-
-**生成方优先级**：见 `references/gate-protocol.md §一`（先检测到的技能生成；后续技能发现已存在则跳过不重复生成，仅引用）。
+「写前战略门禁」触发时生成（触发条件、生成方优先级与去重规则见 `references/gate-protocol.md §一`，本文件不重复）。
 
 ## 二、文件路径
 
@@ -19,7 +13,7 @@
 {project-root}/agile-docs/STRATEGY_CONFLICT.md
 ```
 
-> 与 VISION.md / ARCHITECTURE.md 同级。裁决后被业务技能吸收，可删除。
+> 与 VISION.md / ARCHITECTURE.md 同级。
 
 ## 三、模板正文
 

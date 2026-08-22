@@ -1,7 +1,7 @@
 # Sprint 文件接口契约
 # 消费 Agent 读此文件了解 Sprint 规划文件的格式
 # using-agile 初始化时将此文件复制到 agile-docs/interfaces/
-version: "1.3"
+version: "1.4"
 sprint_file:
   naming: "sprint-{序号:03d}-{日期}.md"
   location: "sprints/"
@@ -9,7 +9,9 @@ sprint_file:
     - header: 文件头信息（状态/周期/目标/容量）
       format: YAML-style key-value
     - header: 任务清单
-      format: plain list, no checkboxes
+      format: plain list, no checkboxes；多仓库项目条目标注 [repo: {仓库名}]
+    - header: 交接契约（跨仓库依赖任务组存在时生成）
+      format: 交接点表格 + 交接文档命名/位置 + 下游任务读取要求；单仓库 Sprint 无此段
     - header: 回填要求（消费 Agent 必读）
       format: 说明段落 + yaml 示例；明确消费 Agent 执行完毕必须回填 .done.yaml 的硬性义务（免人工提醒）
     - header: 闭环检查
@@ -18,7 +20,7 @@ sprint_file:
       format: plain list; 由 agile-sprint 在 DoD 关闭环节追加，规划交付时不存在，消费 Agent 无需读取
 
 # 执行结果回传：消费 Agent 执行完 Sprint 任务后写入此文件（回填是硬性义务，见 sprint 文件内「回填要求」段）
-# agile-sprint DoD 关闭时以此为依据；using-agile 检测到 .done.yaml + Sprint 已关闭 → 路由 agile-backlog 同步
+# agile-sprint DoD 关闭时以此为依据；using-agile 检测到 .done.yaml → 默认执行回填闭环（关闭+同步+反馈处理）
 # 同步完成后改后缀 .done.processed.yaml 留痕，不删除
 done_file:
   filename: "sprint-{序号:03d}-{日期}.done.yaml"
@@ -29,8 +31,16 @@ done_file:
       - F-002
     moved_next:
       - T-003
-  note: completed 和 moved_next 至少一个可为空数组；不应包含 Sprint 任务清单之外的 ID；两个列表之外的清单内条目视为未执行，DoD 时归入 moved_next
+    feedback:
+      - item: "T-003"          # 关联条目 id；Sprint 级问题可省略 item
+        type: "reason"         # reason=未完成原因 / issue=执行中发现的新问题 / decision=需产品层裁决
+        note: "第三方 API 配额不足，需产品确认降级方案"
+  fields:
+    completed: 已完成条目 ID 列表
+    moved_next: 未完成移下 Sprint 条目 ID 列表
+    feedback: 消费 Agent 执行反馈（可选）。reason 作 DoD 关闭时 moved_next 依据展示；issue 由 agile-backlog 同步时转为 Backlog 新条目候选；decision 停下请用户裁决
+  note: completed 和 moved_next 至少一个可为空数组；不应包含 Sprint 任务清单之外的 ID；两个列表之外的清单内条目视为未执行，DoD 时归入 moved_next；含交接契约的任务，completed 前须已产出对应交接文档
   mandatory: true  # 回填是硬性义务：消费 Agent 执行完毕必须生成，否则 Sprint 无法关闭、Backlog 无法同步
   timing: 消费 Agent 执行完毕后生成（含部分完成）
-  lifecycle: 写入（消费 Agent）→ 读取（agile-sprint DoD 检查）→ 检测（using-agile，Sprint 已关闭时路由）→ 消费（agile-backlog 同步到 .yaml+.md）→ 改后缀 .done.processed.yaml（留痕，不删除）
+  lifecycle: 写入（消费 Agent）→ 读取（agile-sprint DoD 检查，含 feedback）→ 检测（using-agile 默认闭环）→ 消费（agile-backlog 同步到 .yaml+.md + 反馈处理）→ 改后缀 .done.processed.yaml（留痕，不删除）
 
