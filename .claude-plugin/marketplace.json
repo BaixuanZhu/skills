@@ -8,13 +8,13 @@
   "plugins": [
     {
       "name": "repo-init",
-      "version": "1.3.8",
+      "version": "1.4.0",
       "author": {
         "name": "BaixuanZhu",
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
       "source": "./plugins/repo-init",
-      "description": "为项目生成或更新跨工具通用的 AGENTS.md 简报，让 Claude Code、Codex、Cursor 等 60+ AI 编码工具开箱即懂项目。新项目冷启动或既有说明过期时使用。",
+      "description": "生成或增量更新跨工具通用的 AGENTS.md 项目简报（Claude Code/Cursor/Codex 等 60+ 工具自动读取），不覆盖手写内容；兼容既有 CLAUDE.md，迁移后降为 @AGENTS.md 一行引用。",
       "category": "engineering",
       "keywords": [
         "agents-md",
