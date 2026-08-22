@@ -1,0 +1,29 @@
+{
+  "skill": "repo-init",
+  "version": "v1.4.0",
+  "date": "2026-08-22",
+  "note": "覆盖 CLAUDE.md 迁移新能力（五象限矩阵：冷启动 / 仅 CLAUDE.md 迁移 / 双源去重 / stub 幂等）+ 更新优化路径",
+  "fixtures": "eval/repo-init/fixtures/",
+  "prompts": [
+    {
+      "id": "T1",
+      "scenario": "冷启动初始化",
+      "prompt": "这是仓库 eval/repo-init/fixtures/demo-cli/（Python CLI 工具，pip 安装 + pytest 测试，无 AGENTS.md 无 CLAUDE.md）。请为该仓库生成一份 AGENTS.md。"
+    },
+    {
+      "id": "T2",
+      "scenario": "仅 CLAUDE.md → 迁移",
+      "prompt": "这是仓库 eval/repo-init/fixtures/demo-cli-migrate/（有 CLAUDE.md 且含实质内容，无 AGENTS.md）。请处理项目上下文：既要让所有工具能读到项目说明，又要保持 Claude Code 的兼容。"
+    },
+    {
+      "id": "T3",
+      "scenario": "双源去重",
+      "prompt": "这是仓库 eval/repo-init/fixtures/demo-cli-dup/（AGENTS.md 与 CLAUDE.md 都存在且都有实质内容，内容部分重叠且有冲突）。请处理这两份项目上下文文件，保证单一事实源且 Claude Code 兼容。"
+    },
+    {
+      "id": "T4",
+      "scenario": "stub 幂等",
+      "prompt": "这是仓库 eval/repo-init/fixtures/demo-cli-stub/（已有 AGENTS.md，CLAUDE.md 首行是 @AGENTS.md 的引用 stub）。请对项目上下文做一次更新优化。"
+    }
+  ]
+}
