@@ -1,7 +1,7 @@
 # 01 · Null 安全与字符串
 
 > **Null 安全**：JDK `Optional`/`Objects`（原生完善→用原生）+ `ObjectUtil.equal`（防 NPE）。
-> **字符串**：Hutool `StrUtil`（`cn.hutool.core.util.StrUtil`，继承 `CharSequenceUtil`）。
+> **字符串**：Hutool `StrUtil`（`cn.hutool.core.util.StrUtil`）。
 
 ## 规范速查
 
@@ -113,13 +113,3 @@ String ids = StrUtil.join(",", userIds);
 String column = StrUtil.toUnderlineCase("userName"); // user_name
 String camel  = StrUtil.toCamelCase("user_name");     // userName
 ```
-
-## Sonar java:S3252 与 StrUtil（默认保留 StrUtil）
-
-Hutool 5.5.3+ 把字符串方法上移至 `CharSequenceUtil`，`StrUtil` 作为官方门面继承保留，故 `StrUtil.isBlank` 会命中 S3252。该规则本意是防「偶然继承」，而 `StrUtil` 是有意设计的门面（官方统一入口、更短可读）——**默认继续写 `StrUtil`，不主动改写**。
-
-仅当项目门禁启用该规则且阻断交付时二选一（全项目统一、禁混用、禁逐处 NOSONAR）：
-1. 质量平台将 Hutool 门面告警标 Accepted / 配置规则例外（推荐，一次配置全局生效）；
-2. 全局改用定义类 `CharSequenceUtil`。
-
-> 同类门面（`DateUtil extends CalendarUtil`、`ArrayUtil extends PrimitiveArrayUtil`）同策略。

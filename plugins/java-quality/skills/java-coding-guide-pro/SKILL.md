@@ -15,8 +15,8 @@ description: >-
   Math.random() 强转生成序号/ID、Random 生成 token/验证码。
   跟随项目既有技术栈（Spring / Hutool / commons-lang3 等），不强加任何库。
   不适用：业务架构设计、框架选型、DDL、纯算法、前端代码。
-version: "3.4.1"
-last_verified: "2026-08-04"
+version: "3.5.0"
+last_verified: "2026-08-23"
 ---
 
 # Java 编码指南
@@ -37,33 +37,33 @@ last_verified: "2026-08-04"
 2. **已有栈**：Spring 系（自带 Jackson/RestTemplate/WebClient/SLF4J）、Hutool、commons-lang3、Guava、Gson/Fastjson、OkHttp、Lombok、MapStruct。
 3. **三条适配规则**：
    - 项目**已有**对应能力的库 → **跟随既有库**，不另引、不混用（一个项目一套字符串/集合工具）；仅当既有库缺该能力时补引，并在代码注释标注混用原因。
-   - **高风险能力缺失**且任务确实需要（见「高风险场景」表）→ 触发 C-CHECK 询问是否引入。
+   - **高风险能力缺失**且任务确实需要（见「风险分级与构件选择」）→ 触发 C-CHECK 询问是否引入。
    - **低风险能力缺失**（判空/集合/随机数/日期等）→ 直接用 JDK 原生，**零打断、不询问**。
 
-## JDK 版本策略（五档 LTS 语义）
+## JDK 版本策略
 
-- **JDK 8（下限）**：可用 `Optional`/`Stream`/`java.time`/`CompletableFuture`/Lambda。**禁** `var`/`record`/`switch 表达式`/文本块/`sealed`/`虚拟线程`/`Stream.toList()`。
-- **JDK 11**：+ `var`(10)、JDK `HttpClient`(11)。
-- **JDK 17**：+ `switch` 表达式(14)、文本块(15)、`record`(16)、`sealed`(17)、`Stream.toList()`(16)、`instanceof` 模式匹配(16)。
-- **JDK 21**：+ 虚拟线程、`switch` 模式匹配、`SequencedCollection`、record 模式。
-- **JDK 25**：+ 22–24 转正特性（未命名变量 `_`、Stream Gatherers、Scoped Values 等）；虚拟线程不再被 synchronized 钉住（JEP 491）。
+**判据：目标 JDK ≥ 特性最低版本 → 可用；低于 → 禁用，改低版本写法。** 非 LTS 目标同样按版本比较，不另设档位。
 
-> LTS 锚定：门控只标 LTS；22–24 转正特性统一归入 25；preview/incubator 不纳入。详细门控见 `references/09-modern-java.md`。
+| 特性 | 最低 JDK |
+|---|---|
+| Lambda / 方法引用 / `Optional` / `Stream` / `java.time` / `CompletableFuture` | 8（下限） |
+| `var`（仅局部变量） | 10 |
+| JDK 内置 `HttpClient` | 11 |
+| `switch` 表达式（箭头 / `yield`） | 14 |
+| 文本块 `"""` | 15 |
+| `record` / `Stream.toList()`（不可变）/ `instanceof` 模式匹配 | 16 |
+| `sealed` | 17 |
+| 虚拟线程 / `switch` 模式匹配 / `SequencedCollection` | 21 |
+| 未命名变量 `_` / Stream Gatherers / Scoped Values（22–24 转正，完整清单见 09） | 25 |
 
-## 高风险场景优先成熟构件（本指南的核心立场）
+> 22–24 转正特性统一按 25 门控；preview/incubator 不纳入。虚拟线程 + `synchronized` 在 21 会钉住载体线程（改 `ReentrantLock`），25 解除（JEP 491）。完整门控表（含推荐度）见 `references/09-modern-java.md`。
 
-以下场景手写极易出 bug，**优先用成熟构件**（顺序：项目既有库 > JDK 原生成熟 API > 推荐引入）：
+## 风险分级与构件选择
 
-| 风险场景 | 为什么手写危险 | 项目无既有方案时的推荐 |
-|---|---|---|
-| 加密 / 哈希 / 密码 | hex 前导零丢失致碰撞；无盐哈希被彩虹表反查 | `hutool-crypto`（`SecureUtil`/`BCrypt`），触发 C-CHECK |
-| 线程池 / 并发 | `Executors.newXxx` 无界队列 OOM；中断状态丢失 | JDK `ThreadPoolExecutor` + `CompletableFuture`（原生即成熟） |
-| JSON 解析 | 手拼转义遗漏 / 注入 | Jackson `ObjectMapper` 复用单例（Spring 项目已自带） |
-| Bean 映射 | Spring/Apache `BeanUtils` 源目标顺序相反，静默拷空 | MapStruct（编译期安全）；无 processor 退 `BeanUtil`，触发 C-CHECK |
-| HTTP 调用 | 连接泄漏、超时缺省 | 跟随 Spring（RestTemplate/WebClient）；纯 Java 项目才 OkHttp3 |
-| 金额运算 | 二进制浮点无法精确表示十进制 | JDK `BigDecimal`（原生即成熟） |
+**构件选择顺序**：项目既有库 > JDK 原生 API > 引入新库（引入前触发 C-CHECK）。
 
-**低风险场景**（判空、集合新建/分块、随机数、日期格式化）：项目有 Hutool / commons-lang3 就用其工具方法，没有就 JDK 原生（`Objects`/`String.isBlank`(11+)/`List.of`(9+)/`ThreadLocalRandom`/`java.time`），**不触发任何询问**。
+- **高风险场景**（手写极易出 bug，**禁手写，必须用成熟构件**；具体推荐见「域 → 默认」表）：加密 / 哈希 / 密码、线程池 / 并发、JSON 解析、Bean 映射、HTTP 调用、金额运算。其中项目缺**加密**或 **Bean 映射**能力时触发 C-CHECK 询问；其余场景 JDK 原生 / Spring 自带即可覆盖，不询问。
+- **低风险场景**（零打断）：判空、集合新建 / 分块、随机数、日期格式化——项目有 Hutool / commons-lang3 就用其工具方法，没有就 JDK 原生（`Objects`/`String.isBlank`(11+)/`List.of`(9+)/`ThreadLocalRandom`/`java.time`），不触发任何询问。
 
 ## 域 → 默认（项目无既有方案时；已有同类库按第 0 步跟随）
 
@@ -84,9 +84,9 @@ last_verified: "2026-08-04"
 | MD5/SHA/AES/密码哈希 | `hutool-crypto`（`SecureUtil`/`BCrypt`） | `references/07-crypto.md` |
 | 异常链/断言/日志 | SLF4J 门面 + 占位符；有 Hutool 用 `ExceptionUtil`/`Assert` | `references/08-exception-logging.md` |
 | 随机数/随机字符串/安全凭证 | `ThreadLocalRandom`；有 Hutool 用 `RandomUtil`；凭证类用 `SecureRandom` | `references/08-exception-logging.md` |
-| 现代 Java 语法（版本门控） | 按目标 JDK 五档 | `references/09-modern-java.md` |
+| 现代 Java 语法（版本门控） | 按「JDK 版本策略」特性最低版本 | `references/09-modern-java.md` |
 | 金额/精确小数 | JDK `BigDecimal` | `references/10-bigdecimal.md` |
-| 命名/OOP 规约/格式 | 阿里 Java 开发手册规约 | `references/11-conventions.md` |
+| 命名/OOP 规约/格式 | 规约条目（无库选型） | `references/11-conventions.md` |
 | 方法嵌套过深/分支膨胀/认知复杂度 | 卫语句 + 提炼语义方法 + 分支分发 | `references/12-complexity.md` |
 
 ## 规则表（S/A 分级）
@@ -111,7 +111,7 @@ last_verified: "2026-08-04"
 | S | 手拼 JSON 字符串 | Jackson 等既有 JSON 库 | — |
 | S | `Math.random()`/`Random` 生成"唯一"序号/单号/ID（如 `(int)(Math.random()*100000)` 当 seq） | DB 序列 / Redis `INCR` / 雪花 ID 等单调发号器 | 随机≠唯一：10 万空间约 400 次即 50% 碰撞（生日悖论），单号重复是事故 |
 | S | `Random`/`ThreadLocalRandom`/`Math.random()` 生成 token/验证码/密码/盐等安全凭证 | JDK `SecureRandom`（原生即成熟） | 线性同余可由少量输出反推种子，凭证可预测 |
-| S | 违反目标 JDK 版本门控（如 JDK 8 用 `var`/`record`） | 按五档门控降级写法 | — |
+| S | 违反目标 JDK 版本门控（如 JDK 8 用 `var`/`record`） | 按版本门控降级写法 | — |
 | A | `== null \|\| .trim().isEmpty()` 手写判空 | 工具方法（`StrUtil.isBlank` / `StringUtils` / JDK `isBlank`(11+)） | — |
 | A | `a.equals(b)` 且 a 可能 null | `Objects.equals` / `ObjectUtil.equal` / 常量在前 | — |
 | A | 仅初始化就 `new ArrayList<>()` 逐个 add；`subList` 手写分块 | `List.of` / `CollUtil.newArrayList`/`partition` | — |
@@ -138,9 +138,15 @@ last_verified: "2026-08-04"
 | core | `cn.hutool:hutool-core` | StrUtil/CollUtil/DateUtil/BeanUtil/Base64 等 |
 | crypto | `cn.hutool:hutool-crypto` | `SecureUtil`/`DigestUtil`/`BCrypt`/`AES` **全在 crypto**（仅 `Base64` 在 core） |
 
-> 其他构件参考版本（JDK 8~25 兼容，仅在项目无同类库且确需时引入）：MapStruct 1.5.5.Final（需 annotation processor）、Jackson 2.17.1、OkHttp3 4.12.0、Lombok 1.18.34、SLF4J 2.0.13（JDK 8 用 1.7.36）+ Logback。
->
-> **Sonar S3252 与 Hutool 门面**（`StrUtil.isBlank` 等会命中）：默认保留 `StrUtil` 等门面写法，不主动改写；仅当项目门禁启用该规则且阻断时，才全局换 `CharSequenceUtil` 或配置规则例外，禁混用、禁逐处 NOSONAR，详见 `references/01-null-and-string.md`。
+其他构件参考版本（项目无同类库且确需时才引入）：
+
+| 构件 | 参考版本 | 门控 / 备注 |
+|---|---|---|
+| MapStruct | 1.5.5.Final | 需 annotation processor（编译期生成） |
+| Jackson | 2.17.1 | Spring 项目跟随 Boot 自带版本 |
+| OkHttp3 | 4.12.0 | 纯 Java 项目 HTTP |
+| Lombok | 1.18.34 | JDK 8+ |
+| SLF4J + Logback | 2.0.13 + 1.5.x | 需 JDK 11+；JDK 8 用 SLF4J 1.7.36 + Logback 1.2.x，两套禁混用（见 `references/08-exception-logging.md`） |
 
 ## 使用流程
 

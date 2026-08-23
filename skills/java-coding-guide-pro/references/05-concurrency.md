@@ -97,7 +97,7 @@ ScopedValue.where(CTX, context).run(() -> handle()); // 作用域结束自动清
 ```
 > ThreadLocal 的问题：可变（随时 set 覆盖）、忘记 remove 导致内存泄漏、线程池复用时串值。ScopedValue 不可变、作用域绑定、自动清理。**仅 JDK 25+ 可用**；JDK 21 及以下仍用 ThreadLocal（务必 finally remove）。详见下方「Scoped Values」段。
 
-### 6. 无名线程 / 线程池未命名 ThreadFactory（阿里规约）
+### 6. 无名线程 / 线程池未命名 ThreadFactory
 ```java
 // ✗ 线程池未命名，线程默认名 pool-1-thread-1，排查无从下手
 ThreadPoolExecutor pool = new ThreadPoolExecutor(
@@ -115,7 +115,7 @@ ThreadPoolExecutor pool = new ThreadPoolExecutor(
     });
 // 线程名：order-pool-1, order-pool-2 ... → 线程 dump 一眼定位
 ```
-> **阿里规约**：线程必须有业务语义命名。禁用默认 `pool-x-thread-y`；必须通过 `ThreadFactory` 设置 `线程名前缀-序号`。线程 dump、日志、APM 追踪都依赖线程名定位问题。
+> 线程必须有业务语义命名。禁用默认 `pool-x-thread-y`；必须通过 `ThreadFactory` 设置 `线程名前缀-序号`。线程 dump、日志、APM 追踪都依赖线程名定位问题。
 
 ### 7. 非线程安全对象 `static` 共享（SonarQube S6373）
 ```java

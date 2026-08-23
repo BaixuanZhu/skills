@@ -64,7 +64,7 @@ String msg = ExceptionUtil.getMessage(e); // null 安全
 Throwable root = ExceptionUtil.getRootCause(e);
 ```
 
-### 异常三级分类（阿里规约）
+### 异常三级分类
 
 | 类别 | 继承关系 | 示例 | 处理策略 |
 |---|---|---|---|
@@ -118,7 +118,7 @@ catch (Exception e) {
 ```
 > `getMessage()` 可能 null 且丢失堆栈；必须传异常对象（作 SLF4J 最后参数）才有完整堆栈。
 
-### antipattern：catch Throwable / Error（阿里 + SonarQube）
+### antipattern：catch Throwable / Error
 ```java
 // ✗ catch Throwable 吞掉所有错误（含 OOM/StackOverflow）
 try { ... } catch (Throwable t) { log.error("err", t); }

@@ -64,8 +64,13 @@ List<String> lines = FileUtil.readUtf8Lines(path);
 
 ## HTTP（OkHttp3）规范
 
+> 客户端必须**显式设置连接/读超时**——默认无超时＝无限等待；实例复用单例（连接池）。
+
 ```java
-private final OkHttpClient client = new OkHttpClient(); // 复用单例（连接池）
+private final OkHttpClient client = new OkHttpClient.Builder()   // 复用单例（连接池）
+        .connectTimeout(5, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build();
 
 // GET
 public String get(String url) throws IOException {

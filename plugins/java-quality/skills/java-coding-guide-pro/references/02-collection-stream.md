@@ -115,7 +115,7 @@ if (CollUtil.isEmpty(list)) { ... }  // null 安全
 ```
 > `isEmpty()` 语义比 `size() == 0` 更清晰，且对 `ConcurrentLinkedQueue` 等并发集合 `size()` 是 O(n) 操作（需遍历），`isEmpty()` 只检查首节点 O(1)。**统一用 `isEmpty()` 或 `CollUtil.isEmpty()`**。
 
-### 8. `foreach` 中 `remove` → `ConcurrentModificationException`（阿里）
+### 8. `foreach` 中 `remove` → `ConcurrentModificationException`
 ```java
 // ✗ 增强 for（foreach）中 remove → ConcurrentModificationException
 for (User u : users) {
@@ -134,7 +134,7 @@ users.removeIf(u -> u.getAge() < 18);
 ```
 > 增强 for 内部用 Iterator 遍历，`remove` 走的是 `Collection.remove`（不走 Iterator），导致 `modCount` 不一致抛 `ConcurrentModificationException`。**遍历中删除用 `Iterator.remove()` 或 `removeIf`**，不要在 foreach 中直接 `remove`。
 
-### 9. `HashMap` 已知大小时不预设容量（阿里）
+### 9. `HashMap` 已知大小时不预设容量
 ```java
 // ✗ 已知约 1000 条但不预设容量，默认 16 → 多次扩容（rehash 性能损耗）
 Map<Long, User> map = new HashMap<>();
