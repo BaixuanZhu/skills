@@ -8,11 +8,15 @@ description: >-
   best practices / code quality）。
   覆盖：判空与字符串、集合与 Stream、日期时间、文件 IO / HTTP 调用 / JSON 序列化、
   线程池与并发、Bean 拷贝、加密哈希、异常处理与日志、金额与浮点精确运算、
-  现代 Java 语法（JDK 8~25，按 LTS 版本门控）。
-  次级触发信号：new SimpleDateFormat、Executors.newXxx、new Thread()、double/float 算钱、
-  new BigDecimal(double)、BeanUtils.copyProperties、catch(Throwable)、手搓 MessageDigest、
-  log.error("x"+e) 拼接、Optional.get() 不判空、subList 分页、finally 中 return/throw、
-  Math.random() 强转生成序号/ID、Random 生成 token/验证码。
+  现代 Java 语法（JDK 8~25，按特性最低版本门控）。
+  次级触发信号——代码中出现：SimpleDateFormat、Executors.newFixedThreadPool /
+  newCachedThreadPool / newSingleThreadExecutor、new Thread(...)、
+  new BigDecimal(0.1) 小数构造、BeanUtils.copyProperties、catch (Throwable) /
+  catch (InterruptedException) 空块、MessageDigest（手写 MD5/SHA）、
+  log.error("x=" + x) 日志拼接、Optional.get()、subList(...)、
+  finally 块内 return / throw、Math.random()、new Random()；
+  用户任务词出现：生成订单号 / 流水号 / 唯一 ID、生成验证码 / token / 盐、
+  密码加密 / 哈希存储、金额 / 价格计算、线程池 / 异步任务、日期格式化 / 时区。
   跟随项目既有技术栈（Spring / Hutool / commons-lang3 等），不强加任何库。
   不适用：业务架构设计、框架选型、DDL、纯算法、前端代码。
 version: "3.5.0"
