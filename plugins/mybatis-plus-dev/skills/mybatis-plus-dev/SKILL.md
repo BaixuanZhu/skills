@@ -1,18 +1,24 @@
 ---
 name: mybatis-plus-dev
 description: >-
-  MyBatis-Plus（baomidou）Java ORM 增强框架开发助手。
-  在 Java / Spring Boot 项目中开发任何数据库增删改查（CRUD）、分页查询、条件查询、
-  Mapper / DAO / Service 层、实体类与表映射、逻辑删除、批量插入、乐观锁、自动填充、
-  事务管理、SQL / XML Mapper 相关功能时使用本技能——无论用户是否提到 MyBatis-Plus
-  （CRUD / pagination / ORM / DAO / database query / entity mapping / transaction）。
-  项目依赖已含 mybatis-plus（mybatis-plus-boot-starter 及 mybatis-plus-spring-boot*-starter
-  系列，覆盖 SpringBoot 2/3/4）或代码出现 BaseMapper / IService / ServiceImpl /
-  LambdaQueryWrapper / LambdaUpdateWrapper / @TableId / @TableField / @TableLogic / saveBatch /
-  selectPage 时必须使用本技能；纯 MyBatis、无 ORM 或 ORM 未知项目，先主动询问用户是否引入
-  MyBatis-Plus 再开发。
-  不适用于：已使用 JPA / Hibernate 的项目（不建议迁移）、数据库表结构设计/DDL、纯 SQL 性能调优
-  （连接池/索引/慢查询属 DBA 层）。
+  MyBatis-Plus（baomidou）开发助手。在 Java / Spring Boot 项目中开发任何数据库
+  增删改查（CRUD）、分页查询、条件查询、Mapper / DAO / Service 层、实体类与表映射、
+  联表 / 复杂查询写 XML、事务相关功能时使用本技能——无论用户是否提到 MyBatis-Plus
+  （MyBatis-Plus / MyBatis Plus / MP / baomidou / CRUD / pagination / ORM / DAO / entity mapping）。
+  次级触发信号——代码或 pom 中出现：mybatis-plus-boot-starter、
+  extends BaseMapper / IService / ServiceImpl、
+  QueryWrapper / LambdaQueryWrapper / LambdaUpdateWrapper、
+  @TableName / @TableId / @TableField / @TableLogic、
+  MybatisPlusInterceptor / MetaObjectHandler、
+  selectPage / saveBatch / IPage、logic-delete-field / mapper-locations / @DS；
+  用户任务词或报错出现：分页失效 / total 为 0 / 返回全量、更新后字段没变 / 字段置 null 不生效、
+  逻辑删除 / 软删除、批量插入 / 批量导入 / saveBatch 慢、乐观锁、创建时间自动填充、
+  多租户 / 数据权限 / 分表 / 动态表名、雪花 ID / 主键策略、枚举存数据库、联表查询、
+  事务不回滚、Invalid bound statement (not found)。
+  依赖含 mybatis-plus-* 或代码出现上述令牌时必须使用；纯 MyBatis、无 ORM 或 ORM 未知，
+  先询问用户是否引入 MyBatis-Plus 再开发。
+  不适用于：已使用 JPA / Hibernate 的项目（不建议迁移）、表结构设计 / DDL、纯 SQL 性能调优
+  （连接池 / 索引 / 慢查询属 DBA 层）。
 agent_created: true
 version: 2.4.0
 last_verified: "2026-08-23"
