@@ -217,7 +217,7 @@ public void inner() {
 
 ## 4. saveBatch 与事务的关系
 
-> 这是 MP 特有的交互点，容易踩坑。
+> 这是 MP 特有的交互点，容易踩坑。批量机制全貌（BATCH executor / InsertBatchSomeColumn / foreach）见 `04-crud.md` §3。
 
 ### saveBatch 需要在事务内才能真正批量
 

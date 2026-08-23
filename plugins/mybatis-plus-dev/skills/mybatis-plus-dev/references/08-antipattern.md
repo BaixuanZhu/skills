@@ -1,4 +1,4 @@
-# Agent 常见错误与最佳实践（核心价值）
+# Agent 常见错误与最佳实践
 
 > 每条结构：**错误写法 → 正确写法 → 为什么**。AI 生成 MyBatis-Plus 代码前应主动核对本章，避免“能跑但有坑”。
 
@@ -24,7 +24,7 @@
 
 ## 5. apply 字符串拼接注入
 - ❌ `w.apply("create_time >= '" + userInput + "'")`。
-- ✅ `SqlInjectionUtils.check(userInput); w.apply("create_time >= {0}", userInput);`（先校验后占位，见 `05-wrapper.md` §5）。
+- ✅ `if (SqlInjectionUtils.check(userInput)) throw new IllegalArgumentException("非法输入"); w.apply("create_time >= {0}", userInput);`（check 只返回 boolean 不抛异常，须调用方拦截；见 `05-wrapper.md` §5）。
 - 为什么：拼接外部输入即留 SQL 注入后门；`{0}` 占位符走 PreparedStatement 参数化，`check` 前置校验拦截恶意输入。
 
 ## 6. 逻辑删除 + 唯一索引冲突

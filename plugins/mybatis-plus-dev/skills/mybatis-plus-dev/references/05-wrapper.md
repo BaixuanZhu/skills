@@ -94,17 +94,19 @@ mapper.selectList(
 // ❌ 危险：字符串拼接，可被注入
 w.apply("date_format(create_time,'%Y-%m-%d') = '" + inputDate + "'");
 
-// ✅ 安全：先校验后占位（check 检测到注入则抛异常，{0} 参数化防注入）
-SqlInjectionUtils.check(inputDate);
+// ✅ 安全：check 拦截恶意输入 + {0} 占位参数化
+if (SqlInjectionUtils.check(inputDate)) {
+    throw new IllegalArgumentException("非法输入");
+}
 w.apply("date_format(create_time,'%Y-%m-%d') = {0}", inputDate);
 ```
-> `SqlInjectionUtils.check()` 返回 boolean（true=检测到注入并抛异常），**不返回安全化后的值**。正确流程：先 `check` 校验，再用 `{0}` 占位符传原值（PreparedStatement 参数化）。任何把外部输入拼进 SQL 片段的地方都照此处理。
+> `SqlInjectionUtils.check(String)` 返回 boolean（true=疑似注入），**自身不抛异常、不返回安全化后的值**——必须由调用方 `if (check(x)) throw` 拦截，裸调用 `check(x);` 会被编译/告警忽略返回值，校验形同虚设。拦截后用 `{0}` 占位符传原值（PreparedStatement 参数化）。任何把外部输入拼进 SQL 片段的地方都照此处理。
 
 ## 6. last 慎用
 
 `last("limit 1")` 直接拼接在 SQL 末尾，会**覆盖** MP 自己生成的分页 / 排序，且同样有注入风险。非必要不用。
 
-## 7. 空值语义（重点·实跑验证）
+## 7. 空值语义（重点）
 
 - **`eq / ge / like ...` 传 `null` 不会忽略条件**：默认 `condition=true`，生成 `col = NULL`，而 `NULL = NULL` 在 SQL 中为 unknown → **匹配 0 行**（不是"忽略返回全部"，也不是"查到 null 行"）。
 - 想条件性跳过：用三参重载 `eq(name != null, User::getName, name)`（`condition=false` 时该条件不加入 SQL）。
@@ -122,7 +124,7 @@ w.eq(name != null, User::getName, name);
 w.isNull(User::getName);
 ```
 
-> 此前版本曾误记「eq 传 null 自动被忽略」——经 MP 3.5.17 实跑 + 官方文档核实，不成立（见 `eval/mybatis-plus-dev/` 达尔文验证）。
+> 此前版本曾误记「eq 传 null 自动被忽略」——经实跑核实不成立。
 
 ## 8. Wrapper 不可复用
 

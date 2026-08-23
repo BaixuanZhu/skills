@@ -14,14 +14,15 @@ description: >-
   不适用于：已使用 JPA / Hibernate 的项目（不建议迁移）、数据库表结构设计/DDL、纯 SQL 性能调优
   （连接池/索引/慢查询属 DBA 层）。
 agent_created: true
-version: 2.3.1
+version: 2.4.0
+last_verified: "2026-08-23"
 slug: mybatis-plus-dev
 displayName: MyBatis-Plus 开发助手
 ---
 
 # MyBatis-Plus 开发助手
 
-面向日常 Java 开发的 MyBatis-Plus 编码助手。推荐 **3.5.17**（3.5.x 最新线，2026），**3.5.x 全线适用**，3.4.x 大部分兼容（差异处已注明）。
+面向日常 Java 开发的 MyBatis-Plus 编码助手。**推荐 3.5.x 最新版（本技能写作时为 3.5.17），3.5.x 全线适用**，3.4.x 大部分兼容（差异处已注明）。
 采用**完全本地自包含**策略：所有知识沉淀于本地 `references/`，运行时不依赖任何外部文档站点。
 
 ## 版本与依赖（先判 SpringBoot 版本）
@@ -77,42 +78,41 @@ displayName: MyBatis-Plus 开发助手
    - **自定义列别名 / 投影计算列**（`amount*2 AS double_amount`）
 
    用 `apply()`/`last()` 拼函数片段是反模式（注入风险 + 跨库不可移植 + 语义不可读），见 `references/05-wrapper.md` §1、`references/10-xml.md`。
-4. **null 不更新**：`updateById(entity)` 中 entity 的 `null` 字段默认**不参与更新**（根因：全局 `updateStrategy` 默认 `NOT_NULL`，见 `references/02-config.md` §7）；要显式置空用 `UpdateWrapper.set(...)` 或字段级 `@TableField(updateStrategy = FieldStrategy.ALWAYS)`。
-5. **逻辑删除**：推荐 0+毫秒时间戳方案（`Long` 字段，`logic-not-delete-value: 0`，`logic-delete-value: "UNIX_TIMESTAMP(now())*1000"`）；用全局 `logic-delete-field` 或字段 `@TableLogic`；启用后查询自动过滤已删除行。
+4. **null 不更新**：`updateById(entity)` 中 entity 的 `null` 字段默认**不参与更新**（根因：全局 `updateStrategy` 默认 `NOT_NULL`，见 `references/02-config.md` §7）；要显式置空用 `UpdateWrapper.set(...)` 或字段级 `@TableField(updateStrategy = FieldStrategy.ALWAYS)`。全局改 `update-strategy: ALWAYS` 会让所有 null 字段写库误清数据——只允许字段级覆盖。
+5. **逻辑删除**：推荐 0+毫秒时间戳方案（`Long` 字段，`logic-not-delete-value: 0`，`logic-delete-value: "UNIX_TIMESTAMP(now())*1000"`）；用全局 `logic-delete-field` 或字段 `@TableLogic`；启用后查询自动过滤已删除行。唯一索引须含 `deleted`（如 `UNIQUE(username, deleted)`），否则删除后同值插入报 Duplicate。
 6. **分页插件最后添加 + 显式 DbType**：`MybatisPlusInterceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL))` 必须放在插件链**最后**；**非 MySQL（PG/Oracle/SQLServer/达梦/金仓）必须显式指定 `DbType`**，否则分页方言可能生成错误（total 错或语法错）。跨库差异（主键策略/引用符/批量语法）见 `references/12-dbtype.md`。
-7. **SQL 注入防护**：`Wrapper.apply` 用 `{0}` 占位符（PreparedStatement 参数化）+ 前置 `SqlInjectionUtils.check(...)` 校验，**禁止字符串拼接** SQL 片段。`check` 返回 boolean 并抛异常，不返回安全值。
+7. **SQL 注入防护**：`Wrapper.apply` 用 `{0}` 占位符（PreparedStatement 参数化）+ 前置 `SqlInjectionUtils.check(...)` 校验，**禁止字符串拼接** SQL 片段。`check(String)` 返回 boolean（true=疑似注入）且**自身不抛异常**——必须 `if (SqlInjectionUtils.check(x)) throw new IllegalArgumentException(...)` 由调用方拦截，禁止裸调用（返回值被忽略＝校验形同虚设）。
 8. **Wrapper 不可复用**：同一 `Wrapper` 实例多次使用会叠加条件；每次查询 `new` 一个新的。
 9. **枚举映射**：枚举值字段标 `@EnumValue`（或实现 `IEnum`），JSON 序列化标 `@JsonValue`；XML 自定义查询中枚举字段的**每个位置**（resultMap、条件 `#{}`、插入 `#{}`）都要声明 `typeHandler=MybatisEnumTypeHandler`。
 10. **高级插件顺序（多租户/数据权限/动态表名 → 分页最后）**：`TenantLineInnerInterceptor` / `DataPermissionInterceptor` / `DynamicTableNameInnerInterceptor` 必须在 `PaginationInnerInterceptor` **之前**添加；否则 COUNT 语句不会被改写，分页总数不准或数据权限漏过滤（见 `references/07-plugin.md` §5）。
 11. **字段引用必须用方法引用（Lambda）**：构造条件/更新默认用 `LambdaQueryWrapper` / `LambdaUpdateWrapper` + 方法引用（`User::getName`），**禁止字符串字段名**（`eq("name", ...)`）。例外：动态列名 / 动态表名 / 方言函数等运行时才知道的列——用 `QueryWrapper` / `UpdateWrapper` 字符串形式 + 注释说明，且拼接外部输入走 §7 `{0}` 占位防注入。方法引用编译期检查，字段改名编译报错；字符串字面量无校验，重构改名静默产出错误 SQL（`Unknown column`）或查错数据（见 `references/05-wrapper.md` §1）。
+12. **自定义 XML 分页**：Mapper 方法返回 `IPage`（返回 `List` 则 MP 不改写分页）、入参 `page` 非 null（MP 靠它追加 LIMIT/COUNT），`ORDER BY` 写在 XML（见 `references/06-page.md` §4）。
 
 ## 决策路由（全部本地，无在线 fetch）
 
-| 需求场景 | 读取文件 | 关键提醒 |
-|---|---|---|
-| 依赖、starter 选择、最小配置、基础 CRUD 跑通 | `references/01-start.md` | SB3 用 `spring-boot3-starter`；分页必引 `mybatis-plus-jsqlparser`（v3.5.9+，否则静默失效） |
-| 全局配置：分页插件、逻辑删除全局、乐观锁、自动填充、防全表、**字段策略(insertStrategy/updateStrategy/whereStrategy)**、DbConfig/Configuration 速查 | `references/02-config.md` | 逻辑删除推荐 0+时间戳；唯一索引含 deleted；字段策略全局改 `ALWAYS` 会误清数据 |
-| 实体映射：@TableId 策略、@TableField(字段策略/null/JSON)、**枚举映射(@EnumValue/IEnum/@JsonValue)**、@Version、@TableLogic | `references/03-entity.md` | 枚举 @EnumValue+@JsonValue；XML 每处 typeHandler |
-| BaseMapper vs IService、继承范式、优先父类方法、saveBatch、null 不更新、**MP 专属性能（批量 BATCH / InsertBatchSomeColumn / 一级缓存 / 流式大结果集，见 §3）** | `references/04-crud.md` | 优先父类方法；null 不更新用 `UpdateWrapper.set` |
-| QueryWrapper vs LambdaQueryWrapper、条件构造、apply 防注入、空值语义 | `references/05-wrapper.md` | 默认 Lambda 方法引用（禁字符串字段名）；SQL 函数表达式(窗口/聚合/GROUP BY/专有函数)转 XML，勿用 `apply` 拼；Wrapper 不可复用；`apply` 用 `{0}` 占位 + `SqlInjectionUtils.check` |
-| 分页：Page/IPage、自定义 count、联表分页 XML | `references/06-page.md` | IPage 非 null 非 List；ORDER BY 写 XML |
-| 插件：逻辑删除/自动填充/乐观锁/多租户/动态表名/数据权限/防全表 | `references/07-plugin.md` | 插件顺序：分页最后 |
-| **数据库适配：DbType/分页方言/主键策略/标识符引用符/逻辑删除函数/批量语法** | `references/12-dbtype.md` | 非 MySQL 必须显式 `DbType`；Oracle/PG 勿用 `AUTO` 主键 |
-| **3.4.x→3.5.x 迁移 / 兼容（breaking changes）** | `references/13-migration.md` | `PaginationInterceptor`→`MybatisPlusInterceptor`；`IGNORED`→`ALWAYS`；3.5.9+ 引 jsqlparser |
-| **Agent 常见错误与最佳实践（重点看）** | `references/08-antipattern.md` | — |
-| SQL 日志开启、常见异常与分页失效排查 | `references/09-troubleshoot.md` | — |
-| **MyBatis XML Mapper 编写（mapper-locations / resultMap / 动态 SQL / 联表 / 联表分页）** | `references/10-xml.md` | 窗口/聚合/GROUP BY/专有函数/计算列/联表都进 XML，不止联表 |
-| **事务管理（@Transactional / 事务失效 / saveBatch 事务 / 多数据源 / 编程式事务）** | `references/11-transaction.md` | rollbackFor 必须显式；自调用不走代理；多数据源单 `@Transactional` 限单库 |
-
-> **组合场景阅读顺序**：先读机制类（`01`/`02`/`03`/`04`/`05`/`06`/`07`），再读落地/纠偏类（`08`/`09`/`10`/`11`）。例：分页+联表→先 `06` 后 `10`；枚举+XML→先 `03` 后 `10`；逻辑删除+多租户→先 `07` 后 `02`；批量+事务→先 `04` 后 `11`；事务+多数据源→先 `11` 后 `02`；事务回滚排查→先 `11` 后 `08`。
+| 需求场景 | 读取文件 |
+|---|---|
+| 依赖、starter 选择、最小配置、基础 CRUD 跑通 | `references/01-start.md` |
+| 全局配置：分页插件、逻辑删除全局、乐观锁、自动填充、防全表、**字段策略(insertStrategy/updateStrategy/whereStrategy)**、DbConfig/Configuration 速查 | `references/02-config.md` |
+| 实体映射：@TableId 策略、@TableField(字段策略/null/JSON)、**枚举映射(@EnumValue/IEnum/@JsonValue)**、@Version、@TableLogic | `references/03-entity.md` |
+| BaseMapper vs IService、继承范式、优先父类方法、saveBatch、null 不更新、**MP 专属性能（批量 BATCH / InsertBatchSomeColumn / 一级缓存 / 流式大结果集，见 §3）** | `references/04-crud.md` |
+| QueryWrapper vs LambdaQueryWrapper、条件构造、apply 防注入、空值语义 | `references/05-wrapper.md` |
+| 分页：Page/IPage、自定义 count、联表分页 XML | `references/06-page.md` |
+| 插件：逻辑删除/自动填充/乐观锁/多租户/动态表名/数据权限/防全表 | `references/07-plugin.md` |
+| **数据库适配：DbType/分页方言/主键策略/标识符引用符/逻辑删除函数/批量语法** | `references/12-dbtype.md` |
+| **3.4.x→3.5.x 迁移 / 兼容（breaking changes）** | `references/13-migration.md` |
+| **Agent 常见错误与最佳实践** | `references/08-antipattern.md` |
+| SQL 日志开启、常见异常与分页失效排查 | `references/09-troubleshoot.md` |
+| **MyBatis XML Mapper 编写（mapper-locations / resultMap / 动态 SQL / 联表 / 联表分页）** | `references/10-xml.md` |
+| **事务管理（@Transactional / 事务失效 / saveBatch 事务 / 多数据源 / 编程式事务）** | `references/11-transaction.md` |
 
 ## 使用流程
 
 1. **确认 MP 适用性**：先执行「第 0 步：依赖探测与激活分支」；依赖缺失时主动询问是否引入 MyBatis-Plus。不适用 → 告知用户并建议退出；部分适用 → 告知范围并让用户确认；正常 → 继续。
 2. **定位 reference**：查上方「决策路由」表，读对应文件。
-3. **编码遵循强约束**：先看 11 条核心强约束，再读 reference 给代码。
+3. **编码遵循强约束**：先看 12 条核心强约束，再读 reference 给代码。
 4. **遇异常先查排错**：`references/09-troubleshoot.md` + `references/08-antipattern.md`。
-5. **输出前自检（9 项）**：
+5. **输出前自检（10 项）**：
    - [ ] starter 坐标对应 SpringBoot 版本？（2.x / 3.x / 4.x）
    - [ ] 分页场景引了 `mybatis-plus-jsqlparser`？
    - [ ] `updateById` 需置 null？→ 改用 `LambdaUpdateWrapper.set()`
@@ -122,8 +122,4 @@ displayName: MyBatis-Plus 开发助手
    - [ ] 窗口/聚合/GROUP BY/专有函数/计算列场景 → 改写 XML，未用 `apply`/`last` 拼？
    - [ ] `@Transactional` 显式写了 `rollbackFor = Exception.class`？
    - [ ] 事务方法无自调用？
-
-## 版本注意
-- 依赖坐标 `com.baomidou:mybatis-plus-*`，本地 references 基于 3.5.17 整理，**3.5.x 全线适用**。
-- `v3.5.9+` 插件拆分为可选依赖（分页需额外引 `mybatis-plus-jsqlparser`）。
-- 若用户环境为 3.4.x 旧版：`PaginationInterceptor` 在 3.4.0 起标记废弃、**3.5.x 已移除**，应迁移到 `MybatisPlusInterceptor`（见 `references/13-migration.md`）；3.4.x 暂无 jsqlparser 拆分，勿按 3.5.9+ 引依赖。
+   - [ ] 自定义 XML 分页：方法返回 `IPage`、入参 `page` 非 null？

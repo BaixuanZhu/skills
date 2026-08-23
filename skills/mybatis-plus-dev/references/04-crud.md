@@ -34,7 +34,7 @@ public class UserService extends ServiceImpl<UserMapper, User> implements IUserS
 userService.saveBatch(userList);            // 默认 batchSize=1000
 userService.saveBatch(userList, 500);       // 指定批次大小
 ```
-> 若追求极致批量性能，复杂场景用 `InsertBatchSomeColumn` 注入器或原生 `foreach` 批量 SQL，而非依赖 `saveBatch` 的“伪批量”。
+> 若追求极致批量性能，复杂场景用 `InsertBatchSomeColumn` 注入器或原生 `foreach` 批量 SQL，而非依赖 `saveBatch` 的“伪批量”。批量与**事务**的交互（rewriteBatchedStatements、分批提交）见 `11-transaction.md` §4。
 
 ### MP 侧批量 / 性能要点（仅 MP 专属，非通用 DBA）
 

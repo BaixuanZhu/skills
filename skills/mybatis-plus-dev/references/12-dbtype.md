@@ -42,7 +42,7 @@ interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.POSTGRE_SQ
 ## 4. 标识符引用符 / 保留字
 
 - 列名含保留字（如 `order` / `user` / `desc`）时，需按库用引用符包裹：`@TableField("\"order\"")`(Oracle/PG/达梦) 或 `` @TableField("`order`") ``(MySQL)。
-- MP 的 `DbType` 内置 `keywordFit` 关键字转义，但仅覆盖**已知关键字**；自定义保留字列名仍需手写引用符。
+- 保留字列名**无自动转义**——MP 不会按 `DbType` 自动包裹关键字，引用符必须手写。
 
 ## 5. 逻辑删除函数（方言绑定）
 

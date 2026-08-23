@@ -1,21 +1,12 @@
 # 依赖与快速开始
 
-> 适用于 MyBatis-Plus 3.5.17。核心：选对 starter → 加 `@MapperScan` → 直接用 `BaseMapper`。
+> 适用于 MyBatis-Plus 3.5.x（版本真值源见 SKILL.md「版本与依赖」）。核心：选对 starter → 加 `@MapperScan` → 直接用 `BaseMapper`。
 
 ## 1. 添加依赖
 
-> **依赖通用规则**：所有坐标 `com.baomidou:mybatis-plus-*`，版本统一 3.5.17；切勿同时引入 `mybatis` / `mybatis-spring-boot-starter` / `mybatis-spring`（会与 MP 自带 MyBatis 冲突）。
+> **依赖通用规则**：所有坐标 `com.baomidou:mybatis-plus-*`，同一项目内版本统一；切勿同时引入 `mybatis` / `mybatis-spring-boot-starter` / `mybatis-spring`（会与 MP 自带 MyBatis 冲突）。
 
-**SpringBoot 2.x（Maven）**
-```xml
-<dependency>
-    <groupId>com.baomidou</groupId>
-    <artifactId>mybatis-plus-boot-starter</artifactId>
-    <version>3.5.17</version>
-</dependency>
-```
-
-**SpringBoot 3.x**
+**SpringBoot 3.x（Maven）**
 ```xml
 <dependency>
     <groupId>com.baomidou</groupId>
@@ -23,32 +14,17 @@
     <version>3.5.17</version>
 </dependency>
 ```
-
-**SpringBoot 4.x（需 MP ≥ 3.5.13）**
-```xml
-<dependency>
-    <groupId>com.baomidou</groupId>
-    <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
-    <version>3.5.17</version>
-</dependency>
-```
+- SpringBoot 2.x：换用 `mybatis-plus-boot-starter`；SpringBoot 4.x（需 MP ≥ 3.5.13）：换用 `mybatis-plus-spring-boot4-starter`（映射见 SKILL.md「版本与依赖」表）。
 
 **分页必引（v3.5.9+）**：
 ```xml
-<!-- JDK11+ -->
 <dependency>
     <groupId>com.baomidou</groupId>
     <artifactId>mybatis-plus-jsqlparser</artifactId>
     <version>3.5.17</version>
 </dependency>
-<!-- JDK8 用特定版本 -->
-<dependency>
-    <groupId>com.baomidou</groupId>
-    <artifactId>mybatis-plus-jsqlparser-4.9</artifactId>
-    <version>3.5.17</version>
-</dependency>
 ```
-> 不引 jsqlparser，`PaginationInnerInterceptor` 无法工作（静默失效，无报错）。
+> JDK8 项目改用 `mybatis-plus-jsqlparser-4.9`（同版本号）。不引 jsqlparser，`PaginationInnerInterceptor` 无法工作（静默失效，无报错）。
 
 ## 2. 最小配置
 

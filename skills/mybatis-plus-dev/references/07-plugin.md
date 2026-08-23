@@ -39,8 +39,9 @@ interceptor.addInnerInterceptor(new TenantLineInnerInterceptor(
 ## 3. 动态表名 DynamicTableNameInnerInterceptor
 
 ```java
+// TableNameHandler.dynamicTableName(String sql, String tableName) 是两参函数式接口
 interceptor.addInnerInterceptor(new DynamicTableNameInnerInterceptor(
-    tableName -> "user_" + LocalDate.now().getMonthValue()));  // 按月分表
+    (sql, tableName) -> "user_" + LocalDate.now().getMonthValue()));  // 按月分表
 ```
 - 用于分表路由；与多租户同用时要关注插件顺序（不做 SQL 改写的靠后）。
 
@@ -49,33 +50,36 @@ interceptor.addInnerInterceptor(new DynamicTableNameInnerInterceptor(
 按当前用户的数据范围（部门/角色）自动追加行级过滤条件（如 `dept_id IN (...)`）。
 
 ```java
-interceptor.addInnerInterceptor(new DataPermissionInterceptor(
-    new MultiDataPermissionHandler() {
-        @Override
-        public List<DataPermissionRule> getSqlSegment(ExecutionStatement stmt) {
-            // 范围来自登录上下文（可信），不要拼接未校验的外部输入
-            List<Long> deptIds = UserContext.getDeptIds();
-            if (deptIds == null || deptIds.isEmpty()) return Collections.emptyList();
-            // 权限表/字典表自身不应被过滤，按表名白名单跳过
-            if (!isBizTable(stmt.getTableName())) return Collections.emptyList();
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.InExpression;
+import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.schema.Table;
 
-            DataPermissionRule rule = new DataPermissionRule();
-            rule.setColumn("dept_id");
-            // 用 jsqlparser AST 构造（InExpression/Column/LongValue），勿字符串拼接 → 防注入
-            rule.setExpression(new InExpression(
-                new Column("dept_id"),
-                new ExpressionList(deptIds.stream().map(LongValue::new).collect(Collectors.toList())),
-                false));
-            return Collections.singletonList(rule);
+interceptor.addInnerInterceptor(new DataPermissionInterceptor(new MultiDataPermissionHandler() {
+    @Override
+    public Expression getSqlSegment(Table table, Expression where, String mappedStatementId) {
+        // 返回追加到该表 WHERE 上的条件；返回 null = 该表不追加
+        if (!isBizTable(table.getName())) {
+            return null;   // 权限表/字典表自身跳过，防自过滤查不到
         }
-    }));
+        List<Long> deptIds = UserContext.getDeptIds();   // 范围来自登录上下文（可信），勿拼未校验的外部输入
+        if (deptIds == null || deptIds.isEmpty()) {
+            return null;
+        }
+        // 用 jsqlparser AST 构造 dept_id IN (...)，勿字符串拼接 → 防注入
+        return new InExpression(new Column("dept_id"),
+                new ExpressionList(deptIds.stream().map(LongValue::new).collect(Collectors.toList())));
+    }
+}));
 ```
 
 - **必须放在多租户之后、分页之前**（顺序见 §5 / 强约束 #10）；与逻辑删除共存时 MP 顺序拼接，无需手动处理。
 - **条件来源必须可信**：部门/角色范围来自登录上下文；若含外部输入，须先 `SqlInjectionUtils.check`（对应强约束 #7）。**禁止字符串拼接** SQL 片段（注入后门）。
 - **避免权限表自过滤**：数据权限表/字典表自身不应被追加条件，用表名白名单或 `@InterceptorIgnore` 跳过。
 - 反模式：
-  - ❌ 拼 `"dept_id IN ('" + userInput + "')"` → SQL 注入。✅ 用 `DataPermissionRule` + `InExpression` 参数化构造。
+  - ❌ 拼 `"dept_id IN ('" + userInput + "')"` → SQL 注入。✅ 在 `getSqlSegment` 里返回 jsqlparser AST（`InExpression` / `EqualsTo`）。
   - ❌ 数据权限放在分页之后 → COUNT 未被过滤，总数泄露越权数据。✅ 先于分页（强约束 #10）。
   - ❌ 对权限/字典表也追加条件 → 自身被过滤查不到。✅ 表名白名单跳过。
 
