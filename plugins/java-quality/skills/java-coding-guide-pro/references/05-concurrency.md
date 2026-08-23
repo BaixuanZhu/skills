@@ -32,7 +32,7 @@ ThreadPoolExecutor pool = new ThreadPoolExecutor(
     10,                                                 // maxPoolSize（按需可 > core）
     0L, TimeUnit.MILLISECONDS,                          // 空闲存活
     new LinkedBlockingQueue<>(100),                     // 有界队列
-    new ThreadFactory() {                               // 手写命名工厂（不依赖 Guava）
+    new ThreadFactory() {                               // 手写命名工厂
         private final AtomicInteger n = new AtomicInteger(1);
         @Override public Thread newThread(Runnable r) {
             return new Thread(r, "biz-pool-" + n.getAndIncrement());
@@ -201,7 +201,7 @@ public class TaskRunner {
         ThreadPoolExecutor pool = new ThreadPoolExecutor(
             10, 10, 0L, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(100),
-            new ThreadFactory() {                                   // 手写命名工厂（不依赖 Guava）
+            new ThreadFactory() {                                   // 手写命名工厂
                 private final AtomicInteger n = new AtomicInteger(1);
                 @Override public Thread newThread(Runnable r) {
                     return new Thread(r, "task-" + n.getAndIncrement());
@@ -225,8 +225,4 @@ public class TaskRunner {
     }
 }
 ```
-
-## 依赖
-
-命名线程工厂**手写匿名 `ThreadFactory`**（见上，纯 JDK，无额外依赖）。**不引入 Guava** `ThreadFactoryBuilder`（本指南栈不含 Guava）。
 
