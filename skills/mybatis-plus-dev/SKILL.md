@@ -1,7 +1,7 @@
 ---
 name: mybatis-plus-dev
 description: >-
-  MyBatis-Plus（baomidou）开发助手。在 Java / Spring Boot 项目中开发任何数据库
+  MyBatis-Plus 开发助手。在 Java / Spring Boot 项目中开发任何数据库
   增删改查（CRUD）、分页查询、条件查询、Mapper / DAO / Service 层、实体类与表映射、
   联表 / 复杂查询写 XML、事务相关功能时使用本技能——无论用户是否提到 MyBatis-Plus
   （MyBatis-Plus / MyBatis Plus / MP / baomidou / CRUD / pagination / ORM / DAO / entity mapping）。
