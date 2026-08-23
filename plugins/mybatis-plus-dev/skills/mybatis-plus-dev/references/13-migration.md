@@ -1,11 +1,11 @@
 # 3.4.x → 3.5.x 迁移与兼容速查
 
-> 本 skill 主线基于 3.5.x（推荐 3.5.x 最新版）。若项目仍停留在 3.4.x 或需从 3.4.x 升级，本章给出**已验证的 breaking change 与前后代码**。3.5.x 的 breaking 多为「删废弃类 + 拆依赖」，机械替换即可，无行为语义重写。
+> 主线针对 3.5.x。若项目仍停留在 3.4.x 或需从 3.4.x 升级，本章给出**已验证的 breaking change 与前后代码**。3.5.x 的 breaking 多为「删废弃类 + 拆依赖」，机械替换即可，无行为语义重写。
 
 ## 1. 支持策略
 
-- **3.5.x（主线）**：本 skill 全部 references 按其整理，直接适用。
-- **3.4.x（legacy 兼容）**：`PaginationInterceptor` 在 3.4.0 起已被标记废弃但仍可用；**不要**在 3.4.x 用本 skill 提到的 `mybatis-plus-jsqlparser` 拆分依赖（那时尚未拆分）。升级到 3.5.x 后按本章改造。
+- **3.5.x（主线）**：全部内容直接适用。
+- **3.4.x（legacy 兼容）**：`PaginationInterceptor` 在 3.4.0 起已被标记废弃但仍可用；**不要**在 3.4.x 引 `mybatis-plus-jsqlparser`（3.5.9 才拆分，3.4.x 无此依赖）。升级到 3.5.x 后按本章改造。
 - 更老的 3.3.x：先升到 3.4.x 再升 3.5.x（3.3→3.4 已引入 `MybatisPlusInterceptor`）。
 
 ## 2. Breaking Changes（前 → 后）

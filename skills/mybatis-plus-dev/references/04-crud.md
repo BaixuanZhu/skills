@@ -38,7 +38,7 @@ userService.saveBatch(userList, 500);       // 指定批次大小
 
 ### MP 侧批量 / 性能要点（仅 MP 专属，非通用 DBA）
 
-以下均为 MyBatis-Plus / MyBatis 层可掌控的性能点；**连接池调优、索引设计、慢查询分析属数据源 / DBA 层，不在本 skill 范围**（见 SKILL.md「不适用」边界）。
+以下均为 MyBatis-Plus / MyBatis 层可掌控的性能点；**连接池调优、索引设计、慢查询分析属数据源 / DBA 层，不在本技能范围**（见 SKILL.md「不适用」边界）。
 
 - **真正批量三法**（减少网络往返）：
   1. `BATCH` executor：`new SqlSessionTemplate(sqlSessionFactory, ExecutorType.BATCH)` + JDBC URL `rewriteBatchedStatements=true`（MySQL），循环 `insert` 后 `sqlSession.flushStatements()`。

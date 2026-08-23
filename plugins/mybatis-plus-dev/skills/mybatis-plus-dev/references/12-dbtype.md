@@ -1,6 +1,6 @@
 # DbType 适配速查（非 MySQL 项目必读）
 
-> 本 skill 示例默认 MySQL，但 MP 支持 PostgreSQL / Oracle / SQL Server / 达梦 / 人大金仓 等。**跨库的坑集中在「分页方言、主键策略、标识符引用符、逻辑删除函数、批量语法」五处**，其余 CRUD/Wrapper/插件用法与 MySQL 一致。
+> 示例默认 MySQL，MP 支持 PostgreSQL / Oracle / SQL Server / 达梦 / 人大金仓 等。**跨库的坑集中在「分页方言、主键策略、标识符引用符、逻辑删除函数、批量语法」五处**，其余 CRUD/Wrapper/插件用法与 MySQL 一致。
 
 ## 1. 速查表
 

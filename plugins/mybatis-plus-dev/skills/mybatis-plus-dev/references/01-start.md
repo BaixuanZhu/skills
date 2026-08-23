@@ -1,6 +1,6 @@
 # 依赖与快速开始
 
-> 适用于 MyBatis-Plus 3.5.x（版本真值源见 SKILL.md「版本与依赖」）。核心：选对 starter → 加 `@MapperScan` → 直接用 `BaseMapper`。
+> 适用于 MyBatis-Plus 3.5.x。核心：选对 starter → 加 `@MapperScan` → 直接用 `BaseMapper`。
 
 ## 1. 添加依赖
 
