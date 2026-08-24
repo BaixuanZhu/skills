@@ -18,7 +18,7 @@ description: >-
   栈中立跟随项目既有（JUnit 4/5 均支持）。
   不适用：集成测试 / E2E / 冒烟测试（@SpringBootTest 全量上下文 / Testcontainers /
   REST Assured / WireMock）→ java-integration-test；性能测试、前端测试。
-version: "1.5.0"
+version: "1.5.1"
 last_verified: "2026-08-03"
 ---
 
