@@ -42,7 +42,7 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Engineering",
-      "version": "1.5.2"
+      "version": "1.5.3"
     },
     {
       "name": "sa-token-dev",
