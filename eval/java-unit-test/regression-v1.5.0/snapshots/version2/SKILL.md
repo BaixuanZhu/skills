@@ -8,8 +8,7 @@ description: >-
   测哪些 / 写多少）。
   次级触发信号——代码或 pom 中出现：spring-boot-starter-test、junit-jupiter、
   @Test / @BeforeEach / @ParameterizedTest / @MethodSource、
-  assertEquals / assertThrows / assertThat / extracting（AssertJ）、
-  @Mock / @InjectMocks / MockitoAnnotations.openMocks、
+  assertEquals / assertThrows、@Mock / @InjectMocks / MockitoAnnotations.openMocks、
   mockStatic / MockedStatic、mockito-core；
   用户任务词或痛点出现：只写 happy path、补测试不知道写几个、手写一堆重复 @Test、
   多条件分支只测一两种、有状态对象只测正常流转、@MockBean 用于纯单测、
@@ -48,7 +47,7 @@ last_verified: "2026-08-03"
 
 | 你想做的 | 看这份 | 读多少 |
 |---|---|---|
-| 不知道测什么 / 测多少 | `references/01` 四维度 + 「DoD 锚点」三条勾选项 | 各前 30 行 |
+| 不知道测什么 / 测多少 | `references/01` 四维度 + 「DoD 锚点」三停止信号 | 各前 30 行 |
 | 写纯计算/校验方法测试 | `references/02` | 通读（有完整范例） |
 | 写多条件组合 / 状态机测试 | `references/03` / `references/04` | 通读 |
 | 设计好的用例怎么落代码 / Mock 怎么写 | `references/06` | 按需查 |

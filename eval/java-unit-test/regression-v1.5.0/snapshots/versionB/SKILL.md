@@ -3,22 +3,22 @@ name: java-unit-test
 slug: java-unit-test
 displayName: Java 单元测试
 description: >-
-  Java 单元测试助手。在编写、评审、补全、重构单元测试时使用本技能——
+  Java 单元测试**规范对齐**助手。在编写、评审、补全单元测试时使用本技能——
   无论用户是否提到具体框架（unit test / JUnit / Mockito / 测试用例 / 怎么测 /
-  测哪些 / 写多少）。
-  次级触发信号——代码或 pom 中出现：spring-boot-starter-test、junit-jupiter、
-  @Test / @BeforeEach / @ParameterizedTest / @MethodSource、
-  assertEquals / assertThrows / assertThat / extracting（AssertJ）、
-  @Mock / @InjectMocks / MockitoAnnotations.openMocks、
-  mockStatic / MockedStatic、mockito-core；
-  用户任务词或痛点出现：只写 happy path、补测试不知道写几个、手写一堆重复 @Test、
+  测哪些 / 写多少测试）。
+  核心：统一团队的测试规范——用同一套设计方法（等价类/边界值/决策表/状态迁移）、
+  同一套默认（JUnit 5 原生断言、四维度必检）、同一套"写多少"的停止标准，
+  让不同人/不同对话产出的测试质量一致、可溯源、可审计，而非每次碰运气。
+  覆盖：一个方法必测的四维度（正向/反向/边界/异常）、最小充分集、
+  覆盖率反向校验、测试命名与组织、Mock 边界、"写多少"的成本收益判定。
+  次级触发信号：只写 happy path、补测试不知道写几个、手写一堆重复 @Test、
   多条件分支只测一两种、有状态对象只测正常流转、@MockBean 用于纯单测、
-  测够了没 / 写到什么程度算够、等价类 / 边界值 / 决策表 / 状态迁移用例设计。
-  核心默认：一个方法四维度必检（正向/反向/边界/异常）、JUnit 5 原生断言为默认、
-  栈中立跟随项目既有（JUnit 4/5 均支持）。
-  不适用：集成测试 / E2E / 冒烟测试（@SpringBootTest 全量上下文 / Testcontainers /
-  REST Assured / WireMock）→ java-integration-test；性能测试、前端测试。
-version: "1.5.0"
+  不确定测试该写到什么程度。
+  工具默认：断言默认用 JUnit 5 原生 Assertions，仅在集合内容断言/字段分组断言（同一逻辑组）时升级到 AssertJ；
+  Spring Boot 项目走 spring-boot-starter-test（自带 JUnit5+Mockito）。
+  不适用：集成测试/E2E/冒烟测试（@SpringBootTest 全量上下文 / Testcontainers / REST Assured / WireMock）→ java-integration-test；
+  性能测试、前端测试。
+version: "1.4.1"
 last_verified: "2026-08-03"
 ---
 
@@ -48,7 +48,7 @@ last_verified: "2026-08-03"
 
 | 你想做的 | 看这份 | 读多少 |
 |---|---|---|
-| 不知道测什么 / 测多少 | `references/01` 四维度 + 「DoD 锚点」三条勾选项 | 各前 30 行 |
+| 不知道测什么 / 测多少 | `references/01` 四维度 + 「DoD 锚点」三停止信号 | 各前 30 行 |
 | 写纯计算/校验方法测试 | `references/02` | 通读（有完整范例） |
 | 写多条件组合 / 状态机测试 | `references/03` / `references/04` | 通读 |
 | 设计好的用例怎么落代码 / Mock 怎么写 | `references/06` | 按需查 |
@@ -59,7 +59,7 @@ last_verified: "2026-08-03"
 
 读被测方法/类，一次性判断（读不到则问用户，勿分多轮）：
 
-1. **工具栈**：是否 Spring Boot（决定 `spring-boot-starter-test` 一行 vs 逐库坐标）；JUnit 4 还是 5（决定 `@Before`/`@BeforeEach`、`Assert`/`Assertions` 写法）；Mockito 版本（决定 `mockStatic` 能否用、是否需 `mockito-inline`，见 06 §1 栈基线决策表）。三条都用 `grep` 探 `pom.xml`：`grep -E "spring-boot-starter-test|spring-boot-starter-parent"` / `grep -E "junit-jupiter|<artifactId>junit</artifactId>"`（前者命中=JUnit5，后者=JUnit4）/ `grep mockito`。
+1. **工具栈**：是否 Spring Boot（决定 `spring-boot-starter-test` 一行 vs 逐库坐标）；JUnit 4 还是 5（决定 `@Before`/`@BeforeEach`、`Assert`/`Assertions` 写法）；Mockito 版本（决定 `mockStatic` 能否用、是否需 `mockito-inline`，见 06）。三条都用 `grep` 探 `pom.xml`：`grep -E "spring-boot-starter-test|spring-boot-starter-parent"` / `grep -E "junit-jupiter|<artifactId>junit</artifactId>"`（前者命中=JUnit5，后者=JUnit4）/ `grep mockito`。
 2. **被测对象类型**（决定用哪种设计方法，详见路由表）：
    - 纯计算/校验方法（输入→输出） → 等价类 + 边界值
    - 多条件组合逻辑（if/else 或规则） → 决策表
@@ -128,7 +128,7 @@ last_verified: "2026-08-03"
 
 > 判定"项目无 ArchUnit"：第 0 步探测依赖时一并 `grep archunit pom.xml`；有则跳过本节。
 
-- 询问要点（一次问全）：说明 ArchUnit 的价值（编译期/测试期守护分层契约）→ 给坐标 `com.tngtech.archunit:archunit-junit5`（版本取当前最新稳定）→ 两个选项：A) 引入并加架构测试；B) 不引入，靠人工 review 守护。
+- 询问要点（一次问全）：说明 ArchUnit 的价值（编译期/测试期守护分层契约）→ 给坐标 `com.tngtech.archunit:archunit-junit5:1.3.0` → 两个选项：A) 引入并加架构测试；B) 不引入，靠人工 review 守护。
 - 选 A 时给两条**可直接复制**的规则（实测一行即可抓 Controller 直连 Repository 等真实高频违规）：
 
 ```java
@@ -159,12 +159,13 @@ class ArchitectureTest {
 本节供外部 PR/DoD checklist **直接引用**——回答"这个方法的测试做完了没有"。三条**同时**满足才算最小充分（不是穷尽）。判定陷阱（"无遗漏"不可绝对证明）见 `references/05-coverage-and-quantity.md`「三个停止信号」。
 
 - [ ] **四维度齐全**：正向 / 反向 / 边界 / 异常各至少一个代表用例（对照上方「每个方法的四维度」表逐项打勾）。
-- [ ] **分支盲区清零**：被测方法的每个 `if/switch` 分支至少被一个用例走到（JaCoCo 口径下即 Branch 列 Missed = 0，无 JaCoCo 时人工分支清单全勾）。有 JaCoCo → `mvn test` 看报告，Missed>0 逐条补等价类用例或判死代码；无 JaCoCo → 读被测方法源码列分支清单逐分支对照已设计用例（设计时本就要数分支，默认路径不依赖工具）。
+- [ ] **分支覆盖无盲区**：所有 `if/switch` 的每个分支都被至少一个用例走到——`mvn test` 后看 JaCoCo 报告的 Branch 列，红色（`BRANCH_MISSED > 0`）行逐一对照"漏了哪个等价类"再补，或判为死代码。**项目无 JaCoCo 时**：人工核对分支表，或按"成本收益"决定是否接入（接入见 05）。
 - [ ] **等价类清单已显式走完**：按 `references/02` 四步法列出有效/无效等价类清单，逐类打勾（`null`/空串/越界这些无效类最易漏）。
 
-> ✗ DoD 写"覆盖率 ≥ 80%" → ✓ DoD 写"四维度齐全 + 分支盲区清零 + 等价类清单已显式走完"。前者把覆盖率当目标，催生凑数测试；后者才是测试设计完整性的判定。
+> ✗ DoD 写"覆盖率 ≥ 80%" → ✓ DoD 写"四维度齐全 + 分支覆盖无盲区 + 等价类清单已走完"。前者把覆盖率当目标，催生凑数测试；后者才是测试设计完整性的判定。
 
 ## 版本与范围
 
-- JUnit 5（Jupiter）为主，JDK 8+；JUnit 4 项目的写法差异见 `references/06-tools-lean.md` §1 栈基线决策表。
+- JUnit 5（Jupiter）为主，JDK 8+；JUnit 4 项目的写法差异见 `references/06-tools-lean.md` §4。
 - Spring Boot 项目测试依赖一行 `spring-boot-starter-test`（自带 JUnit5+Mockito）；非 Spring 项目逐库坐标见 `references/06-tools-lean.md` §1。断言默认 JUnit 原生，升级条件见上文"断言库策略"。
+- **与 `java-coding-guide-pro` 的关系**：正交互补。guide-pro 的编码高风险域（金额/日期/并发/加密）天然是测试设计的重点——其边界值正是 off-by-one 高发区，设计测试时优先覆盖这些域的边界。（注：guide-pro 用「S 级」标注编码高风险，与本文 S/A 表的「S 级＝测试设计缺陷」是两套体系，勿混。）

@@ -39,7 +39,6 @@
 <plugin>
     <groupId>org.jacoco</groupId>
     <artifactId>jacoco-maven-plugin</artifactId>
-    <version><!-- 填当前最新稳定 --></version>
     <executions>
         <execution>
             <goals><goal>prepare-agent</goal></goals>
@@ -53,7 +52,7 @@
 </plugin>
 ```
 
-`<version>` 建议显式写（实测：留空时 Maven 会解析最新 release 并告"构建稳定性"WARNING——`spring-boot-starter-parent` 的 pluginManagement **并不**管理 jacoco 插件版本），版本取当前最新稳定，勿照抄旧教程里的数字。
+Spring Boot `spring-boot-starter-parent` 的 pluginManagement 已管理 JaCoCo 插件版本，可不写 `<version>`；独立项目需补版本号——取当前最新稳定，勿照抄旧教程里的数字。
 
 `mvn test` 后看 `target/site/jacoco/index.html`。
 

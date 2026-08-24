@@ -22,7 +22,7 @@
 <!-- ArchUnit 仅"架构守护询问"（见 SKILL.md）触发时引入 -->
 ```
 
-**坐标不硬编码会过时的具体版本数字**：版本跟随项目既有；新项目取当前最新稳定（agent 生成坐标时现场填该数字，不是 XML 里省略 `<version>` 标签）；Spring Boot 项目的依赖由 parent BOM 管理（上方 `spring-boot-starter-test` 坐标无版本即因此）。下面写法以 JUnit 5（Jupiter）为主；项目已有 TestNG → 跟随既有（栈中立，见 SKILL 铁律 3）。
+**坐标一律不写版本号**：版本跟随项目既有；新项目取当前最新稳定；Spring Boot 项目由 parent BOM 管理（这也是上方 `spring-boot-starter-test` 坐标无版本的原因）。下面写法以 JUnit 5（Jupiter）为主；项目已有 TestNG → 跟随既有（栈中立，见 SKILL 铁律 3）。
 
 ### JUnit 4 差异表（探测到 `junit:junit` / `@RunWith` 时使用）
 
