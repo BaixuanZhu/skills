@@ -34,7 +34,7 @@
 
 ### 高风险域的边界优先级（Pareto）
 
-以下域的边界是 off-by-one 与精度 bug 的重灾区，**优先覆盖**（与 `java-coding-guide-pro` 的 S 级高风险域呼应）：
+以下域的边界是 off-by-one 与精度 bug 的重灾区，**优先覆盖**：
 
 - **金额**：`0`、负数、极小数（`0.005` 四舍五入）、极大值（溢出）、小数位超出 scale。
 - **日期时间**：`00:00:00` 与 `23:59:59`、月末、闰年 `2024-02-29`、跨时区日切、`now()` 的 mock。
@@ -113,4 +113,4 @@ int calculateDiscountPrice(int originalPrice, double discountRate)
 - **✗ 忘记边界，只取类内典型值**（如 `[1,100]` 只测 `50`） → ✓ 必测 `min, max, min-1, max+1`。
 - **✗ `null` 从不测**（"调用方不会传 null"） → ✓ `null` 是独立无效等价类，`@Nullable` 参数必测。
 - **✗ 两个非法输入同时传入**（`price=-1, rate=1.1` 一起测） → ✓ 一次只让一个输入非法，否则失败时不知哪个条件触发。
-- **✗ 浮点用 `==` 断言** → ✓ 用 `assertEquals(expected, actual, delta)` 或改用整数（本例用"分"为单位避免浮点，呼应 guide-pro 金额规约）。
+- **✗ 浮点用 `==` 断言** → ✓ 用 `assertEquals(expected, actual, delta)` 或改用整数（本例用"分"为单位避免浮点）。
