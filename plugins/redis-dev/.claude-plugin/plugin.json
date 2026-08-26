@@ -1,0 +1,9 @@
+{
+  "name": "redis-dev",
+  "version": "1.0.0",
+  "description": "Redis 开发助手——缓存（@Cacheable / RedisTemplate）、分布式锁（Redisson 看门狗）、序列化与连接配置、缓存一致性三件套。Java/Spring Boot 项目使用 Redis 时适用。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com"
+  }
+}

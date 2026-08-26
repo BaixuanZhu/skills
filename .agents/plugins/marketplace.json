@@ -97,6 +97,19 @@
       "version": "1.5.1"
     },
     {
+      "name": "redis-dev",
+      "source": {
+        "source": "local",
+        "path": "./plugins/redis-dev"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Engineering",
+      "version": "1.0.0"
+    },
+    {
       "name": "agile",
       "source": {
         "source": "local",

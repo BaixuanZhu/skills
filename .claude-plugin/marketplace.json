@@ -136,6 +136,25 @@
       ]
     },
     {
+      "name": "redis-dev",
+      "version": "1.0.0",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/redis-dev",
+      "description": "Redis 开发助手——缓存（@Cacheable/RedisTemplate）、分布式锁（Redisson 看门狗）、序列化与连接配置、缓存一致性三件套与排错。项目使用 Redis 时适用。",
+      "category": "engineering",
+      "keywords": [
+        "java",
+        "redis",
+        "cache",
+        "redisson",
+        "distributed-lock",
+        "spring-boot"
+      ]
+    },
+    {
       "name": "agile",
       "version": "4.5.3",
       "author": {
