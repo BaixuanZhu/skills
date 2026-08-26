@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,5 +47,19 @@ public class TestController {
         session.set("user", user);
         SysUser read = session.getModel("user", SysUser.class);
         return "name=" + read.name;
+    }
+
+    /**
+     * 复刻 03-permission.md §6「权限缓存（生产必做）」示例原样：
+     * StpUtil.getSessionByLoginId(loginId) + session.get(key, () -> ...) lazy 语义。
+     * second 读取时若 supplier 再次执行会返回 WRONG-CACHE-MISS，验证缓存命中。
+     */
+    @RequestMapping("permCacheOps")
+    public String permCacheOps(Integer id) {
+        Object loginId = id == null ? 10004 : id;
+        SaSession session = StpUtil.getSessionByLoginId(loginId);
+        List<String> first = session.get("permissionList", () -> List.of("user.add", "user.delete"));
+        List<String> second = session.get("permissionList", () -> List.of("WRONG-CACHE-MISS"));
+        return first + "|second=" + second;
     }
 }

@@ -87,4 +87,15 @@ class SessionApiTest {
         System.out.println("注册异常信息: " + ex.getMessage());
         assertTrue(ex.getMessage().contains("初始化") || ex.getMessage().contains("无法注册"));
     }
+
+    @Test
+    void permCache_03_section6_getSessionByLoginId_and_get_supplier() {
+        // 验证 03-permission.md §6 权限缓存示例的真实 API：
+        // StpUtil.getSessionByLoginId(loginId) + SaSession.get(key, supplier) lazy 语义（无值执行并缓存）
+        HttpHeaders headers = authHeaders(10004);
+        String body = rest.postForObject("/permCacheOps", new HttpEntity<>(headers), String.class);
+        assertTrue(body.contains("user.add"), "首次 supplier 应执行并写入缓存，实际: " + body);
+        assertTrue(body.contains("second=[user.add, user.delete]"),
+                "二次读取应命中缓存而非重新执行 supplier，实际: " + body);
+    }
 }
