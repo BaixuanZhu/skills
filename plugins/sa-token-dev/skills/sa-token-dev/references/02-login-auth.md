@@ -9,17 +9,7 @@
 StpUtil.login(Object userId);
 ```
 
-典型登录接口：
-```java
-@RequestMapping("doLogin")
-public SaResult doLogin(String name, String pwd) {
-    if ("zhang".equals(name) && "123456".equals(pwd)) {   // 真实项目查库比对
-        StpUtil.login(10001);
-        return SaResult.ok("登录成功");
-    }
-    return SaResult.error("登录失败");
-}
-```
+完整登录流程（含封禁校验、Cookie/Header 两种模式）见下方「登录流程最佳实践」。
 
 ## 2. 校验是否登录
 

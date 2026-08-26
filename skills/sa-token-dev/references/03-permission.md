@@ -1,6 +1,6 @@
 # 权限认证与角色认证
 
-> 核心：实现 `StpInterface` 告诉框架每个账号拥有的「权限码」和「角色」集合，再用 `StpUtil.checkXxx` 校验。
+> 核心：`StpInterface.getPermissionList / getRoleList` 返回的集合是 `StpUtil.checkPermission / checkRole` 的**检查源**——校验是否通过，取决于集合中是否包含对应权限码/角色。本文件只讲如何提供这个集合、如何校验；集合怎么来（库表设计、权限建模）是业务侧的事。
 
 ## 1. 实现权限数据源 StpInterface（必做）
 
@@ -32,7 +32,7 @@ public class StpInterfaceImpl implements StpInterface {
 
 - `loginId`：即 `StpUtil.login(id)` 写入的唯一标识。
 - `loginType`：账号体系标识（多账号认证用，单账号可忽略）。
-- 该接口不在启动时执行，每次鉴权时才调用。
+- 该接口不在启动时执行，**每次鉴权时才调用** → 生产环境必须缓存（见 §6）。
 
 ## 2. 权限校验 API
 
@@ -54,7 +54,18 @@ StpUtil.checkRoleAnd("super-admin", "shop-admin");
 StpUtil.checkRoleOr("super-admin", "shop-admin");
 ```
 
-## 4. 权限通配符
+- **角色不自动继承权限**：`checkRole` 只查 `getRoleList`，与 `getPermissionList` 无任何关联。若角色需对应权限，须在业务侧把角色映射的权限码算进 `getPermissionList` 的返回值。
+
+## 4. 权限通配符与权限码命名
+
+权限码统一命名 `模块.操作`（如 `user.add` / `art.update`）——通配符语义依赖该格式：
+
+```
+模块.操作     → user.add, user.delete, art.update
+模块.*        → art.*（art 模块全部权限）
+*.操作        → *.delete（所有模块的删除权限）
+*             → 超级管理员（通过任何权限码）
+```
 
 ```java
 // 拥有 art.*
@@ -85,70 +96,24 @@ public class GlobalExceptionHandler {
 
 > `NotPermissionException` / `NotRoleException` 均可通过 `getLoginType()` 获取是哪个 StpLogic 抛出。
 
-## 要点
-- 前端按钮级权限只是辅助显示，**后端接口必须再次校验**，前端校验可被轻松绕过。
+## 6. 权限缓存（生产必做）
 
-## RBAC 设计模式
-
-### 权限码命名规范
-
-```
-模块.操作     → user.add, user.delete, art.update
-模块.*        → art.*（art 模块全部权限）
-*.操作        → *.delete（所有模块的删除权限）
-*             → 超级管理员（通过任何权限码）
-```
-
-### 典型 RBAC 实现
-
-```java
-@Component
-public class StpInterfaceImpl implements StpInterface {
-    @Autowired
-    private RoleMapper roleMapper;
-    @Autowired
-    private PermissionMapper permissionMapper;
-
-    @Override
-    public List<String> getPermissionList(Object loginId, String loginType) {
-        // 1. 查用户角色
-        List<String> roleIds = roleMapper.getRoleIdsByUserId(Long.parseLong(loginId.toString()));
-        // 2. 查角色对应权限码
-        return permissionMapper.getPermissionCodesByRoleIds(roleIds);
-    }
-
-    @Override
-    public List<String> getRoleList(Object loginId, String loginType) {
-        return roleMapper.getRoleCodesByUserId(Long.parseLong(loginId.toString()));
-    }
-}
-```
-
-### 权限缓存优化
-
-`StpInterface` 每次鉴权时调用，频繁查库影响性能。优化方案：
+`StpInterface` 每次鉴权时调用，直接查库会产生高频 SQL。用 SaSession 缓存：
 
 ```java
 @Override
 public List<String> getPermissionList(Object loginId, String loginType) {
-    // 方案一：Sa-Token Session 缓存
     SaSession session = StpUtil.getSessionByLoginId(loginId);
     return session.get("permissionList", () -> {
         return permissionMapper.getPermissionCodesByUserId(loginId);  // 无值时查库
     });
-
-    // 方案二：Redis 缓存 + TTL
-    // String key = "perm:" + loginId;
-    // List<String> list = redisTemplate.opsForValue().get(key);
-    // if (list == null) { list = permissionMapper...; redisTemplate.set(key, list, 30, MINUTES); }
-    // return list;
 }
 ```
 
-### 最佳实践
-- **权限码统一命名**：`模块.操作` 格式，便于通配符匹配。
-- **缓存权限列表**：`StpInterface` 每次鉴权调用，务必缓存。
-- **角色和权限独立**：角色不自动继承权限，需在 `getPermissionList` 中查角色对应权限。
-- **通配符 * 谨慎使用**：拥有 `*` 表示通过任何权限码校验，仅限超级管理员。
+（Redis + TTL 缓存效果等价，任选其一。）
+
+## 要点
+
+- 前端按钮级权限只是辅助显示，**后端接口必须再次校验**，前端校验可被轻松绕过。
 
 > **常见错误**：StpInterface 未加 @Component、权限校验只在前端做 → 见 `10-antipattern.md` §24、§4。

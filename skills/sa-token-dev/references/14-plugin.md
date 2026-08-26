@@ -26,7 +26,7 @@ sa-token:
   jwt-secret-key: your-secret-key-do-not-copy  # 必填
 ```
 
-### 1.3 三种模式（关键选型）
+### 1.3 三种模式
 
 注入对应的 `StpLogic` Bean：
 

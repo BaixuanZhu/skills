@@ -13,7 +13,7 @@ description: >-
   项目尚无任何认证框架时，先主动询问用户是否引入 Sa-Token 再开发。
   不适用于：已使用 Spring Security / Shiro 的项目（不建议迁移）、纯 JWT 自实现方案、非 Java 语言。
 agent_created: true
-version: 2.2.0
+version: 2.3.0
 slug: sa-token-dev
 displayName: Sa-Token 开发助手
 ---
@@ -23,7 +23,7 @@ displayName: Sa-Token 开发助手
 面向日常 Java 开发的 Sa-Token 编码助手。推荐 **1.46.0+**（最新稳定版），**1.40.x 及以上全线适用**。版本基准以本声明为准，references 不再重复标注；功能级版本差异已在文中以 `v1.xx.0+` 标注。
 采用**完全本地自包含**策略：所有知识沉淀于本地 `references/`，运行时不依赖任何外部文档站点。
 
-## 版本与依赖（先判 SpringBoot 版本）
+## 版本与依赖
 
 | SpringBoot | starter 坐标 | 环境 |
 |---|---|---|
@@ -39,7 +39,7 @@ displayName: Sa-Token 开发助手
 - **SpringBoot 3.x**：Redis 前缀从 `spring.redis` 改为 `spring.data.redis`。
 - 微服务网关用 Reactor 依赖，子服务用 Servlet 依赖，**不要在父 pom 统一引入**。
 
-## 第 0 步：依赖探测与激活分支（收到认证/鉴权类任务先做这一步）
+## 第 0 步：依赖探测与激活分支
 
 任务涉及登录、注册、认证、鉴权、权限、token、会话、SSO、OAuth2 等编码——**即使用户没提 Sa-Token**——先检索项目依赖（在 `pom.xml` / `build.gradle` 中搜 `sa-token`、`spring-security`、`shiro`）：
 
@@ -63,39 +63,48 @@ displayName: Sa-Token 开发助手
 
 > **检查点**：判定为「不适用」→ 告知用户当前问题不在 Sa-Token 范围，建议退出本技能。
 
-## 决策路由（全部本地，无在线 fetch）
+## 关键决策检查点
 
-| 需求场景（关键词） | 读取文件 | 同时警告 |
-|---|---|---|
-| 依赖、starter 选择、yml 配置、最小示例、生产配置清单 | `references/01-setup.md` | SpringBoot 版本决定 starter 坐标；零配置可启动但生产需调 timeout/is-concurrent |
-| 登录、登出、会话查询、Token 查询、timeout vs active-timeout、登录流程 | `references/02-login-auth.md` | timeout 与 active-timeout 是两个独立机制；v1.29.0+ renewTimeout 可续期 |
-| 权限认证、角色认证、StpInterface、通配符、RBAC 设计模式 | `references/03-permission.md` | 必须实现 StpInterface；后端必须再次校验；通配符 * 代表全通过 |
-| 注解鉴权（@SaCheck*、SaMode、orRole、@SaIgnore、@SaCheckOr）、注解 vs 路由选型 | `references/04-annotation.md` | 必须先注册 SaInterceptor 否则注解无效；粗粒度用路由、细粒度用注解、可混用 |
-| 路由拦截鉴权（SaInterceptor / SaRouter / match / free / stop / back）、全局白名单 | `references/05-interceptor-route.md` | SaInterceptor 注册后注解才生效；路由做白名单 + 注解做细粒度（推荐混用） |
-| Session 会话（Account/Token/Custom）、三大作用域 | `references/06-session.md` | SaSession ≠ HttpSession，不可混用 |
-| 集成 Redis、前后端分离 token 传递、Redis 部署模式 | `references/07-redis-frontsep.md` | SB3.x 前缀 spring.data.redis；前端塞 header，参数名即 tokenName；分布式场景必须；自定义类型存 Session 需注册 `SaJsonStrategy` 白名单（v1.46.0+，防 RCE） |
-| StpUtil 常用 API（登录/踢人/封禁/二级认证/身份切换/多账号） | `references/08-api-stputil.md` | 踢人 vs 注销 vs 顶人场景值不同；kickout 与 disable 不同、封禁需先踢下线 |
-| 排错：NotLoginException 场景值、异常码、注解不生效、跨域、反代 uri、过滤器异常 | `references/09-pitfalls.md` | NotLoginException 7 种场景值；过滤器/跨域异常不进 @ExceptionHandler |
-| **Agent 常见错误与最佳实践（核心价值，每次生成代码前必看）** | `references/10-antipattern.md` | 28 条 antipattern，生成代码前必对照 |
-| 高级特性：记住我、同端互斥、账号封禁、二级认证、身份切换、多账号、密码加密、Token 风格/前缀、全局侦听器/过滤器、Http Basic/Digest | `references/11-advanced.md` | v1.31.0+ login 不再自动校验封禁需显式 checkDisable；记住我本质是 Cookie 持久 vs 临时（前后端分离需前端控制）；同端互斥需 is-concurrent=false + device；二级认证 openSafe+checkSafe（@SaCheckSafe）；多账号推荐 StpKit 门面、LoginType 不可运行时改；Token 前缀与值间必须有空格、Cookie 模式需额外配置 |
-| SSO 单点登录（三种模式）、OAuth2.0（四种授权模式）、SSO vs OAuth2 选型 | `references/12-sso-oauth2.md` | 三种模式选型看前端是否同域+后端是否同 Redis；SSO vs OAuth2 选型；allow-url 生产必须配详细地址 |
-| 微服务：分布式 Session、网关统一鉴权、内部服务隔离（Same-Token）、依赖引入 | `references/13-micro-service.md` | 网关用 Reactor 依赖、子服务用 Servlet；SaReactorFilter 全局过滤器；Redis 必须；Feign 内部调用需传 Same-Token |
-| 插件：JWT、API-Key、API 签名、AOP 注解、临时 Token、Alone Redis、SpEL 表达式 | `references/14-plugin.md` | **JWT 是可选 token 风格（非默认）**：有状态场景用 `simple-uuid` token 风格（不引 JWT）即可；仅当用户要 JWT 格式时才在 Simple/Mixin/Stateless 中选——Simple=JWT+Redis（推荐），Mixin=JWT+Redis 且登录数据内嵌 Token，Stateless=JWT 无 Redis 不支持踢人；网关用 Reactor 依赖；v1.46.0+ 新增 fory-json/rest-client/rest-template/alone-redisson 插件 |
+以下 6 个场景存在多条技术路线，Agent **不可擅自替用户选择**。
 
+**执行规则（机械判据，逐条执行）：**
 
-## 主动行为触发（代码审查护栏）
+1. 拿到任务后、写任何代码前，先扫描用户消息与上下文是否命中下表「触发信号」列的关键词（逐字匹配）。
+2. 命中任一检查点 → **本轮回复只做一件事：输出确认问题**。禁止输出业务代码块、依赖坐标、配置片段。
+3. 确认问题必须是**选择题**：列出候选方案（A/B/C）+ 标注推荐项 + 一句话理由。禁止开放式提问（如"你想怎么做认证？"）。
+4. 用户未明确回答 → 使用「默认推荐」列策略，并在输出开头标注「未确认，已使用默认方案」。
+5. 用户确认方向 → 按选择生成代码，不再重复追问。
+6. 一个需求命中多个检查点 → 一次性列出全部确认问题，全部完成后才生成代码。
 
-> 以下代码模式命中时主动提醒用户；更完整的强制规则见「核心强约束」。
+| # | 触发信号（逐字关键词） | 必须确认的问题 | 方案差异（一句话） | 默认推荐（用户未指定时） |
+|---|---------|-------------|---------|----------------------|
+| C1 | "JWT" / "无状态" / "不要 Redis" / "水平扩展" / "token 风格" / "自包含 token" | ① 是否要无状态（不依赖 Redis）？② 是否要 JWT 风格 token（自包含/可读）？ | 有状态默认 **simple-uuid**（不引 JWT，功能完整）；有状态 + JWT = Simple；无状态 = Stateless JWT（不支持踢人/Session/active-timeout）；Mixin = JWT+Redis 内嵌。详见 `references/14-plugin.md` | **有状态 + simple-uuid**；用户显式声明"无状态/不要 Redis" 视为已确认，直接 Stateless |
+| C2 | "SSO" / "单点登录" | ① 各子系统前端是否同域？② 各子系统后端是否共享同一 Redis？ | 模式一：同域+同 Redis（共享 Cookie）；模式二：跨域+同 Redis（URL 重定向 + Ticket）；模式三：跨域+异 Redis（HTTP 请求校验）。详见 `references/12-sso-oauth2.md` | 按条件自动判定（同域同 Redis → 模式一） |
+| C3 | "登录" / "认证"（未明确前后端分离） | ① 前端是浏览器渲染页面，还是 App/小程序/SPA？② 是否前后端分离？ | **Cookie 模式**：浏览器自动管理，login() 后自动注入；**Header 模式**：前后端分离，后端返回 tokenValue，前端塞 header | Cookie（浏览器）；Header（前后端分离/App/小程序） |
+| C4 | "鉴权" / "权限" / "保护接口" | ① 需要粗粒度（路径级）还是细粒度（接口/方法级）？② 是否有全局白名单？ | **路由拦截**：SaInterceptor + SaRouter，粗粒度；**注解**：@SaCheck*，细粒度；可混用 | **混用**（路由全局白名单 + 注解细粒度） |
+| C5 | "微服务" / "网关" | ① 是否需要无状态（不依赖 Redis）？② 是否需要踢人/active-timeout？ | **Redis 方案**：有状态，功能完整（推荐）；**JWT Stateless**：无 Redis，但不支持踢人/active-timeout | **Redis 方案** |
+| C6 | "多账号" / "多体系" / "多端" | ① 需要几套独立登录体系？② 各体系是否需要不同 timeout/配置？ | **StpKit 门面**：每体系独立 StpLogic，可独立配置；**单账号 + device**：同一体系区分设备类型 | 按体系数量决定（≥2 套 → StpKit） |
 
-| 代码模式 | 主动提醒 |
-|---------|---------|
-| `is-share: true` + 需要踢人/顶人下线 | is-share=true 时多端共用 token，踢人语义变化，需向用户说明 |
-| SSO `allow-url: "*"` | 生产环境必须配置为详细 URL（详见 `12-sso-oauth2.md`） |
-| `active-timeout` 配了但自动续签不理解 | getLoginId/checkLogin 等调用时自动续签；关闭用 autoRenew=false |
-| Feign 内部调用未传 Same-Token | 子服务会拒绝未携带 Same-Token 的请求（详见 `13-micro-service.md`） |
-| `@SaCheckDisable` 不指定 service | 校验全账号封禁；分类封禁需指定 service |
+## 决策路由
 
-## 核心强约束（Agent 必须遵守）
+| 需求场景（关键词） | 读取文件 |
+|---|---|
+| 依赖、starter 选择、yml 配置、生产配置清单 | `references/01-setup.md` |
+| 登录、登出、会话查询、Token 查询、timeout vs active-timeout、登录流程 | `references/02-login-auth.md` |
+| 权限认证、角色认证、StpInterface、通配符、RBAC 权限模型 | `references/03-permission.md` |
+| 注解鉴权（@SaCheck*、SaMode、orRole、@SaIgnore、@SaCheckOr）、注解 vs 路由选型 | `references/04-annotation.md` |
+| 路由拦截鉴权（SaInterceptor / SaRouter / match / free / stop / back）、全局白名单 | `references/05-interceptor-route.md` |
+| Session 会话（Account/Token/Custom）、三大作用域 | `references/06-session.md` |
+| 集成 Redis、前后端分离 token 传递、Redis 部署模式 | `references/07-redis-frontsep.md` |
+| StpUtil 常用 API（登录/踢人/封禁/二级认证/身份切换/多账号） | `references/08-api-stputil.md` |
+| 排错：NotLoginException 场景值、异常码、注解不生效、跨域、反代 uri、过滤器异常 | `references/09-pitfalls.md` |
+| Agent 常见错误与最佳实践（28 条 antipattern） | `references/10-antipattern.md` |
+| 高级特性：记住我、同端互斥、账号封禁、二级认证、身份切换、多账号、密码加密、Token 风格/前缀、全局侦听器/过滤器、Http Basic/Digest | `references/11-advanced.md` |
+| SSO 单点登录（三种模式）、OAuth2.0（四种授权模式）、SSO vs OAuth2 选型 | `references/12-sso-oauth2.md` |
+| 微服务：分布式 Session、网关统一鉴权、内部服务隔离（Same-Token）、依赖引入 | `references/13-micro-service.md` |
+| 插件：JWT、API-Key、API 签名、AOP 注解、临时 Token、Alone Redis、SpEL 表达式 | `references/14-plugin.md` |
+
+## 核心强约束
 
 1. **先注册拦截器再用注解**：`@SaCheck*` 注解依赖 `SaInterceptor`，默认关闭。必须先 `registry.addInterceptor(new SaInterceptor()).addPathPatterns("/**")` 注册，注解才生效。高版本 SpringBoot（≥2.6.x）可能需额外加 `@EnableWebMvc`。
 2. **SaSession ≠ HttpSession**：`StpUtil.getSession()` 返回的 `SaSession` 与 `HttpSession` 无任何关系，互不通。用 Sa-Token 时统一使用 `SaSession`，不要混用。
@@ -110,34 +119,24 @@ displayName: Sa-Token 开发助手
 11. **Redis 前缀注意版本**：SpringBoot 2.x 用 `spring.redis.*`，SpringBoot 3.x 用 `spring.data.redis.*`。配错导致连接失败。
 12. **JWT 是可选 token 风格，与有状态/无状态正交**：有状态场景默认用 Sa-Token 原生 `simple-uuid` token 风格 + Redis 即可，**无需引入 JWT**；仅当用户要 JWT 自包含/可读格式时引入 `sa-token-jwt`（Simple 模式，JWT + Redis）。无状态场景必须 JWT（`StpLogicJwtForStateless`，不要 Redis，不支持踢人/active-timeout）。Mixin 才同时需要 JWT + Redis（登录数据内嵌 Token）。**不要默认假设用 JWT。**
 
-## 关键决策检查点（生成代码前必须确认）
-
-以下场景存在多条技术路线，Agent **不可擅自替用户选择**。须先简要说明选项差异，确认方向后再编码。
-
-| # | 触发信号 | 必须确认的问题 | 选项差异 | 默认推荐（用户未指定时） |
-|---|---------|-------------|---------|----------------------|
-| C1 | 用户提到 "JWT" / "无状态" / "不要 Redis" / "水平扩展" / "token 风格" / "自包含 token" | ① 是否要无状态（不依赖 Redis）？② 是否要 JWT 风格 token（自包含/可读）？ | **有状态 + simple-uuid token（默认，最常用）**：Redis 存会话，无需 JWT，功能完整（踢人/Session/active-timeout）<br>**有状态 + JWT（Simple）**：JWT 自包含 token + Redis，功能完整<br>**无状态（Stateless）**：必须 JWT，不要 Redis，不支持踢人/Session/active-timeout<br>**Mixin**：JWT + Redis，登录数据内嵌 Token，不支持踢人/顶人 | **有状态 + simple-uuid token**；用户已显式声明"无状态/不要 Redis"视为已确认，直接 Stateless |
-| C2 | 用户提到 "SSO" / "单点登录" | ① 各子系统前端是否同域？② 各子系统后端是否共享同一 Redis？ | **模式一**：前端同域 + 后端同 Redis → 共享 Cookie<br>**模式二**：前端不同域 + 后端同 Redis → URL 重定向 + Ticket<br>**模式三**：前端不同域 + 后端不同 Redis → HTTP 请求校验 | 按条件自动判定（同域同 Redis → 模式一） |
-| C3 | 用户提到 "登录" / "认证"（未明确前后端分离） | ① 前端是浏览器渲染页面，还是 App/小程序/SPA？② 是否前后端分离？ | **Cookie 模式**：浏览器自动管理，login() 后自动注入<br>**Header 模式**：前后端分离，后端返回 tokenValue，前端塞 header | Cookie（浏览器）；Header（前后端分离/App/小程序） |
-| C4 | 用户提到 "鉴权" / "权限" / "保护接口" | ① 需要粗粒度（路径级）还是细粒度（接口/方法级）？② 是否有全局白名单？ | **路由拦截**：SaInterceptor + SaRouter，粗粒度，路径匹配<br>**注解**：@SaCheck*，细粒度，方法级<br>**混用**：路由做白名单 + 注解做细粒度（推荐） | **混用**（路由全局 + 注解细粒度） |
-| C5 | 用户提到 "微服务" / "网关" | ① 是否需要无状态（不依赖 Redis）？② 是否需要踢人/active-timeout？ | **Redis 方案**：有状态，支持踢人/active-timeout/Session（推荐）<br>**JWT Stateless**：无状态，不依赖 Redis，但不支持踢人/active-timeout | **Redis 方案**（功能完整） |
-| C6 | 用户提到 "多账号" / "多体系" / "多端" | ① 需要几套独立登录体系？② 各体系是否需要不同 timeout/配置？ | **StpKit 门面模式**：每个体系独立 StpLogic，可独立配置<br>**单账号 + device 参数**：同一体系区分设备类型 | 按体系数量决定（≥2 套 → StpKit） |
-
-> **执行规则**：
-> 1. 检测到触发信号 → 先向用户提出确认问题，**不要直接生成代码**。
-> 2. 用户未明确回答 → 使用「默认推荐」列的策略，但在输出中标注"未确认，已使用默认方案"。
-> 3. 用户确认方向 → 按选择生成代码，不再追问。
-> 4. 一个需求命中多个检查点 → 逐一确认，全部完成后一次性生成代码。
-
 ## 使用流程
 
 1. **确认适用性**：先执行「第 0 步：依赖探测与激活分支」，再对照「何时使用本技能」；依赖缺失时主动询问是否引入 Sa-Token，不适用 → 告知用户并建议退出。
-2. **关键决策检查点**：查表命中触发信号 → 先向用户确认方向，**不要直接生成代码**。
+2. **关键决策检查点**：逐字扫描 C1–C6 触发信号；命中 → 本轮只输出确认选择题，禁止生成代码。
 3. **定位 reference**：查「决策路由」表，读对应文件。
-4. **编码前看 antipattern**：必读 `10-antipattern.md` 对照常见错误。
+4. **编码前看 antipattern**：对照 `10-antipattern.md` 常见错误。
 5. **编码遵循强约束**：先读 12 条核心强约束，再给代码。
 6. **遇异常先查排错**：`references/09-pitfalls.md`。
-7. **输出前自检**：对照 12 条核心强约束逐项核对——starter 版本对应（2/3/4.x）、检查点已确认方向、@SaCheck* 已注册 SaInterceptor、前后端分离已返回 tokenValue、SaSession 未与 HttpSession 混用、Redis 前缀对应版本、踢人前置 kickout 再 disable、过滤器已配 setError、JWT 仅在用户要 JWT 格式或无状态时引入（默认 simple-uuid）。
+7. **输出前自检（二值核对，任一为「否」即违规，必须返工）**：
+   - C1–C6 已逐项扫描：命中的检查点均已确认，或已按执行规则 4 标注默认方案？
+   - starter 对应 SpringBoot 版本，Servlet / Reactor 未混用？
+   - `@SaCheck*` 使用处已注册 `SaInterceptor`？
+   - 前后端分离场景已返回 tokenValue？
+   - SaSession 未与 HttpSession 混用？
+   - Redis 前缀对应 SpringBoot 版本？
+   - 封禁流程已先 kickout 再 disable，登录前已 checkDisable？
+   - 过滤器已配 `.setError()`？
+   - JWT 仅在用户要 JWT 格式或无状态时引入（默认 simple-uuid）？
 
 ## 版本注意
 
