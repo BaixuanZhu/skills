@@ -86,6 +86,8 @@ public class OrderService {
 
 同类失效的还有：`private`/`final` 方法上的注解（代理无法覆写）。
 
+其余失效原因（按序排查）：① 没配 `@EnableCaching`；② 方法所在类不是 Spring bean；③ `cacheNames` 拼错——与 `perName` 不匹配会**静默落默认配置**；④ `condition` 执行前返回 false（方法正常执行但不缓存）；⑤ 多个无参方法共用默认 SimpleKey 互相顶替。
+
 ## 5. sync / condition / unless 的组合
 
 - `sync = true`：同 key 未命中时**同 JVM 内**只放一个线程回源（其余等待），单机防击穿；限制：仅 `@Cacheable` 支持、**与 `unless` 互斥**（组合直接抛 `IllegalStateException`）；**多实例部署时每个实例各放一个线程**，分布式防击穿仍需分布式锁（`06-cache-consistency.md` §3）。

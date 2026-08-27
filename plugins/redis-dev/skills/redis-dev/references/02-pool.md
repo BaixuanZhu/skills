@@ -86,7 +86,7 @@ Boot 2.0（2018）起 starter 默认 Lettuce；仍在 Jedis 的项目按本节�
 |---|---|
 | 配了 `pool.*` 感觉没生效 | 正常——普通命令共享连接不走池（§1）；确认是否真用到事务/阻塞命令 |
 | `Could not get a resource from the pool` / pool exhausted | ① `max-wait` 太短（借连接排队超时）② `max-active` 太小（并发事务/阻塞命令 > 上限）③ 连接泄漏：`SessionCallback` 内长时间阻塞、阻塞命令没超时控制 |
-| 命令偶尔超时但池没问题 | 查命令超时配置与慢命令（`keys *`/大 value），见 `08-troubleshoot.md` |
+| 命令偶尔超时但池没问题 | 查命令超时配置与慢命令（`keys *` 禁用见 `04-template-operations.md` §1；大 value 删除用 `unlink`） |
 
 ## 6. 决策表
 

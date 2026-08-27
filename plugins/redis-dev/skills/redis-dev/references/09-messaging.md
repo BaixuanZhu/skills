@@ -96,7 +96,7 @@ public KeyExpirationEventMessageListener keyExpiredListener(
 
 坑（决定了它的定位是"辅助联动"，不是可靠机制）：
 
-1. **过期事件不准时**：由惰性 / 定期删除触发（同 `08-troubleshoot.md` 总表"TTL 到期的 key 还在"一行的机制）——实际触发可能晚很多。
+1. **过期事件不准时**：由惰性 / 定期删除触发（`08-troubleshoot.md` §2）——实际触发可能晚很多。
 2. **不持久化**：监听端重启窗口内的事件永久丢。
 3. **订单超时关闭别押它**——用 `RDelayedQueue` / 定时扫描兜底（选型表 §1）；它适合缓存失效联动、本地缓存失效通知这类"丢了也没事"的场景。
 

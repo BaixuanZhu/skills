@@ -70,6 +70,8 @@ spring:
       timeout: 3s
 ```
 
+`cluster.nodes` 是**种子节点**——Lettuce 会自动发现完整拓扑，但至少一个必须可达；生产仍列全 master，避免种子单点。
+
 集群模式的三个应用侧限制（写代码前必须知道）：
 
 1. **多 key 命令要求同 slot**：`mget(k1, k2)`、Lua 脚本内访问多个 key、事务——key 分布在不同 slot 会报 `CROSSSLOT` 错误。需要绑定的 key 用 **hash tag**：`order:{1001}:detail` 与 `order:{1001}:stock`（`{}` 内相同 → 同 slot）。
@@ -84,7 +86,7 @@ spring:
 | `spring.data.redis.ssl.enabled` | `spring.redis.ssl` | TLS 开关（Boot 3.0 为布尔 `ssl`，3.1 起对象型） |
 | 其余属性名 | 同名 | host/port/timeout/cluster/sentinel 等不变 |
 
-配错的典型症状：`Unable to connect to Redis` 但地址密码都对——先查前缀与 Boot 版本是否匹配（排错表见 `08-troubleshoot.md`）。
+配错的典型症状：`Unable to connect to Redis` 但地址密码都对——先查前缀与 Boot 版本是否匹配。
 
 ## 5. 多数据源（两个 Redis 实例）
 
