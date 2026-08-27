@@ -1,25 +1,22 @@
 ---
 name: redis-dev
 description: >-
-  Redis 开发助手（Java / Spring Boot）。在 Java / Spring Boot 项目中开发任何
-  缓存（@Cacheable 声明式 / RedisTemplate 手动）、分布式锁（Redisson / lock4j / SET NX EX）、
-  Redis 连接与配置（单机 / 哨兵 / 集群 / 连接池）、序列化（key 乱码 / JSON / LocalDateTime）、
-  缓存一致性（穿透 / 击穿 / 雪崩 / 先更库再删缓存）、以及用 Redis 数据结构实现业务功能
-  （计数器 / 签到 / 去重 / 延迟队列 / UV 统计 / 布隆过滤器 / 限流）、消息与事件
-  （发布订阅 / Pub/Sub / Stream 可靠队列 / 键空间通知 / 过期事件回调）时使用本技能——
-  无论用户是否提到 Redis（cache / caching / 分布式锁 / distributed lock / 看门狗 /
-  watch dog / 缓存一致 / hot key / cache aside）。
-  次级触发信号——代码或 pom 中出现：spring-boot-starter-data-redis、redisson、
-  RedisTemplate / StringRedisTemplate、@Cacheable / @CacheEvict / @CachePut / @EnableCaching、
-  RLock / RedissonClient / tryLock / @Lock4j / RRateLimiter / RDelayedQueue / RBloomFilter、
-  opsForValue / opsForHash / opsForZSet / opsForStream /
+  Redis 开发与审查助手（Java / Spring Boot）。开发、审查或优化缓存（@Cacheable 声明式 /
+  RedisTemplate 手动）、分布式锁（Redisson / lock4j / SET NX EX / 看门狗）、Redis 连接与配置
+  （单机 / 哨兵 / 集群 / 连接池）、序列化（key 乱码 / JSON / LocalDateTime）、缓存一致性
+  （穿透 / 击穿 / 雪崩 / hot key / 先更库再删缓存 / cache aside）、用 Redis 数据结构实现业务功能
+  （计数器 / 签到 / 去重 / 延迟队列 / UV 统计 / 布隆过滤器 / 限流）、消息与事件（发布订阅 /
+  Pub/Sub / Stream 可靠队列 / 键空间通知 / 过期事件）时使用本技能——无需用户提到 Redis。
+  次级触发信号——代码或 pom 中出现：spring-boot-starter-data-redis、redisson、RedisTemplate、
+  @Cacheable / @CacheEvict / @CachePut / @EnableCaching、RLock / RedissonClient / tryLock /
+  @Lock4j / RRateLimiter / RDelayedQueue / RBloomFilter、opsForValue 等 opsFor* 方法、
   convertAndSend / RedisMessageListenerContainer / StreamMessageListenerContainer 时必须使用本技能；
   用户报错出现：key 乱码（\xac\xed）、序列化 / 反序列化异常、连不上 Redis / command timeout /
   pool exhausted、@Cacheable 不生效、读回 LinkedHashMap 时必须使用本技能。
-  不适用于：Sa-Token 等框架自身的会话 / 登录集成、测试容器化 Redis、
-  Redis 服务器安装部署 / 主从搭建 / 监控指标调优 / 内存与淘汰策略（运维范围）、非 Java 语言。
+  不适用于：Sa-Token 等框架自身的会话 / 登录集成、测试容器化 Redis、Redis 服务器安装部署 /
+  主从搭建 / 监控指标与内存淘汰策略调优（运维范围）、非 Java 语言。
 agent_created: true
-version: 1.1.1
+version: 1.1.2
 slug: redis-dev
 displayName: Redis 开发助手
 ---
@@ -65,6 +62,7 @@ Boot 2.7 差异以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data
 | 缓存穿透 / 击穿 / 雪崩、先更新库还是先删缓存 | 激活 |
 | 用 Redis 做计数器 / 签到 / 去重 / 延迟队列 / UV / 布隆 / 限流 | 激活 |
 | 发布订阅（Pub/Sub）、Stream 消息队列、key 过期事件监听 | 激活 |
+| 审查 / 优化存量代码的 Redis 用法（自写锁、keys *、JDK 序列化等隐患识别与迁移） | 激活 |
 | 报错：连不上、command timeout、pool exhausted、序列化异常、`@Cacheable` 不生效、读回 `LinkedHashMap` | 激活，先查 `references/08-troubleshoot.md` |
 | Redis 服务器安装 / 主从搭建 / 慢查询监控 / 大 key 巡检 / 内存淘汰治理 | 不适用（运维范围） |
 | Sa-Token 登录 / 会话 / 踢人相关 | 不适用（框架自身集成，非本技能范围） |
@@ -94,7 +92,7 @@ Boot 2.7 差异以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data
 
 | 需求场景（关键词） | 读取文件 |
 |---|---|
-| 依赖引入、单机 / 哨兵 / 集群连接配置、超时、ACL、多数据源 | `references/01-connection.md` |
+| 依赖引入、单机 / 哨兵 / 集群连接配置、超时、ACL | `references/01-connection.md` |
 | 连接池参数、Lettuce 共享连接、pool exhausted、Jedis 迁移决策 / antipattern | `references/02-pool.md` |
 | 序列化方案、key 乱码、GenericJackson2Json、LocalDateTime、LinkedHashMap、跨服务契约、key 规范 / 前缀 | `references/03-serialization.md` |
 | scan / keys 禁用 / 批量删除 / unlink、mget / pipeline、事务（multi/exec 无回滚）、Lua 脚本、set 覆盖清 TTL 等陷阱、Bitmap / HyperLogLog | `references/04-template-operations.md` |
