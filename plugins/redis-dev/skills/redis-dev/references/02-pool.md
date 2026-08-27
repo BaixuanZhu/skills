@@ -48,7 +48,7 @@ spring:
 
 > **`max-wait` ≠ 命令超时**：`max-wait` 是从池里**借连接**的等待时间（`01-connection.md` §2 的 `timeout` 才是命令超时）。"pool exhausted" 类报错先看这里，不要去调 `timeout`。
 
-## 4. Jedis 存量项目：迁移决策与不迁移自查
+## 4. Jedis 存量项目：是否迁移、如何迁移、antipattern 自查
 
 Boot 2.0（2018）起 starter 默认 Lettuce；仍在 Jedis 的项目按本节决策。**§1"普通命令不走池"的结论只对 Lettuce 成立**——Jedis 每个操作从池借还一条连接（连接非线程安全），池参数直接决定并发上限。
 
@@ -68,7 +68,9 @@ Boot 2.0（2018）起 starter 默认 Lettuce；仍在 Jedis 的项目按本节�
 3. **代码排查**（真正的风险区）：grep `redis.clients.jedis`、`JedisConnectionFactory`、`jedisPool.getResource()`——直接操作 Jedis / 手管连接池的代码全部收口到 `RedisTemplate` / `StringRedisTemplate`；池借还代码删除，借出不还的泄漏点一并消失。
 4. **迁移后验证**：连接数**骤降是正常的**（N 条池连接 → 1 条共享多路复用连接）——按 Jedis 时代连接数设的告警阈值要重标；用到事务 / 阻塞命令的项目确认 `commons-pool2` 依赖还在（§2）。
 
-### 不迁移：Jedis 配置 antipattern
+### Jedis 配置 antipattern
+
+凡仍在 Jedis 上运行的项目（含已决定迁移、迁移未完成的）按此自查：
 
 | ✗ 反例 | 后果 | ✓ 正解 |
 |---|---|---|
