@@ -15,7 +15,7 @@ Redisson 不只是锁库——它是在 Redis 上实现的一组**带语义的�
 <dependency>
     <groupId>org.redisson</groupId>
     <artifactId>redisson</artifactId>
-    <version>3.27.2</version>
+    <version>3.27.2</version>   <!-- 坐标示意；取 3.x 线当期最新 -->
 </dependency>
 ```
 

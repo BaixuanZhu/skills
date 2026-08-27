@@ -12,7 +12,7 @@
 
 ## 2. 默认配置的三个坑（为什么必须显式配）
 
-自动配置的 `RedisTemplate<String, Object>`（`redisTemplate` bean）key 与 value 都用 JDK 序列化：
+自动配置的 `RedisTemplate<Object, Object>`（`redisTemplate` bean）key 与 value 都用 JDK 序列化：
 
 1. **key 乱码**：`user:1001` 实际存储为 `\xac\xed\x00\x05t\x00\x09user:1001`——redis-cli 里不可读、`keys user:*` 匹配不到、`ttl` 查询要带二进制前缀才能敲。
 2. **value 二进制**：其他语言 / 其他序列化方案的服务读不懂。

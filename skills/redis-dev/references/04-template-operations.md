@@ -92,6 +92,7 @@ Long count = stringRedisTemplate.execute(
 - **key 一律走 KEYS、参数走 ARGV**：key 藏进 ARGV 单机能跑，集群下 slot 路由失效必错；集群下所有 KEYS 必须同 slot（跨 slot 用 hash tag `{...}` 收拢）。
 - 结果类型支持 Long / Boolean / String / List——Lua 返回 1/0 时 Boolean 结果自动映射 true / false。
 - 典型用途：incr+expire 原子化（上方）、解锁校验（识别存量自写锁用，`07-redisson.md` §2）。
+- 固定窗口在窗口切换瞬间可能放行 **2 倍**流量（上一窗口尾 + 下一窗口头）；可接受即用，要平滑换滑动窗口（ZSet 按时间戳清窗外）或 RRateLimiter（`07-redisson.md` §6）。
 
 ## 5. 陷阱速查
 
