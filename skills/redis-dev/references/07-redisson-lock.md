@@ -19,7 +19,7 @@
 </dependency>
 ```
 
-- 方式一自动装配 `RedissonClient`，复用 `spring.data.redis.*` 连接配置；**starter 版本随 Boot 大版本走**：Boot 3 → 近期 3.x，Boot 4 → 4.x 线（2025-12 起；3.x starter 在 Boot 4 下启动报错）；过老版本只认 `spring.redis.*` 前缀、连不上先查这里（`09-troubleshoot.md`）。
+- 方式一自动装配 `RedissonClient`，复用 `spring.data.redis.*` 连接配置；**starter 版本随 Boot 大版本走**：Boot 3 → 近期 3.x，Boot 4 → 4.x 线（2025-12 起；3.x starter 在 Boot 4 下启动报错）；过老版本只认 `spring.redis.*` 前缀、连不上先查这里（`08-troubleshoot.md`）。
 - 方式二手动建 bean：
 
 ```java

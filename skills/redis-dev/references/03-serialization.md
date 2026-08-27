@@ -78,7 +78,7 @@ public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factor
 | Spring Cache | 默认 `cacheName::key`（本技能配置为 `cache:name:key`，`05-spring-cache.md` §3） |
 | Redisson | 无自动前缀——锁 / 限流 key 与业务 key 同一空间，注意撞名 |
 
-- 前缀隔离只解决**覆盖冲突**；实例级的**淘汰策略**不看前缀（allkeys-lru 照样挤掉 session——随机掉线）→ `08-server-policy.md` §2。
+- 前缀隔离只解决**覆盖冲突**；实例级的**淘汰策略**不看前缀（allkeys-lru 照样挤掉 session——随机掉线）→ `08-troubleshoot.md` §2。
 
 ## 6. 强约束与自检
 
