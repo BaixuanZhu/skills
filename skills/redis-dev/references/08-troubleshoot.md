@@ -17,8 +17,8 @@
 | `@Cacheable` 完全不生效（每次都查库） | 自调用绕过代理 / private/final 方法 / 没配 `@EnableCaching` | 按下方清单逐项排查 | `05-spring-cache.md` §4 |
 | `@Cacheable` 缓存永不过期 | 没配 `RedisCacheManager` 的 `entryTtl` | 显式配 cacheDefaults + perName | `05-spring-cache.md` §3 |
 | `@Cacheable` 缓存的 value 也是二进制乱码 | cacheManager 默认 JDK 序列化（与 RedisTemplate 是两套配置） | `serializeValuesWith` 显式配 JSON | `05-spring-cache.md` §3 |
-| `IllegalMonitorStateException`（unlock 时） | 租期已过锁已易主 / 非持有线程解锁 | `isHeldByCurrentThread()` 判断后再解；查 leaseTime 决策 | `07-redisson.md` §4 |
-| 业务执行中超时后并发进入（锁"失效"） | 显式传了 `leaseTime` → 无看门狗，到期自动释放 | 时长不可预估就不传 leaseTime | `07-redisson.md` §4 |
+| `IllegalMonitorStateException`（unlock 时） | 租期已过锁已易主 / 非持有线程解锁 | `isHeldByCurrentThread()` 判断后再解；查 leaseTime 是否小于业务时长 | `07-redisson.md` §4 |
+| 业务执行中超时后并发进入（锁"失效"） | `leaseTime` 小于业务实际时长，锁到期自动释放 | leaseTime 调到业务上界 × 余量（宁可长不可短）；强互斥场景 DB 兜底 | `07-redisson.md` §4 |
 | TTL 到期的 key 在 `scan`/`dbsize` 里还在 | 惰性+定期删除机制，物理删除滞后 | 无需处理（不可读即正确语义） | — |
 | `CROSSSLOT` / 多 key 命令报错 | 集群模式 key 不在同一 slot | hash tag `{userId}` 绑定；事务改 Lua | `01-connection.md` §3.2 |
 | scan 结果有重复 | scan 语义允许重复 | 调用侧 Set 去重 | `04-template-operations.md` §1 |

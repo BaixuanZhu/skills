@@ -45,7 +45,7 @@ public RedissonClient redissonClient() {
 public void processOrder(Long orderId) { ... }
 ```
 
-- `keys` 支持 SpEL（决定锁粒度）；`acquireTimeout` 获取等待（默认 3000ms，超时抛获取失败异常）；`expire` **固定租期**（默认 30000ms）——**显式 expire 即 leaseTime 语义、无看门狗续期**（§4），必须按业务执行时长上界设置。
+- `keys` 支持 SpEL（决定锁粒度）；`acquireTimeout` 获取等待（默认 3000ms，超时抛获取失败异常）；`expire` **固定租期**（默认 30000ms），即 §4 推荐的显式 leaseTime 语义——必须按业务执行时长上界（× 余量）设置。
 
 ## 2. 禁止自实现锁（存量识别与迁移方向）
 
@@ -56,7 +56,7 @@ public void processOrder(Long orderId) { ... }
 ```java
 RLock lock = redissonClient.getLock("lock:order:" + orderId);   // key 粒度 = 业务互斥粒度
 
-if (lock.tryLock(3, TimeUnit.SECONDS)) {         // 等锁最多 3s；未传 leaseTime → 看门狗
+if (lock.tryLock(3, 30, TimeUnit.SECONDS)) {     // 等锁最多 3s；持锁硬上限 30s（§4 推荐写法）
     try {
         doBusiness();
     } finally {
@@ -70,21 +70,28 @@ if (lock.tryLock(3, TimeUnit.SECONDS)) {         // 等锁最多 3s；未传 lea
 }
 ```
 
-## 4. 看门狗与 leaseTime（本技能最高频的坑）
+## 4. tryLock 参数语义与推荐写法
 
-**看门狗机制**：`tryLock(wait)` / `lock()` 不传 `leaseTime` 时——锁租期默认 **30s**（`lockWatchdogTimeout=30000ms`），Redisson 后台任务每 **10s**（租期/3）自动续期，直到 `unlock` 或客户端崩溃（崩溃后续期停止，30s 后锁自动释放——不死锁）。
+| 调用 | waitTime（等多久拿锁） | leaseTime（持锁多久） | 看门狗 |
+|---|---|---|---|
+| `tryLock()` | 0，立即返回 | 默认 30s | ✓ 每 10s 自动续期 |
+| `tryLock(3, SECONDS)` | 最多等 3s | 默认 30s | ✓ |
+| `tryLock(3, 30, SECONDS)` | 最多等 3s | 固定 30s，到期自动释放 | ✗ |
+| `lock()` | 无限等（别用） | 默认 30s | ✓ |
+| `lock(30, SECONDS)` | 无限等（别用） | 固定 30s | ✗ |
+| lock4j `@Lock4j` | acquireTimeout（默认 3000ms） | expire（默认 30000ms，固定） | ✗ |
 
-**一旦显式传 `leaseTime`，看门狗立即失效**：
+waitTime 与 leaseTime 是两件事：**waitTime** 限「拿不到就放弃」的等待上限（拿不到返回 false）；**leaseTime** 限「拿到后最多持有多久」的租期上限——到期**自动释放，无论业务是否跑完**。
 
-| 调用 | 等待 | 租期 | 看门狗 | 后果 |
-|---|---|---|---|---|
-| `tryLock()` | 不等待 | 30s | ✓ | 拿不到立即返回 false |
-| `tryLock(3, SECONDS)` | 3s | 30s | ✓ | **默认推荐** |
-| `tryLock(3, 10, SECONDS)` | 3s | 固定 10s | **✗** | 业务超 10s → 锁已易主，并发进入（且 unlock 抛异常） |
-| lock4j `@Lock4j(expire = 10000)` | acquireTimeout | 固定 expire | **✗** | 与显式 leaseTime 同语义（§1 方式三）——业务超 expire 并发进入 |
-| `lock()` | 不等待 | 30s | ✓ | 拿不到永久等，一般别用 |
+推荐写法——**两个时间都显式**：
 
-> 传 `leaseTime` 的唯一正当理由：**明确希望到期强制释放**（防持锁方长期占用），且业务时长有把握上界。拿不准 → 不传。
+```java
+lock.tryLock(3, 30, TimeUnit.SECONDS);   // 等锁最多 3s；持锁硬上限 30s（完整模式见 §3）
+```
+
+- **leaseTime 必须显式，防等效死锁**：不传时看门狗给默认 30s 租期、每 10s（租期/3）续期，JVM 存活就一直续。业务线程挂死（死循环 / 业务自身死锁）而客户端健康时，锁被**无限续期、永不释放**，其他节点永远拿不到。显式 leaseTime 是硬上限——挂死也在到期后放锁。
+- **leaseTime 必须大于业务执行上界**（上界 × 安全余量）：业务没跑完锁先到期 → 并发进入（互斥被破），且 unlock 抛 `IllegalMonitorStateException`。上界估不出来给大值（60s / 5min），**宁可长不可短**——互斥正确性靠 DB 兜底（§9），不靠锁精确到期。
+- 看门狗（`lockWatchdogTimeout` 默认 30000ms）是「不传 leaseTime 时」的兜底机制：业务时长波动大时不用猜租期，代价就是上面的无限续期——存量代码识别它即可，新代码按推荐写法显式传。
 
 ## 5. 可重入与公平锁
 
@@ -149,7 +156,7 @@ Redis 主从复制是异步的：加锁落在 master、未同步到 replica 时 
 ## 10. 自检
 
 - [ ] 锁全部走 Redisson / lock4j；存量自写 setnx+expire / Lua 锁已列迁移计划（不是修补）
-- [ ] `leaseTime` 决策：不可预估就不传（看门狗）；传了就知道没有续期
+- [ ] `tryLock` 两个时间都显式：waitTime 限等待、leaseTime（> 业务上界）做持锁硬上限——不裸用看门狗模式（挂死会被无限续期）
 - [ ] `finally` 中 `isHeldByCurrentThread()` 判断后 `unlock()`
 - [ ] `tryLock` 拿不到的分支有真实处理（繁忙返回/降级），不是 while 空转
 - [ ] 锁 key 粒度与业务互斥粒度一致（用户级锁别用全局 key，全局互斥别按用户分 key）

@@ -56,7 +56,7 @@ public User getUser(long id) throws InterruptedException {
         return NULL_MARK.equals(cached) ? null : fromJson(cached);      // null 缓存命中（防穿透）
     }
     RLock lock = redissonClient.getLock("lock:" + key);
-    if (!lock.tryLock(3, TimeUnit.SECONDS)) {                            // 最多等 3s；看门狗续期（07-redisson.md §4）
+    if (!lock.tryLock(3, 30, TimeUnit.SECONDS)) {                        // 等锁最多 3s；持锁硬上限 30s（07-redisson.md §4）
         TimeUnit.MILLISECONDS.sleep(200);                                // 拿不到锁：稍候重读一次缓存
         cached = stringRedisTemplate.opsForValue().get(key);
         return cached == null || NULL_MARK.equals(cached)

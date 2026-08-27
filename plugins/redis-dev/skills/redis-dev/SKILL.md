@@ -87,7 +87,7 @@ Boot 2.7 差异以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data
 | # | 触发信号（逐字关键词） | 必须确认的问题 | 方案差异（一句话） | 默认推荐 |
 |---|---|---|---|---|
 | C1 | "加缓存" / "缓存" / "cache"（未指明方式） | ① 声明式 `@Cacheable` 还是手动 `RedisTemplate`？② 缓存能接受多长的脏读窗口（TTL）？ | 声明式：简洁、注解即生效，适合整对象读缓存；手动：精细控制（部分更新 / 计数 / 锁配合），适合复杂逻辑。见 `references/05-spring-cache.md` §1 | 简单查询缓存用 `@Cacheable` + 显式 TTL 30min |
-| C2 | "锁" / "分布式锁" / "防重复" / "幂等" / "并发" | ① 项目是否已有 Redisson / lock4j？没有 → 是否同意引入？② 业务执行时长是否可预估？ | Redisson `RLock`：不传 `leaseTime` 看门狗自动续期；lock4j `@Lock4j`：注解声明式，底层默认 Redisson，`expire` 是固定租期无续期。**✗ 不自写 SET NX + Lua**（续期 / 可重入 / 安全释放都是坑位）。见 `references/07-redisson.md` §1-§2 | 引入 Redisson，`tryLock(wait)` 不指定 `leaseTime`（看门狗续期） |
+| C2 | "锁" / "分布式锁" / "防重复" / "幂等" / "并发" | ① 项目是否已有 Redisson / lock4j？没有 → 是否同意引入？② 业务执行时长上界是多少？ | Redisson `RLock`：显式 waitTime + leaseTime（持锁硬上限，防挂死被看门狗无限续期）；lock4j `@Lock4j`：注解声明式，底层默认 Redisson，`expire` 即固定租期。**✗ 不自写 SET NX + Lua**（续期 / 可重入 / 安全释放都是坑位）。见 `references/07-redisson.md` §1-§2 | 引入 Redisson，`tryLock(wait, leaseTime)` 两个时间都显式（leaseTime > 业务上界） |
 | C3 | "存对象" / "序列化" / "跨服务共享" / "key 可读" | 数据是否需要跨服务 / 跨语言读取？ | `GenericJackson2Json`：写入 `@class` 自动还原类型，单服务最省事；跨服务 ✗ **禁止 `@class`**（包名耦合、跨语言读不懂、类迁移即断）→ ✓ 干净 JSON + 读侧显式类型。见 `references/03-serialization.md` §4 | 单服务 `GenericJackson2Json`（含 JavaTimeModule），跨服务 StringRedisTemplate + 显式类型 |
 
 ## 决策路由
@@ -111,7 +111,7 @@ Boot 2.7 差异以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data
 3. **`@Cacheable` 的序列化也要显式配**：`RedisCacheConfiguration.defaultCacheConfig()` 默认 value 也是 JDK 序列化——注解缓存与手动 RedisTemplate 是**两套独立序列化配置**，都要设。
 4. **禁止 `keys *`**：全量遍历阻塞单线程 Redis，生产禁用；用 `scan` 游标迭代（`references/04-template-operations.md` §1）。
 5. **分布式锁只用成熟实现（Redisson / lock4j），禁止自写 SET NX + Lua**：`setnx` + `expire` 两步在崩溃间隔留下死锁；即便补成一条原子命令，续期、可重入、持有者校验释放仍是自己扛的坑位——存量自写锁的修复方向是迁移（`references/07-redisson.md` §2）。
-6. **显式传 `leaseTime` → 看门狗失效**：Redisson `tryLock(wait, leaseTime, unit)` 到期自动释放、不再续期；业务时长不可预估时**不传 `leaseTime`**，靠看门狗（默认 30s 租期、每 10s 续期）。
+6. **`tryLock` 必须显式 `leaseTime`（持锁硬上限）**：不传时看门狗（默认 30s 租期、每 10s 续期）在 JVM 存活时**无限续期**——业务线程挂死而客户端健康，锁永不释放、其他节点全阻塞（等效死锁）。leaseTime 取业务执行上界 × 安全余量，**宁可长不可短**；锁到期后并发可进入，强互斥场景 DB 兜底（`references/07-redisson.md` §4）。
 7. **unlock 必须 try-finally 且先判持有**：`if (lock.isHeldByCurrentThread()) lock.unlock()`，防租期已过被别人持有时抛 `IllegalMonitorStateException`。
 8. **写一致性默认「先更新 DB，再删缓存」**：不更新缓存（并发写覆盖）、不先删缓存（并发读回填旧值）。要更低脏读率 → 延迟双删，见 `references/06-cache-consistency.md` §2。
 9. **null 缓存必须短 TTL**：穿透防护里缓存空值 TTL 控制在 30s~5min，且 `unless="#result == null"` 会**关闭** null 缓存——别写反。
@@ -128,7 +128,7 @@ Boot 2.7 差异以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data
    - C1–C3 已逐项扫描：命中的检查点均已确认，或已标注「未确认，已使用默认方案」？
    - 所有写入（set / cacheManager / increment 初始化）都带显式 TTL（含 null 缓存短 TTL）？
    - key 序列化器为 String？`@Cacheable` 与 RedisTemplate 两套序列化都配了？
-   - 锁：try-finally + isHeldByCurrentThread 判断 + leaseTime 决策（预估不了就不传）？
+   - 锁：try-finally + isHeldByCurrentThread 判断 + leaseTime 显式且大于业务上界？
    - 没有出现 `keys *`、`setnx`+`expire` 两步、先删缓存后更新 DB？
    - 配置前缀与 Boot 版本一致（spring.data.redis vs spring.redis）？
 
