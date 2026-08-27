@@ -131,9 +131,3 @@ Boot 2.7 差异以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data
    - 锁：try-finally + isHeldByCurrentThread 判断 + leaseTime 显式且大于业务上界？
    - 没有出现 `keys *`、`setnx`+`expire` 两步、先删缓存后更新 DB？
    - 配置前缀与 Boot 版本一致（spring.data.redis vs spring.redis）？
-
-## 版本注意
-
-- **Spring Data Redis 3.x/4.x**（Boot 3.x/4.x）：配置前缀均为 `spring.data.redis.*`；2.x（Boot 2.7）为 `spring.redis.*`，其余 API 一致。Boot 4 起 Lettuce 升 7.x（应用侧 API 无感）。
-- **Redisson**：`lockWatchdogTimeout` 默认 30000ms；`redisson-spring-boot-starter` 版本随 Boot 大版本走——Boot 3 用近期 3.x，**Boot 4 必须用 4.x 线 starter（2025-12 起），3.x starter 在 Boot 4 下启动报错**；过老版本只认 `spring.redis.*` 前缀、Boot 3 下连不上。
-- Stream 需 Redis 5.0+。

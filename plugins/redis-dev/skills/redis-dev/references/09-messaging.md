@@ -37,7 +37,7 @@ stringRedisTemplate.convertAndSend("chat:room:1001", "hello");
 - **坑 2**：订阅走**专用连接**（Lettuce 共享连接不用于订阅），订阅数与频道数计入连接规划（`02-pool.md` §1）。
 - 集群模式：经典 `PUBLISH` 在集群内自动广播到所有节点，订阅任一节点即可收到；Redis 7+ 的 sharded pub/sub（`SSUBSCRIBE`）不跨节点广播、省带宽，但订阅端要连对节点。
 
-## 3. Stream（可靠队列）
+## 3. Stream（可靠队列，需 Redis 5.0+）
 
 生产端（`add` 返回消息 id）：
 
@@ -79,7 +79,7 @@ container.start();                                                         // �
 
 ## 4. 键空间通知（keyspace notifications）
 
-key 的过期 / 删除 / 修改事件通过 Pub/Sub 广播，应用侧可订阅。**默认关闭**——需要服务器配置 `notify-keyspace-events`（如 `Ex` = 过期事件）——少数必须运维配合改配置的应用侧功能。
+key 的过期 / 删除 / 修改事件通过 Pub/Sub 广播，应用侧可订阅。**默认关闭**，需服务器配置 `notify-keyspace-events`（如 `Ex` = 过期事件）——运维配合项。
 
 ```java
 @Bean

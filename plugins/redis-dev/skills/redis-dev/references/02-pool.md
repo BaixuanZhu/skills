@@ -42,11 +42,9 @@ spring:
 | 参数 | 语义 | 调错了的症状 |
 |---|---|---|
 | `max-active` | 同时**借出**的连接上限；超过的请求进入等待 | 并发事务/阻塞命令多于 max-active 时吞吐封顶 |
-| `max-wait` | 借连接的**排队等待上限**（不是命令超时！） | 设太短 → 高峰期 `Could not get a resource from the pool`；设 `-1` 无限等 → 线程堆积 |
+| `max-wait` | 借连接的**排队等待上限**（不是命令超时！） | 设太短 → 高峰期 `Could not get a resource from the pool`；设 `-1` 无限等 → 线程堆积。命令超时是另一参数（`01-connection.md` §2 的 `timeout`），报池错别去调它 |
 | `max-idle` / `min-idle` | 空闲连接的保持区间，控制建连/销毁抖动 | min-idle=0 → 突发时集中建连，出现毛刺 |
 | `time-between-eviction-runs` | 空闲检测周期（驱逐多余空闲连接） | 默认即可，一般不动 |
-
-> **`max-wait` ≠ 命令超时**：`max-wait` 是从池里**借连接**的等待时间（`01-connection.md` §2 的 `timeout` 才是命令超时）。"pool exhausted" 类报错先看这里，不要去调 `timeout`。
 
 ## 4. Jedis 存量项目：是否迁移、如何迁移、antipattern 自查
 

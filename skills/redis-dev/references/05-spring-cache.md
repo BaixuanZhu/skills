@@ -39,10 +39,9 @@ public class CacheConfig {
             .serializeKeysWith(SerializationPair.fromSerializer(new StringRedisSerializer()))
             .serializeValuesWith(SerializationPair.fromSerializer(
                     RedisSerializer.json()));                                // ② GenericJackson2Json
-    // 注：RedisSerializer.json() 的默认 mapper 不含 JavaTimeModule；实体含 LocalDateTime 时
-    // 按 03-serialization.md §3 注入自定义 mapper 的序列化器，且必须补
-    // GenericJackson2JsonRedisSerializer.registerNullValueSerializer(mapper, null)——
-    // 否则 @Cacheable 缓存 null 时写入 NullValue 抛 "No serializer found"（仅默认构造自动注册）
+    // 注：实体含 LocalDateTime 时按 03-serialization.md §3 换自定义 mapper 序列化器——
+    // RedisSerializer.json() 默认 mapper 不含 JavaTimeModule；缺 NullValueSerializer
+    // 时 @Cacheable 缓存 null 抛 "No serializer found"（03 §3 表第 4 行）
 
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory factory) {
