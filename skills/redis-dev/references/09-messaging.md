@@ -94,7 +94,7 @@ public KeyExpirationEventMessageListener keyExpiredListener(
 }
 ```
 
-坑（决定了它的定位是"辅助联动"，不是可靠机制）：
+坑（定位：辅助联动，非可靠机制）：
 
 1. **过期事件不准时**：由惰性 / 定期删除触发（`08-troubleshoot.md` §2）——实际触发可能晚很多。
 2. **不持久化**：监听端重启窗口内的事件永久丢。

@@ -19,7 +19,7 @@ description: >-
   不适用于：Sa-Token 等框架自身的会话 / 登录集成、测试容器化 Redis、
   Redis 服务器安装部署 / 主从搭建 / 监控指标调优 / 内存与淘汰策略（运维范围）、非 Java 语言。
 agent_created: true
-version: 1.1.0
+version: 1.1.1
 slug: redis-dev
 displayName: Redis 开发助手
 ---

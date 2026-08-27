@@ -1,10 +1,10 @@
 # Redisson：分布式锁与分布式对象
 
-Redisson 不只是锁库——它是在 Redis 上实现的一组**带语义的分布式对象与服务**：锁 / 读写锁 / 信号量 / 限流器 / 阻塞与延迟队列 / 布隆过滤器。选型口径：普通 KV / 缓存读写继续 `RedisTemplate`；需要这些语义化能力时用 Redisson（`RedissonClient` 直接注入）。两套可共存——§1 默认坐标（裸 `redisson`）不动既有 Lettuce 连接。
+Redisson 是在 Redis 上实现的一组**带语义的分布式对象与服务**：锁 / 读写锁 / 信号量 / 限流器 / 阻塞与延迟队列 / 布隆过滤器。选型口径：普通 KV / 缓存读写继续 `RedisTemplate`；需要这些语义化能力时用 Redisson（`RedissonClient` 直接注入，与 Lettuce 共存，坐标见 §1）。
 
 ## 1. 依赖与坐标选择
 
-**最佳实践：已有 `spring-boot-starter-data-redis` 的项目引裸 `org.redisson:redisson` 共存**——数据面（RedisTemplate / @Cacheable）留在 Lettuce 不动，Redisson 只管锁 / 限流 / 延迟队列等语义化能力，互不干扰，也不卷入 starter 的版本耦合。
+**最佳实践：已有 `spring-boot-starter-data-redis` 的项目引裸 `org.redisson:redisson` 共存**——数据面（RedisTemplate / @Cacheable）留在 Lettuce 不动，Redisson 只管锁 / 限流 / 延迟队列等语义化能力。
 
 | 坐标 | 连接层影响 | 适用 |
 |---|---|---|
@@ -19,7 +19,7 @@ Redisson 不只是锁库——它是在 Redis 上实现的一组**带语义的�
 </dependency>
 ```
 
-裸依赖手动建 client——**从 Boot 的 `RedisProperties` 建 Config，与 `spring.data.redis.*` 同源**（共存方案唯一的坑是两套连接配置漂移，这样堵死）：
+裸依赖手动建 client——**从 Boot 的 `RedisProperties` 建 Config，与 `spring.data.redis.*` 同源**（共存方案的主要坑是两套连接配置漂移，这样堵死）：
 
 ```java
 @Bean(destroyMethod = "shutdown")
@@ -33,11 +33,11 @@ public RedissonClient redissonClient(RedisProperties props) {   // org.springfra
 }
 ```
 
-选 starter 的代价（引了就要知道）：零配置（复用 `spring.data.redis.*` 自动装配 `RedissonClient`），但 ① 连接工厂整体替换，既有 RedisTemplate 的事务 / 管道等边缘行为随连接实现切换；② **版本随 Boot 大版本走**：Boot 3 → 近期 3.x，Boot 4 → 4.x 线（2025-12 起；3.x starter 在 Boot 4 下启动报错），过老版本只认 `spring.redis.*` 前缀；③ 常见依赖冲突——starter 拉自己版本的 spring-data-redis，与其他组件顶牛时先查这条线（`08-troubleshoot.md`）。
+选 starter 的代价：零配置（复用 `spring.data.redis.*` 自动装配 `RedissonClient`），但 ① 连接工厂整体替换，既有 RedisTemplate 的事务 / 管道等边缘行为随连接实现切换；② **版本随 Boot 大版本走**：Boot 3 → 近期 3.x，Boot 4 → 4.x 线（2025-12 起；3.x starter 在 Boot 4 下启动报错），过老版本只认 `spring.redis.*` 前缀；③ 常见依赖冲突——starter 拉自己版本的 spring-data-redis，与其他组件顶牛时先查这条线（`08-troubleshoot.md`）。
 
-### lock4j：Redisson 的注解门面（不是第三种坐标）
+### lock4j：注解门面（声明式锁）
 
-lock4j 不替代也不自带 Redisson（其 pom 对 redisson 依赖是 `provided`）——它在**你已选的任一 Redisson 坐标之上**加 Spring AOP 注解封装，省掉 §3 的手写样板（`getLock` / `tryLock` / `finally unlock` 全在切面里）。只要声明式锁才需要它。
+lock4j 对 Redisson 是 `provided` 依赖——复用已有的 `RedissonClient`，以 Spring AOP 切面提供 `@Lock4j` 方法注解，§3 的手写样板（`getLock` / `tryLock` / `finally unlock`）全由切面代劳。需要声明式锁才引它。
 
 ```xml
 <dependency>
@@ -58,7 +58,7 @@ public void processOrder(Long orderId) { ... }
 
 ## 2. 禁止自实现锁（存量识别与迁移方向）
 
-存量代码里的自写锁形态：`setnx` + `expire` 两步（崩溃间隔留下永不过期的死锁），或一条 `SET NX EX` 加自写 Lua 校验释放。**修复方向一律是迁移本节的成熟实现，不是继续打补丁**——"正确的自实现"还缺：持有者唯一标识 + 校验释放（防误删他人的锁）、业务超时自动续期、可重入、主从切换语义（§9），每一项都是造轮子的新坑位。`SET NX EX` 的原子性留作 review 存量代码的识别知识即可，不是自实现的邀请。
+存量代码里的自写锁形态：`setnx` + `expire` 两步（崩溃间隔留下永不过期的死锁），或一条 `SET NX EX` 加自写 Lua 校验释放。**修复方向一律是迁移本节的成熟实现，不是继续打补丁**——"正确的自实现"还缺：持有者唯一标识 + 校验释放（防误删他人的锁）、业务超时自动续期、可重入、主从切换语义（§9），每一项都是造轮子的新坑位。`SET NX EX` 的原子性留作 review 存量代码的识别知识即可。
 
 ## 3. RLock 标准用法
 
