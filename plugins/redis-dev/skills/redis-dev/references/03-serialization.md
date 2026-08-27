@@ -73,7 +73,7 @@ public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factor
 | 写入方 | 前缀体系 |
 |---|---|
 | 本服务 | 自定 `<app>:` 命名空间（上行规范） |
-| Sa-Token | 集成包前缀封装（可重写 `wrapKey` 定制，见 sa-token-dev `references/07-redis-frontsep.md`） |
+| Sa-Token | 集成包前缀封装（可重写 `wrapKey` 定制） |
 | Spring Session | `spring:session:*` |
 | Spring Cache | 默认 `cacheName::key`（本技能配置为 `cache:name:key`，`05-spring-cache.md` §3） |
 | Redisson | 无自动前缀——锁 / 限流 key 与业务 key 同一空间，注意撞名 |

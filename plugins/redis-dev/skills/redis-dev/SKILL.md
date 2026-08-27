@@ -2,7 +2,7 @@
 name: redis-dev
 description: >-
   Redis 开发助手（Java / Spring Boot）。在 Java / Spring Boot 项目中开发任何
-  缓存（@Cacheable 声明式 / RedisTemplate 手动）、分布式锁（Redisson / SET NX EX）、
+  缓存（@Cacheable 声明式 / RedisTemplate 手动）、分布式锁（Redisson / lock4j / SET NX EX）、
   Redis 连接与配置（单机 / 哨兵 / 集群 / 连接池）、序列化（key 乱码 / JSON / LocalDateTime）、
   缓存一致性（穿透 / 击穿 / 雪崩 / 先更库再删缓存）、以及用 Redis 数据结构实现业务功能
   （计数器 / 排行榜 / 签到 / 去重 / 延迟队列 / UV 统计）、消息与事件
@@ -11,12 +11,12 @@ description: >-
   watch dog / 缓存一致 / hot key / cache aside）。
   次级触发信号——代码或 pom 中出现：spring-boot-starter-data-redis、redisson、
   RedisTemplate / StringRedisTemplate、@Cacheable / @CacheEvict / @CachePut / @EnableCaching、
-  RLock / RedissonClient / tryLock、opsForValue / opsForHash / opsForZSet / opsForStream /
+  RLock / RedissonClient / tryLock / @Lock4j、opsForValue / opsForHash / opsForZSet / opsForStream /
   convertAndSend / RedisMessageListenerContainer / StreamMessageListenerContainer 时必须使用本技能；
   用户报错出现：key 乱码（\xac\xed）、序列化 / 反序列化异常、连不上 Redis / command timeout /
   pool exhausted、@Cacheable 不生效、读回 LinkedHashMap 时必须使用本技能。
-  不适用于：Sa-Token 自身的 Redis 集成与 session 存储（→ sa-token-dev）、测试容器化 Redis
-  （→ java-integration-test）、Redis 服务器安装部署 / 主从搭建 / 监控指标调优 / 内存与淘汰策略（运维范围）、非 Java 语言。
+  不适用于：Sa-Token 等框架自身的会话 / 登录集成、测试容器化 Redis、
+  Redis 服务器安装部署 / 主从搭建 / 监控指标调优 / 内存与淘汰策略（运维范围）、非 Java 语言。
 agent_created: true
 version: 1.0.0
 slug: redis-dev
@@ -25,9 +25,9 @@ displayName: Redis 开发助手
 
 # Redis 开发助手
 
-面向 Java / Spring Boot 的 Redis 编码助手：缓存、分布式锁、序列化配置、连接配置、缓存一致性。
-版本基准：**Spring Data Redis 3.x/4.x（Spring Boot 3.x/4.x 自带，Lettuce 6.x/7.x）+ Redisson 3.x，Redis 服务器 6.x/7.x**。
-Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data.redis.*`——Boot 3/4 前缀相同，无此坑）。
+面向 Java / Spring Boot 的 Redis 编码助手：缓存、分布式锁、序列化配置、连接配置、缓存一致性、消息与事件。
+版本基准：**Spring Boot 3.x/4.x（Spring Data Redis 3.x/4.x、Lettuce 6.x/7.x）+ Redisson 3.x**；
+Boot 2.7 差异以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data.redis.*`——Boot 3/4 前缀相同）。
 采用**完全本地自包含**策略：所有知识沉淀于本地 `references/`，运行时不依赖任何外部文档站点。
 
 ## 版本与依赖
@@ -44,14 +44,14 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 
 ## 第 0 步：依赖探测与激活分支
 
-任务涉及缓存、分布式锁、Redis 配置、序列化、数据结构实现——**即使用户没提 Redis**——先检索项目依赖与代码（pom / build.gradle 搜 `data-redis`、`redisson`；代码搜 `RedisTemplate`、`@Cacheable`、`RLock`）：
+任务涉及缓存、分布式锁、Redis 配置、序列化、数据结构实现——**即使用户没提 Redis**——先检索项目依赖与代码（pom / build.gradle 搜 `data-redis`、`redisson`、`lock4j`；代码搜 `RedisTemplate`、`@Cacheable`、`RLock`）：
 
 | 探测结果 | 动作 |
 |---|---|
-| 已有 `data-redis` 或 `RedisTemplate` / `@Cacheable` | 直接激活，走「关键决策检查点」→「决策路由」 |
+| 已有 `data-redis` / `redisson` / `lock4j` 依赖，或代码用 `RedisTemplate` / `@Cacheable` / `RLock` | 直接激活，走「关键决策检查点」→「决策路由」 |
 | 无任何 Redis 依赖，但任务要求缓存 / 锁 / 计数 / 排行 | **主动询问**是否引入 Redis（说明：进程内缓存 Caffeine 也可能是答案——单实例部署、无共享需求时）；同意 → 按「版本与依赖」表引入后继续 |
-| 任务其实是 Sa-Token 的会话 / 登录存储问题 | 退出本技能 → sa-token-dev `references/07-redis-frontsep.md` |
-| 任务是起 Redis 测试容器 / 测试隔离 | 退出本技能 → java-integration-test `references/04-testcontainers.md` |
+| 任务其实是 Sa-Token 等框架自身的会话 / 登录存储问题 | 退出本技能（属框架自身集成，查框架文档） |
+| 任务是起 Redis 测试容器 / 测试隔离 | 退出本技能（属集成测试领域） |
 
 ## 何时使用本技能
 
@@ -66,7 +66,7 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 | 发布订阅（Pub/Sub）、Stream 消息队列、key 过期事件监听 | 激活 |
 | 报错：连不上、command timeout、pool exhausted、序列化异常、`@Cacheable` 不生效、读回 `LinkedHashMap` | 激活，先查 `references/08-troubleshoot.md` |
 | Redis 服务器安装 / 主从搭建 / 慢查询监控 / 大 key 巡检 / 内存淘汰治理 | 不适用（运维范围） |
-| Sa-Token 登录 / 会话 / 踢人相关 | 不适用（→ sa-token-dev） |
+| Sa-Token 登录 / 会话 / 踢人相关 | 不适用（框架自身集成，非本技能范围） |
 
 > **检查点**：判定为「不适用」→ 告知用户当前问题不在本技能范围并建议退出。
 
@@ -135,4 +135,4 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 
 - **Spring Data Redis 3.x/4.x**（Boot 3.x/4.x）：配置前缀均为 `spring.data.redis.*`；2.x（Boot 2.7）为 `spring.redis.*`，其余 API 一致。Boot 4 起 Lettuce 升 7.x（应用侧 API 无感）。
 - **Redisson**：`lockWatchdogTimeout` 默认 30000ms；`redisson-spring-boot-starter` 版本随 Boot 大版本走——Boot 3 用近期 3.x，**Boot 4 必须用 4.x 线 starter（2025-12 起），3.x starter 在 Boot 4 下启动报错**；过老版本只认 `spring.redis.*` 前缀、Boot 3 下连不上。
-- Stream 需 Redis 5.0+，本文数据结构以 6.x/7.x 为基准。
+- Stream 需 Redis 5.0+。
