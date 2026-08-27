@@ -7,7 +7,7 @@
 | `Unable to connect to Redis` / `Connection refused` | 地址/端口/网络/防火墙；**Boot 2 与 3/4 配置前缀写错**（`spring.redis` vs `spring.data.redis`） | 核对前缀与版本；`redis-cli -h host -p port ping` 先通 | `01-connection.md` §4 |
 | `ERR Client sent AUTH, but no password is set` | `password: ""` 空串被当密码；或老版本 `requirepass` 与 ACL 混用 | 无密码删掉配置行；ACL 配 `username` | `01-connection.md` §2 |
 | `RedisCommandTimeoutException: Command timed out` | 命令超时配置过小 / 慢命令（`keys *`）/ 大 value / 网络 | 查超时配置与慢命令；禁 `keys` | `02-pool.md` §5、`04` §3 |
-| `Could not get a resource from the pool` / pool exhausted | **先确认 client-type**：Jedis 每操作借还连接，`max-wait` 排队超时 / `max-active` 不足是常态原因；Lettuce 普通命令不走池，真报池错多半在事务 / 阻塞命令（`02-pool.md` §1） | 调池参数；阻塞命令加超时；确认真需要池 | `02-pool.md` §3/§5 |
+| `Could not get a resource from the pool` / pool exhausted | **先确认 client-type**：Jedis 每操作借还连接，`max-wait` 排队超时 / `max-active` 不足是常态原因；Lettuce 普通命令不走池，真报池错多半在事务 / 阻塞命令（`02-pool.md` §1） | 调池参数；阻塞命令加超时；确认真需要池 | `02-pool.md` §3-§5 |
 | key 显示 `\xac\xed\x00\x05t\x00\x03...` 乱码 | key 用了 JDK 序列化 | key 序列化器改 `StringRedisSerializer`，**按前缀清掉旧 key** | `03-serialization.md` §2 |
 | `InvalidDefinitionException: Java 8 date/time type ... not supported` | GenericJackson 的 mapper 没注册 `JavaTimeModule` | 按推荐配置注入自定义 mapper | `03-serialization.md` §3 |
 | 读回 `LinkedHashMap`（强转 `User` 报 `ClassCastException`） | 未启用 `activateDefaultTyping` / 反序列化目标类型写 `Object.class` | 开 default typing 或显式 `readValue(json, User.class)` | `03-serialization.md` §3/§4 |

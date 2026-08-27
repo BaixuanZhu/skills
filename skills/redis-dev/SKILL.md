@@ -94,7 +94,7 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 | 需求场景（关键词） | 读取文件 |
 |---|---|
 | 依赖引入、单机 / 哨兵 / 集群连接配置、超时、ACL、多数据源 | `references/01-connection.md` |
-| 连接池参数、Lettuce 共享连接、pool exhausted、Jedis（存量项目） | `references/02-pool.md` |
+| 连接池参数、Lettuce 共享连接、pool exhausted、Jedis 迁移决策 / antipattern | `references/02-pool.md` |
 | 序列化方案、key 乱码、GenericJackson2Json、LocalDateTime、LinkedHashMap、跨服务契约、key 规范 / 前缀 | `references/03-serialization.md` |
 | 数据结构选型（计数 / 排行 / 签到 / 去重 / UV）、String / Hash / ZSet 精用、scan / pipeline、incr 原子性 | `references/04-template-operations.md` |
 | @Cacheable / @CacheEvict、TTL 配置（默认永不过期坑）、自调用失效、多缓存名不同 TTL | `references/05-spring-cache.md` |

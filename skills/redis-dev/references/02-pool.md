@@ -48,45 +48,35 @@ spring:
 
 > **`max-wait` ≠ 命令超时**：`max-wait` 是从池里**借连接**的等待时间（`01-connection.md` §2 的 `timeout` 才是命令超时）。"pool exhausted" 类报错先看这里，不要去调 `timeout`。
 
-## 4. Jedis（存量项目识别；新项目不选）
+## 4. Jedis 存量项目：迁移决策与不迁移自查
 
-Boot 2.0（2018）起 starter 默认 Lettuce，Jedis 仍在维护但新项目基本不选。本节用于接手存量 Jedis 项目时对上行为差异——**§1"普通命令不走池"的结论只对 Lettuce 成立**，Jedis 每个操作从池借还连接、池必配。存量迁移到 Lettuce 的依赖写法：
+Boot 2.0（2018）起 starter 默认 Lettuce；仍在 Jedis 的项目按本节决策。**§1"普通命令不走池"的结论只对 Lettuce 成立**——Jedis 每个操作从池借还一条连接（连接非线程安全），池参数直接决定并发上限。
 
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-redis</artifactId>
-    <exclusions>
-        <exclusion>
-            <groupId>io.lettuce</groupId>
-            <artifactId>lettuce-core</artifactId>
-        </exclusion>
-    </exclusions>
-</dependency>
-<dependency>
-    <groupId>redis.clients</groupId>
-    <artifactId>jedis</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.apache.commons</groupId>
-    <artifactId>commons-pool2</artifactId>
-</dependency>
-```
+### 是否迁移
 
-```yaml
-spring:
-  data:
-    redis:
-      client-type: jedis
-      jedis:
-        pool: { max-active: 32, max-idle: 16, min-idle: 4, max-wait: 3s }
-```
+| 信号 | 判断 |
+|---|---|
+| 池耗尽常态化 / 高并发吞吐上不去（`Could not get a resource from the pool`） | 迁——Jedis 的池就是并发上限，借还开销随流量放大 |
+| 需要响应式 / 异步 API | 迁——Lettuce 原生支持 |
+| 需要引入 Redisson | 不构成迁移理由——与客户端选择正交（starter 会整体替换连接工厂，`07-redisson-lock.md` §1） |
+| 运行稳定、无扩展需求、回归测试成本高 | 不强求——按下方 antipattern 自查后维持 |
 
-| | Lettuce（默认） | Jedis |
+### 如何迁移（Jedis → Lettuce）
+
+1. **依赖与配置**：删 `redis.clients:jedis` 依赖与 `client-type: jedis` 配置；当年若 exclude 过 `lettuce-core` 要恢复（starter 自带）。
+2. **池配置别平移**：`jedis.pool.*` 不等于 `lettuce.pool.*`——Lettuce 普通命令不走池（§1），多数项目直接删池配置只留 `timeout`；确有事务 / 阻塞命令再按 §2 配。
+3. **代码排查**（真正的风险区）：grep `redis.clients.jedis`、`JedisConnectionFactory`、`jedisPool.getResource()`——直接操作 Jedis / 手管连接池的代码全部收口到 `RedisTemplate` / `StringRedisTemplate`；池借还代码删除，借出不还的泄漏点一并消失。
+4. **迁移后验证**：连接数**骤降是正常的**（N 条池连接 → 1 条共享多路复用连接）——按 Jedis 时代连接数设的告警阈值要重标；用到事务 / 阻塞命令的项目确认 `commons-pool2` 依赖还在（§2）。
+
+### 不迁移：Jedis 配置 antipattern
+
+| ✗ 反例 | 后果 | ✓ 正解 |
 |---|---|---|
-| 连接模型 | 一条共享连接多路复用 | **每个操作从池借还一条连接** |
-| 池是否必配 | 仅事务/阻塞命令需要 | **必配**，池参数直接决定并发 |
-| 新项目默认 | ✓ | 一般不选 |
+| 不配池参数就上线（默认 max-active=8、max-wait=**-1 无限等**） | 高并发下第 9 个请求无限排队挂起，线程堆积无报错 | `max-active` ≥ 并发峰值；`max-wait` 设有限值（如 3s）快速失败 |
+| `new Jedis(host, port)` 当字段共享给多线程 | Jedis 连接**非线程安全**，并发下指令串线、诡异报错 | 连接一律从池借（Spring 托管即走池）；裸 Jedis 只许方法内局部变量 |
+| `pool.getResource()` 借出后异常路径没归还 | 连接泄漏 → 池耗尽（重启才能恢复） | try-with-resources：`try (Jedis j = pool.getResource()) { ... }` |
+
+> 排错归属：`Could not get a resource from the pool` 在 Jedis 下查池参数 / 连接泄漏（上表）；在 Lettuce 下先确认是否真用了事务 / 阻塞命令（§5）。
 
 ## 5. 排错速查
 
