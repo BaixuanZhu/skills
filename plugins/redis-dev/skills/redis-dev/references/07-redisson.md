@@ -56,7 +56,7 @@ public void processOrder(Long orderId) { ... }
 ```java
 RLock lock = redissonClient.getLock("lock:order:" + orderId);   // key 粒度 = 业务互斥粒度
 
-if (lock.tryLock(3, 30, TimeUnit.SECONDS)) {     // 等锁最多 3s；持锁硬上限 30s（§4 推荐写法）
+if (lock.tryLock(3, 30, TimeUnit.SECONDS)) {     // 等锁最多 3s；持锁硬上限 30s（§4）
     try {
         doBusiness();
     } finally {
@@ -70,28 +70,23 @@ if (lock.tryLock(3, 30, TimeUnit.SECONDS)) {     // 等锁最多 3s；持锁硬�
 }
 ```
 
-## 4. tryLock 参数语义与推荐写法
+## 4. tryLock 参数语义与 antipattern
 
 | 调用 | waitTime（等多久拿锁） | leaseTime（持锁多久） | 看门狗 |
 |---|---|---|---|
-| `tryLock()` | 0，立即返回 | 默认 30s | ✓ 每 10s 自动续期 |
-| `tryLock(3, SECONDS)` | 最多等 3s | 默认 30s | ✓ |
 | `tryLock(3, 30, SECONDS)` | 最多等 3s | 固定 30s，到期自动释放 | ✗ |
-| `lock()` | 无限等（别用） | 默认 30s | ✓ |
-| `lock(30, SECONDS)` | 无限等（别用） | 固定 30s | ✗ |
+| `tryLock(3, SECONDS)` | 最多等 3s | 默认 30s | ✓ 每 10s 自动续期 |
+| `tryLock()` | 0，立即返回 | 默认 30s | ✓ |
+| `lock()` / `lock(30, SECONDS)` | 无限等（别用） | 默认 30s / 固定 30s | ✓ / ✗ |
 | lock4j `@Lock4j` | acquireTimeout（默认 3000ms） | expire（默认 30000ms，固定） | ✗ |
 
-waitTime 与 leaseTime 是两件事：**waitTime** 限「拿不到就放弃」的等待上限（拿不到返回 false）；**leaseTime** 限「拿到后最多持有多久」的租期上限——到期**自动释放，无论业务是否跑完**。
+waitTime 与 leaseTime 是两件事：前者限「拿不到就放弃」，后者限「持有多久」——到期自动释放，**无论业务是否跑完**。
 
-推荐写法——**两个时间都显式**：
-
-```java
-lock.tryLock(3, 30, TimeUnit.SECONDS);   // 等锁最多 3s；持锁硬上限 30s（完整模式见 §3）
-```
-
-- **leaseTime 必须显式，防等效死锁**：不传时看门狗给默认 30s 租期、每 10s（租期/3）续期，JVM 存活就一直续。业务线程挂死（死循环 / 业务自身死锁）而客户端健康时，锁被**无限续期、永不释放**，其他节点永远拿不到。显式 leaseTime 是硬上限——挂死也在到期后放锁。
-- **leaseTime 必须大于业务执行上界**（上界 × 安全余量）：业务没跑完锁先到期 → 并发进入（互斥被破），且 unlock 抛 `IllegalMonitorStateException`。上界估不出来给大值（60s / 5min），**宁可长不可短**——互斥正确性靠 DB 兜底（§9），不靠锁精确到期。
-- 看门狗（`lockWatchdogTimeout` 默认 30000ms）是「不传 leaseTime 时」的兜底机制：业务时长波动大时不用猜租期，代价就是上面的无限续期——存量代码识别它即可，新代码按推荐写法显式传。
+| | 写法 | 判定 |
+|---|---|---|
+| ✗ | `tryLock(wait)` 不传 leaseTime | 看门狗（`lockWatchdogTimeout` 默认 30s）在 JVM 存活期每 10s 无限续期——业务线程挂死（死循环 / 业务自身死锁）而客户端健康时，锁**永不释放**、其他节点全阻塞（等效死锁）。识别存量用，新代码不写 |
+| ✗ | leaseTime ≤ 业务执行上界 | 业务没跑完锁先到期 → 并发进入（互斥被破）+ unlock 抛 `IllegalMonitorStateException` |
+| ✓ | `tryLock(wait, lease)` 两个时间都显式（§3 示例） | leaseTime = 业务上界 × 安全余量，估不出给大值（60s / 5min），**宁可长不可短**；互斥正确性靠 DB 兜底（§9），不靠锁精确到期 |
 
 ## 5. 可重入与公平锁
 

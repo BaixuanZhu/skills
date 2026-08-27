@@ -25,7 +25,7 @@
 | # | 现象 | 根因 | 方案（按优先级） |
 |---|---|---|---|
 | 穿透 | 反复查**不存在**的数据，每次都打到 DB（恶意构造 id / 脏链接） | 缓存只挡"存在"的数据 | ① 参数校验拦非法 id ② **缓存 null + 短 TTL**（30s~5min，`05-spring-cache.md` §5）③ 高频场景布隆过滤器前置（Redisson `RBloomFilter`，判"一定不存在"才有效；误判率换内存，有添加无删除需定期重建） |
-| 击穿 | **单个热点 key** 过期瞬间，并发未命中全部回源 | 热点 + 过期叠加 | ① **互斥锁回源**：拿到分布式锁的线程查库回填，其余等待后重读缓存（代码见下）② 逻辑过期：value 内嵌过期时间，读到"已过期"返回旧值 + 异步线程刷新（不阻塞请求，接受短暂旧值）③ 单实例场景 `sync = true`（`05-spring-cache.md` §5） |
+| 击穿 | **单个热点 key** 过期瞬间，并发未命中全部回源 | 热点 + 过期叠加 | ① **互斥锁回源（同步，§5）**：拿到分布式锁的线程查库回填，其余等待后重读缓存 ② **逻辑过期 + 异步重建（§6）**：读到"已过期"返回旧值 + 后台线程刷新，请求不阻塞 ③ 单实例场景 `sync = true`（`05-spring-cache.md` §5） |
 | 雪崩 | **大批 key 同时过期** / Redis 实例宕机，DB 被打垮 | TTL 同值 / 实例单点 | ① **TTL 随机抖动**（基础值 + 10%~30% 随机，写缓存的统一规则）② 实例宕机：多级缓存（Caffeine 本地兜底）+ 接口熔断限流降级 ③ 高可用部署（哨兵/集群，`01-connection.md` §3） |
 
 三者区分一句话：穿透是**数据不存在**，击穿是**一个热 key**，雪崩是**一大片 key 或整个实例**。
@@ -43,59 +43,53 @@ stringRedisTemplate.opsForValue().set(key, json, ttlWithJitter(Duration.ofMinute
 
 `@Cacheable` 无法逐次抖动（TTL 挂在 cacheName 级）——同批部署的注解缓存靠 `perName` 错开 TTL 数值缓解。
 
-## 5. 击穿的互斥锁回源（完整模板）
+## 5. 击穿的同步回源：互斥锁 + DoubleCheck（伪代码）
 
-```java
-private static final ObjectMapper MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
-private static final String NULL_MARK = "<null>";   // 哨兵：序列化产物是 JSON（{ 或 [ 开头），不会撞型
+```
+读 key：
+  cached = GET(key)
+  cached ≠ null → 是 "<null>" 哨兵 ? 返回 null（穿透防护已含） : 返回 JSON 反序列化值
 
-public User getUser(long id) throws InterruptedException {
-    String key = "user:" + id;
-    String cached = stringRedisTemplate.opsForValue().get(key);
-    if (cached != null) {
-        return NULL_MARK.equals(cached) ? null : fromJson(cached);      // null 缓存命中（防穿透）
-    }
-    RLock lock = redissonClient.getLock("lock:" + key);
-    if (!lock.tryLock(3, 30, TimeUnit.SECONDS)) {                        // 等锁最多 3s；持锁硬上限 30s（07-redisson.md §4）
-        TimeUnit.MILLISECONDS.sleep(200);                                // 拿不到锁：稍候重读一次缓存
-        cached = stringRedisTemplate.opsForValue().get(key);
-        return cached == null || NULL_MARK.equals(cached)
-                ? null : fromJson(cached);                               // 仍无 → 降级（null / 默认值 / 提示稍后，按业务定）
-    }
-    try {
-        cached = stringRedisTemplate.opsForValue().get(key);             // DoubleCheck：等锁期间别人可能已回填
-        if (cached != null) {
-            return NULL_MARK.equals(cached) ? null : fromJson(cached);
-        }
-        User user = userMapper.selectById(id);                           // 唯一回源点
-        if (user == null) {
-            stringRedisTemplate.opsForValue().set(key, NULL_MARK, Duration.ofSeconds(60));  // 短 TTL 防穿透
-            return null;
-        }
-        stringRedisTemplate.opsForValue().set(key, toJson(user), ttlWithJitter(Duration.ofMinutes(30)));
-        return user;
-    } finally {
-        if (lock.isHeldByCurrentThread()) lock.unlock();
-    }
-}
-
-private User fromJson(String json) {
-    try { return MAPPER.readValue(json, User.class); }
-    catch (JsonProcessingException e) { throw new IllegalStateException("缓存反序列化失败", e); }
-}
-
-private String toJson(User user) {
-    try { return MAPPER.writeValueAsString(user); }
-    catch (JsonProcessingException e) { throw new IllegalStateException("缓存序列化失败", e); }
-}
+  未命中 → lock = getLock("lock:" + key)，tryLock(wait=3s, lease=30s)   // lease > 回源耗时上界（07-redisson.md §4）
+    拿不到锁 → 等 200ms 重读缓存一次；仍无 → 降级返回（null / 默认值 / 提示稍后，别空转重试）
+    拿到锁 →
+      try:
+        DoubleCheck：再 GET 一次——等锁期间别人可能已回填，有值直接返回
+        value = 查库（唯一回源点）
+        value == null → SETEX(key, "<null>", 60s)                // 短 TTL 防穿透
+        否则         → SETEX(key, JSON(value), 30min + 抖动 §4)
+        返回 value
+      finally: isHeldByCurrentThread() 才 unlock（强约束 7）
 ```
 
-要点：**DoubleCheck**（拿锁后再查一次）、null 短 TTL、`finally` + `isHeldByCurrentThread` 解锁（强约束 7）；拿不到锁不无限等——重读一次仍无就降级返回（`ttlWithJitter` 见 §4）。
+- `"<null>"` 哨兵：JSON 序列化产物以 `{` / `[` 开头，字符串哨兵不会撞型——null 命中与未命中靠它区分。
+- 拿不到锁的分支必须有降级出口，不是 while 空转压垮 Redis。
 
-## 6. 自检
+## 6. 击穿的异步回源：逻辑过期 + 后台重建
+
+互斥锁回源（§5）里等锁请求会排队；热点 key 不接受等待时用逻辑过期——**读请求永不阻塞**，代价是过期窗口内返回旧值。
+
+```
+value 结构：JSON{ data: 原值, expireAt: 逻辑过期时间戳 }；物理 TTL 设长（如 1 天，只做兜底）
+
+读：
+  entry = GET(key)
+  entry == null（冷 key）→ 同步回源一次或降级
+  entry.expireAt > now   → 返回 entry.data
+  已逻辑过期 →
+    返回 entry.data（旧值照常服务）
+    tryLock 成功 → 提交异步任务（独立线程池，非请求线程）：查库 → 写回新 data + 新 expireAt → unlock
+    tryLock 失败 → 已有人在重建，本次直接返回旧值
+```
+
+- 这里的锁防的是**重复回源**，不是互斥读——用途与 §5 不同。
+- 重建失败旧值继续服务 + 告警，读路径不感知。
+- 需要**兜底刷新**（启动预热 / 定时任务）：无人访问的 key 逻辑过期后会一直旧值下去。
+
+## 7. 自检
 
 - [ ] 所有 set 带 TTL 且含随机抖动（含 null 缓存——短且抖动可省）
 - [ ] 写路径是「先更 DB，再删缓存」；高一致场景评估过延迟双删/Canal
-- [ ] 热点 key 回源有互斥（多实例不用 `sync=true` 当分布式锁）
+- [ ] 热点 key 回源有互斥（同步，§5）或逻辑过期异步重建（§6），不是裸回源；多实例不用 `sync=true` 当分布式锁
 - [ ] 布隆过滤器仅用于"判不存在"拦截，且知道误判与不可删除的代价
 - [ ] DB 挂了 / Redis 挂了有降级出口（熔断、默认值），不是 500
