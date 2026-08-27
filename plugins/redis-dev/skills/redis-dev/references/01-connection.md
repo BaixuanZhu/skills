@@ -88,7 +88,7 @@ spring:
 
 ## 5. 多数据源（两个 Redis 实例）
 
-**先判对：仅当需要两个物理隔离的实例才走这里**——典型是 C4 检查点 / `08-troubleshoot.md` §2 的分实例方案（缓存实例可丢、session / 持久数据实例不可丢），或第二实例属另一环境。单实例内隔离用 `database` / key 前缀（§2、`03-serialization.md` §5）。
+**先判对：仅当确需连接第二个物理实例才走这里**（如另一环境 / 独立资源的 Redis）。单实例内隔离用 `database` / key 前缀（§2、`03-serialization.md` §5）。
 
 自动配置只认一套连接属性；第二实例手动建工厂。密码与命令超时必须在工厂里自带——**不走 `spring.data.redis.*`**：
 
@@ -143,6 +143,6 @@ public class RedisConfig {
 
 - [ ] `timeout` 已显式配置（1~5s），不依赖默认 60s
 - [ ] `password` 不落明文进 git（环境变量 / 配置中心占位符 `${REDIS_PASSWORD}`）
-- [ ] 共用实例时 `database` 或 key 前缀与其他写入方约定（框架前缀速查 `03-serialization.md` §5；淘汰风险 `08-troubleshoot.md` §2）
+- [ ] 共用实例时 `database` 或 key 前缀与其他写入方约定（框架前缀速查 `03-serialization.md` §5）
 - [ ] 集群模式：确认没有用到事务 / 跨 slot 多 key 操作
 - [ ] 连接池是否真需要（见 `02-pool.md` §1——多数场景 Lettuce 不需要）

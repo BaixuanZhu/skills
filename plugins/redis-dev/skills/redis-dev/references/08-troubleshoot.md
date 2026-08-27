@@ -17,8 +17,6 @@
 | `@Cacheable` 完全不生效（每次都查库） | 自调用绕过代理 / private/final 方法 / 没配 `@EnableCaching` | 按下方清单逐项排查 | `05-spring-cache.md` §4 |
 | `@Cacheable` 缓存永不过期 | 没配 `RedisCacheManager` 的 `entryTtl` | 显式配 cacheDefaults + perName | `05-spring-cache.md` §3 |
 | `@Cacheable` 缓存的 value 也是二进制乱码 | cacheManager 默认 JDK 序列化（与 RedisTemplate 是两套配置） | `serializeValuesWith` 显式配 JSON | `05-spring-cache.md` §3 |
-| `OOM command not allowed when used memory > 'maxmemory'` | 默认 `noeviction` + 内存写满 | 设置 `maxmemory` + 合理策略；查内存去哪了 | 本文件 §2 |
-| 用户随机掉线（共库：常见与 Sa-Token 共实例） | 淘汰策略把 session 挤掉（`evicted_keys` 非零即实锤） | 分实例 / 容量余量（三方案见 §2） | 本文件 §2 |
 | `IllegalMonitorStateException`（unlock 时） | 租期已过锁已易主 / 非持有线程解锁 | `isHeldByCurrentThread()` 判断后再解；查 leaseTime 决策 | `07-redisson-lock.md` §4 |
 | 业务执行中超时后并发进入（锁"失效"） | 显式传了 `leaseTime` → 无看门狗，到期自动释放 | 时长不可预估就不传 leaseTime | `07-redisson-lock.md` §4 |
 | TTL 到期的 key 在 `scan`/`dbsize` 里还在 | 惰性+定期删除机制，物理删除滞后 | 无需处理（不可读即正确语义） | — |
@@ -26,33 +24,7 @@
 | scan 结果有重复 | scan 语义允许重复 | 调用侧 Set 去重 | `04-template-operations.md` §3 |
 | Redisson starter 引入后 RedisTemplate 行为异常 | starter 把连接工厂整体替换为 Redisson | 知情引入；不想要全局替换就用裸 `redisson` 依赖 | `07-redisson-lock.md` §1 |
 
-## 2. 实例策略反噬：写报 OOM / session 被挤掉
-
-淘汰策略、maxmemory 是服务器配置，但两类症状直接砸在应用上，开发必须认得：
-
-**① 写命令报 `OOM command not allowed when used memory > 'maxmemory'`**
-
-默认策略 `noeviction`：内存到上限后**所有写**（缓存 set、登录写 session、锁的 SET NX）报错、读不受影响——没人改代码却一阵集中故障，先查这里。修复在服务器侧显式配 `maxmemory` + 策略，按实例用途给运维提需求：
-
-| 实例用途 | 策略 |
-|---|---|
-| 纯缓存（可从 DB 重建） | `allkeys-lru` / `allkeys-lfu`（Redis 4.0+） |
-| 缓存与持久数据混用（不分实例时） | `volatile-lru`——前提是缓存全部带 TTL（强约束 2；没 TTL 的缓存又挤不掉） |
-| 锁 / 限流 / 幂等专用 | `noeviction` + 容量规划（锁被 LRU 挤掉 = 互斥凭空消失） |
-
-**② 用户随机掉线（淘汰策略把 session 挤掉）**
-
-业务缓存与 Sa-Token / Spring Session 共实例、策略为 `allkeys-lru` / `volatile-*`，内存到顶时"最久未访问"的 key 被挤——长时间未操作（仍在有效期内）的 session 首当其冲，下次请求 `NotLoginException`。无规律、无法复现、代码毫无问题。**实锤**：`redis-cli info stats` 的 `evicted_keys` 非零；`info memory` 看 `used_memory` 是否贴着 `maxmemory`。
-
-方案（按优先级；机制对所有"不可丢"数据——Spring Session、延迟队列、幂等键——同样成立）：
-
-1. **分实例**：缓存单独实例开 allkeys-lru；session / 持久数据独立实例 + 容量规划（应用侧落地 `01-connection.md` §5）。
-2. 无法分实例：`maxmemory` 按峰值预留 30%+ 余量，让淘汰根本不发生。
-3. session 所在实例退 `volatile-lru`，只保住无 TTL 的持久数据（session 有 TTL 仍可能被挤，治标）。
-
-**key 前缀隔离防不了淘汰**——策略是实例级的，不看前缀（`03-serialization.md` §5）。
-
-## 3. @Cacheable 不生效排查清单（按序执行）
+## 2. @Cacheable 不生效排查清单（按序执行）
 
 1. 启动类/配置类有 `@EnableCaching`？
 2. 调用路径是否**经过代理**：不是同类 `this.` 调用、方法非 private/final？
@@ -61,7 +33,7 @@
 5. `condition` 是否把请求全拦了（执行前返回 false 时方法**正常执行但不缓存**）？
 6. key 冲突：无参/默认 SimpleKey 时多个方法/参数共用了同一个缓存项？
 
-## 4. 连接失败排查清单（按序执行）
+## 3. 连接失败排查清单（按序执行）
 
 1. `redis-cli -h <host> -p <port> ping` → 不通是网络/地址问题，与应用无关
 2. 配置前缀 vs Boot 版本（`spring.data.redis.*` / `spring.redis.*`）
@@ -70,7 +42,7 @@
 5. 集群模式：`cluster.nodes` 是**种子节点**——Lettuce 会自动发现完整拓扑，但至少一个可达；生产仍列全 master，避免种子单点
 6. 云 Redis：白名单/安全组是否放行应用出口 IP
 
-## 5. 使用规则
+## 4. 使用规则
 
 - 拿到 Redis 相关报错，**先在本表按症状匹配**，命中即按「修复」列动作，未命中再分析。
 - 修复动作涉及代码修改的，改完对照 SKILL.md「核心强约束」自检，防止按下葫芦浮起瓢。

@@ -12,10 +12,9 @@ description: >-
   RedisTemplate / StringRedisTemplate、@Cacheable / @CacheEvict / @CachePut / @EnableCaching、
   RLock / RedissonClient / tryLock、opsForValue / opsForHash / opsForZSet 时必须使用本技能；
   用户报错出现：key 乱码（\xac\xed）、序列化 / 反序列化异常、连不上 Redis / command timeout /
-  pool exhausted、OOM command not allowed、@Cacheable 不生效、读回 LinkedHashMap、
-  用户随机掉线（共库 session 被淘汰，常见于与 Sa-Token 共实例）时必须使用本技能。
+  pool exhausted、@Cacheable 不生效、读回 LinkedHashMap 时必须使用本技能。
   不适用于：Sa-Token 自身的 Redis 集成与 session 存储（→ sa-token-dev）、测试容器化 Redis
-  （→ java-integration-test）、Redis 服务器安装部署 / 主从搭建 / 监控指标调优（运维范围）、非 Java 语言。
+  （→ java-integration-test）、Redis 服务器安装部署 / 主从搭建 / 监控指标调优 / 内存与淘汰策略（运维范围）、非 Java 语言。
 agent_created: true
 version: 1.0.0
 slug: redis-dev
@@ -40,7 +39,6 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 
 - **配置命名空间**：Boot 3/4 用 `spring.data.redis.*`，Boot 2.x 用 `spring.redis.*`——配错导致连不上（症状见 `references/08-troubleshoot.md`）。
 - **redisson-spring-boot-starter 会把 RedisConnectionFactory 替换为 Redisson 实现**（RedisTemplate 底层随之切换），引入即全局生效，详见 `references/07-redisson-lock.md` §1。
-- **共用实例（多写入方）**：其他服务、Sa-Token / Spring Session 等框架与业务共写一个实例——前缀隔离只防覆盖，**防不了淘汰策略挤掉 session**（随机掉线的头号嫌疑），见 `references/08-troubleshoot.md` §2。
 
 ## 第 0 步：依赖探测与激活分支
 
@@ -63,15 +61,15 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 | 序列化：存对象、key 乱码、跨服务共享数据 | 激活 |
 | 缓存穿透 / 击穿 / 雪崩、先更新库还是先删缓存 | 激活 |
 | 用 Redis 做计数器 / 排行榜 / 签到 / 去重 / 延迟队列 / UV | 激活 |
-| 报错：连不上、command timeout、pool exhausted、OOM command not allowed、序列化异常、`@Cacheable` 不生效、读回 `LinkedHashMap` | 激活，先查 `references/08-troubleshoot.md` |
-| Redis 服务器安装 / 主从搭建 / 慢查询监控 / 大 key 巡检 | 不适用（运维范围；例外——策略反噬应用的排查见 `references/08-troubleshoot.md` §2） |
+| 报错：连不上、command timeout、pool exhausted、序列化异常、`@Cacheable` 不生效、读回 `LinkedHashMap` | 激活，先查 `references/08-troubleshoot.md` |
+| Redis 服务器安装 / 主从搭建 / 慢查询监控 / 大 key 巡检 / 内存淘汰治理 | 不适用（运维范围） |
 | Sa-Token 登录 / 会话 / 踢人相关 | 不适用（→ sa-token-dev） |
 
 > **检查点**：判定为「不适用」→ 告知用户当前问题不在本技能范围并建议退出。
 
 ## 关键决策检查点
 
-以下 4 个场景存在多条技术路线，Agent **不可擅自替用户选择**。
+以下 3 个场景存在多条技术路线，Agent **不可擅自替用户选择**。
 
 **执行规则（机械判据，逐条执行）：**
 
@@ -87,7 +85,6 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 | C1 | "加缓存" / "缓存" / "cache"（未指明方式） | ① 声明式 `@Cacheable` 还是手动 `RedisTemplate`？② 缓存能接受多长的脏读窗口（TTL）？ | 声明式：简洁、注解即生效，适合整对象读缓存；手动：精细控制（部分更新 / 计数 / 锁配合），适合复杂逻辑。见 `references/05-spring-cache.md` §1 | 简单查询缓存用 `@Cacheable` + 显式 TTL 30min |
 | C2 | "锁" / "分布式锁" / "防重复" / "幂等" / "并发" | ① 项目是否已有 Redisson？没有 → 是否同意引入？② 业务执行时长是否可预估？ | Redisson `RLock`：看门狗自动续期，业务时长不定时不传 `leaseTime`；`SET NX EX` 自实现：零依赖但需自己处理续期与安全释放。见 `references/07-redisson-lock.md` | 引入 Redisson，`tryLock(wait)` 不指定 `leaseTime`（看门狗续期） |
 | C3 | "存对象" / "序列化" / "跨服务共享" / "key 可读" | 数据是否需要跨服务 / 跨语言读取？ | `GenericJackson2Json`：写入 `@class` 自动还原类型，单服务最省事；跨服务 ✗ **禁止 `@class`**（包名耦合、跨语言读不懂、类迁移即断）→ ✓ 干净 JSON + 读侧显式类型。见 `references/03-serialization.md` §4 | 单服务 `GenericJackson2Json`（含 JavaTimeModule），跨服务 StringRedisTemplate + 显式类型 |
-| C4 | "共用 Redis" / "同一个实例" / "共库" / 与 Sa-Token / Spring Session / session 共库 | 业务缓存与登录 session / 持久数据是否必须同实例？ | 同实例：key 前缀隔离只能防覆盖，**防不了淘汰策略挤掉 session**（随机掉线）；分实例：彻底隔离，多一个运维对象。见 `references/08-troubleshoot.md` §2（分实例落地 `references/01-connection.md` §5） | 提示风险；有条件 → 分实例，无条件 → 前缀隔离 + 容量留余量 |
 
 ## 决策路由
 
@@ -95,12 +92,12 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 |---|---|
 | 依赖引入、单机 / 哨兵 / 集群连接配置、超时、ACL、多数据源 | `references/01-connection.md` |
 | 连接池参数、Lettuce 共享连接、pool exhausted、Jedis（存量项目） | `references/02-pool.md` |
-| 序列化方案、key 乱码、GenericJackson2Json、LocalDateTime、LinkedHashMap、跨服务契约 | `references/03-serialization.md` |
+| 序列化方案、key 乱码、GenericJackson2Json、LocalDateTime、LinkedHashMap、跨服务契约、key 规范 / 前缀 | `references/03-serialization.md` |
 | 数据结构选型（计数 / 排行 / 签到 / 去重 / UV / 队列）、scan / pipeline、incr 原子性 | `references/04-template-operations.md` |
 | @Cacheable / @CacheEvict、TTL 配置（默认永不过期坑）、自调用失效、多缓存名不同 TTL | `references/05-spring-cache.md` |
 | 缓存一致性：先更库还是先删缓存、穿透 / 击穿 / 雪崩三件套、延迟双删 | `references/06-cache-consistency.md` |
 | 分布式锁：SET NX EX、Redisson tryLock、看门狗 / leaseTime 互斥、同步器、延迟队列 | `references/07-redisson-lock.md` |
-| 排错：连不上 / 超时 / 乱码 / 序列化异常 / @Cacheable 不生效 / 随机掉线 / 写报 OOM，症状 → 原因 → 修复 | `references/08-troubleshoot.md` |
+| 排错：连不上 / 超时 / 乱码 / 序列化异常 / @Cacheable 不生效，症状 → 原因 → 修复 | `references/08-troubleshoot.md` |
 
 ## 核心强约束
 
@@ -118,21 +115,20 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 ## 使用流程
 
 1. **确认适用性**：先执行「第 0 步：依赖探测」，再对照「何时使用本技能」；报错类任务直接从 `references/08-troubleshoot.md` 症状表入手。
-2. **关键决策检查点**：逐字扫描 C1–C4 触发信号；命中 → 本轮只输出确认选择题，禁止生成代码。
+2. **关键决策检查点**：逐字扫描 C1–C3 触发信号；命中 → 本轮只输出确认选择题，禁止生成代码。
 3. **定位 reference**：查「决策路由」表，读对应文件。
 4. **编码前过强约束**：10 条核心强约束逐条对照，尤其 TTL（第 2/9 条）与序列化（第 1/3 条）。
 5. **遇异常先查排错**：`references/08-troubleshoot.md`。
 6. **输出前自检（二值核对，任一为「否」即违规，必须返工）**：
-   - C1–C4 已逐项扫描：命中的检查点均已确认，或已标注「未确认，已使用默认方案」？
+   - C1–C3 已逐项扫描：命中的检查点均已确认，或已标注「未确认，已使用默认方案」？
    - 所有写入（set / cacheManager / increment 初始化）都带显式 TTL（含 null 缓存短 TTL）？
    - key 序列化器为 String？`@Cacheable` 与 RedisTemplate 两套序列化都配了？
    - 锁：try-finally + isHeldByCurrentThread 判断 + leaseTime 决策（预估不了就不传）？
    - 没有出现 `keys *`、`setnx`+`expire` 两步、先删缓存后更新 DB？
    - 配置前缀与 Boot 版本一致（spring.data.redis vs spring.redis）？
-   - 共用实例场景已提示淘汰策略风险（C4）？
 
 ## 版本注意
 
 - **Spring Data Redis 3.x/4.x**（Boot 3.x/4.x）：配置前缀均为 `spring.data.redis.*`；2.x（Boot 2.7）为 `spring.redis.*`，其余 API 一致。Boot 4 起 Lettuce 升 7.x（应用侧 API 无感）。
 - **Redisson**：`lockWatchdogTimeout` 默认 30000ms；`redisson-spring-boot-starter` 版本随 Boot 大版本走——Boot 3 用近期 3.x，**Boot 4 必须用 4.x 线 starter（2025-12 起），3.x starter 在 Boot 4 下启动报错**；过老版本只认 `spring.redis.*` 前缀、Boot 3 下连不上。
-- **LFU 淘汰策略需 Redis 4.0+**，Stream 需 5.0+，本文数据结构以 6.x/7.x 为基准。
+- Stream 需 Redis 5.0+，本文数据结构以 6.x/7.x 为基准。
