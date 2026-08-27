@@ -1,26 +1,45 @@
 # Redisson：分布式锁与分布式对象
 
-Redisson 不只是锁库——它是在 Redis 上实现的一组**带语义的分布式对象与服务**：锁 / 读写锁 / 信号量 / 限流器 / 阻塞与延迟队列 / 布隆过滤器。选型口径：普通 KV / 缓存读写继续 `RedisTemplate`；需要这些语义化能力时用 Redisson（`RedissonClient` 直接注入）。两套可共存——下方方式二不动既有 Lettuce 连接。
+Redisson 不只是锁库——它是在 Redis 上实现的一组**带语义的分布式对象与服务**：锁 / 读写锁 / 信号量 / 限流器 / 阻塞与延迟队列 / 布隆过滤器。选型口径：普通 KV / 缓存读写继续 `RedisTemplate`；需要这些语义化能力时用 Redisson（`RedissonClient` 直接注入）。两套可共存——§1 默认坐标（裸 `redisson`）不动既有 Lettuce 连接。
 
-## 1. 依赖与选型（一律用成熟实现）
+## 1. 依赖与坐标选择
+
+**最佳实践：已有 `spring-boot-starter-data-redis` 的项目引裸 `org.redisson:redisson` 共存**——数据面（RedisTemplate / @Cacheable）留在 Lettuce 不动，Redisson 只管锁 / 限流 / 延迟队列等语义化能力，互不干扰，也不卷入 starter 的版本耦合。
+
+| 坐标 | 连接层影响 | 适用 |
+|---|---|---|
+| `org.redisson:redisson`（裸依赖，**默认推荐**） | 无——Lettuce / RedisTemplate / @Cacheable 原样 | 已有 data-redis 在跑的项目，加锁 / 分布式对象 |
+| `redisson-spring-boot-starter` | **整体替换 RedisConnectionFactory**，RedisTemplate 底层随之切换，引入即全局生效 | 全新项目 / 团队明确用 Redisson 做数据面（RedissonSpringCacheManager、near-cache 等） |
 
 ```xml
-<!-- 方式一：starter（⚠️ 会把 RedisConnectionFactory 替换为 Redisson 实现，
-     RedisTemplate 底层随之切换，全局生效——团队需知情） -->
-<dependency>
-    <groupId>org.redisson</groupId>
-    <artifactId>redisson-spring-boot-starter</artifactId>
-    <version>3.27.2</version>
-</dependency>
-
-<!-- 方式二：仅分布式对象、不动既有 Lettuce 连接（不想全局替换时选这个） -->
 <dependency>
     <groupId>org.redisson</groupId>
     <artifactId>redisson</artifactId>
     <version>3.27.2</version>
 </dependency>
+```
 
-<!-- 方式三：lock4j 注解式（底层默认 Redisson，仅锁场景） -->
+裸依赖手动建 client——**从 Boot 的 `RedisProperties` 建 Config，与 `spring.data.redis.*` 同源**（共存方案唯一的坑是两套连接配置漂移，这样堵死）：
+
+```java
+@Bean(destroyMethod = "shutdown")
+public RedissonClient redissonClient(RedisProperties props) {   // org.springframework.boot.autoconfigure.data.redis.RedisProperties
+    Config config = new Config();
+    config.useSingleServer()
+          .setAddress("redis://" + props.getHost() + ":" + props.getPort())
+          .setPassword(props.getPassword());
+    // 哨兵 / 集群：useSentinelServers() / useClusterServers()，节点同样从 props 取（拓扑与字段见 01-connection.md §3）
+    return Redisson.create(config);
+}
+```
+
+选 starter 的代价（引了就要知道）：零配置（复用 `spring.data.redis.*` 自动装配 `RedissonClient`），但 ① 连接工厂整体替换，既有 RedisTemplate 的事务 / 管道等边缘行为随连接实现切换；② **版本随 Boot 大版本走**：Boot 3 → 近期 3.x，Boot 4 → 4.x 线（2025-12 起；3.x starter 在 Boot 4 下启动报错），过老版本只认 `spring.redis.*` 前缀；③ 常见依赖冲突——starter 拉自己版本的 spring-data-redis，与其他组件顶牛时先查这条线（`08-troubleshoot.md`）。
+
+### lock4j：Redisson 的注解门面（不是第三种坐标）
+
+lock4j 不替代也不自带 Redisson（其 pom 对 redisson 依赖是 `provided`）——它在**你已选的任一 Redisson 坐标之上**加 Spring AOP 注解封装，省掉 §3 的手写样板（`getLock` / `tryLock` / `finally unlock` 全在切面里）。只要声明式锁才需要它。
+
+```xml
 <dependency>
     <groupId>com.baomidou</groupId>
     <artifactId>lock4j-redisson-spring-boot-starter</artifactId>
@@ -28,24 +47,14 @@ Redisson 不只是锁库——它是在 Redis 上实现的一组**带语义的�
 </dependency>
 ```
 
-- 方式一自动装配 `RedissonClient`，复用 `spring.data.redis.*` 连接配置；**starter 版本随 Boot 大版本走**：Boot 3 → 近期 3.x，Boot 4 → 4.x 线（2025-12 起；3.x starter 在 Boot 4 下启动报错）；过老版本只认 `spring.redis.*` 前缀、连不上先查这里（`08-troubleshoot.md`）。
-- 方式二手动建 bean：
-
-```java
-@Bean(destroyMethod = "shutdown")
-public RedissonClient redissonClient() {
-    return Redisson.create(Config.fromYAML(getClass().getResourceAsStream("/redisson.yaml")));
-}
-```
-
-方式三声明式用法（`@Lock4j`，方法上加注解即锁）：
-
 ```java
 @Lock4j(keys = "#orderId", acquireTimeout = 3000, expire = 10000)
 public void processOrder(Long orderId) { ... }
 ```
 
-- `keys` 支持 SpEL（决定锁粒度）；`acquireTimeout` 获取等待（默认 3000ms，超时抛获取失败异常）；`expire` **固定租期**（默认 30000ms），即 §4 推荐的显式 leaseTime 语义——必须按业务执行时长上界（× 余量）设置。
+- `keys` 支持 SpEL、可多个（决定锁粒度）；`acquireTimeout` 获取等待（默认 3000ms，超时抛 `LockFailureException`）；`expire` **固定租期**（默认 30000ms），即 §4 的显式 leaseTime 语义——必须按业务执行时长上界（× 余量）设置。
+- 全局默认可配 `lock4j.acquire-timeout` / `lock4j.expire`，注解参数覆盖。
+- 编程式也有：注入 `LockTemplate`，不必注解。
 
 ## 2. 禁止自实现锁（存量识别与迁移方向）
 

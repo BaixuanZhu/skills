@@ -37,7 +37,7 @@ Boot 2.7 差异以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data
 |---|---|---|
 | 缓存 / 任意 Redis 读写 | `spring-boot-starter-data-redis` | 默认 Lettuce 客户端，自带 |
 | 声明式缓存 @Cacheable | `spring-boot-starter-data-redis` + `spring-boot-starter-cache` | 还需 `@EnableCaching` |
-| 分布式锁 / 限流 / 布隆过滤器 / 延迟队列 | `redisson-spring-boot-starter`（或仅 `org.redisson:redisson` 手动配置） | 仅缓存场景**不要**引入 |
+| 分布式锁 / 限流 / 布隆过滤器 / 延迟队列 | `org.redisson:redisson` 手动配置（数据面留在 Lettuce，**默认**）；或 `redisson-spring-boot-starter`（整体替换连接层，全新项目 / Redisson 数据面） | 仅缓存场景**不要**引入 |
 | 连接池（池参数生效） | `org.apache.commons:commons-pool2` | **池实现库，不是 Redis 客户端**；仅配 `lettuce.pool.*` 时需要（普通命令不走池，`references/02-pool.md` §1） |
 
 - **配置命名空间**：Boot 3/4 用 `spring.data.redis.*`，Boot 2.x 用 `spring.redis.*`——配错导致连不上（症状见 `references/08-troubleshoot.md`）。
