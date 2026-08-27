@@ -5,12 +5,14 @@ description: >-
   缓存（@Cacheable 声明式 / RedisTemplate 手动）、分布式锁（Redisson / SET NX EX）、
   Redis 连接与配置（单机 / 哨兵 / 集群 / 连接池）、序列化（key 乱码 / JSON / LocalDateTime）、
   缓存一致性（穿透 / 击穿 / 雪崩 / 先更库再删缓存）、以及用 Redis 数据结构实现业务功能
-  （计数器 / 排行榜 / 签到 / 去重 / 延迟队列 / UV 统计）时使用本技能——
+  （计数器 / 排行榜 / 签到 / 去重 / 延迟队列 / UV 统计）、消息与事件
+  （发布订阅 / Pub/Sub / Stream 可靠队列 / 键空间通知 / 过期事件回调）时使用本技能——
   无论用户是否提到 Redis（cache / caching / 分布式锁 / distributed lock / 看门狗 /
   watch dog / 缓存一致 / hot key / cache aside）。
   次级触发信号——代码或 pom 中出现：spring-boot-starter-data-redis、redisson、
   RedisTemplate / StringRedisTemplate、@Cacheable / @CacheEvict / @CachePut / @EnableCaching、
-  RLock / RedissonClient / tryLock、opsForValue / opsForHash / opsForZSet 时必须使用本技能；
+  RLock / RedissonClient / tryLock、opsForValue / opsForHash / opsForZSet / opsForStream /
+  convertAndSend / RedisMessageListenerContainer / StreamMessageListenerContainer 时必须使用本技能；
   用户报错出现：key 乱码（\xac\xed）、序列化 / 反序列化异常、连不上 Redis / command timeout /
   pool exhausted、@Cacheable 不生效、读回 LinkedHashMap 时必须使用本技能。
   不适用于：Sa-Token 自身的 Redis 集成与 session 存储（→ sa-token-dev）、测试容器化 Redis
@@ -61,6 +63,7 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 | 序列化：存对象、key 乱码、跨服务共享数据 | 激活 |
 | 缓存穿透 / 击穿 / 雪崩、先更新库还是先删缓存 | 激活 |
 | 用 Redis 做计数器 / 排行榜 / 签到 / 去重 / 延迟队列 / UV | 激活 |
+| 发布订阅（Pub/Sub）、Stream 消息队列、key 过期事件监听 | 激活 |
 | 报错：连不上、command timeout、pool exhausted、序列化异常、`@Cacheable` 不生效、读回 `LinkedHashMap` | 激活，先查 `references/08-troubleshoot.md` |
 | Redis 服务器安装 / 主从搭建 / 慢查询监控 / 大 key 巡检 / 内存淘汰治理 | 不适用（运维范围） |
 | Sa-Token 登录 / 会话 / 踢人相关 | 不适用（→ sa-token-dev） |
@@ -83,7 +86,7 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 | # | 触发信号（逐字关键词） | 必须确认的问题 | 方案差异（一句话） | 默认推荐 |
 |---|---|---|---|---|
 | C1 | "加缓存" / "缓存" / "cache"（未指明方式） | ① 声明式 `@Cacheable` 还是手动 `RedisTemplate`？② 缓存能接受多长的脏读窗口（TTL）？ | 声明式：简洁、注解即生效，适合整对象读缓存；手动：精细控制（部分更新 / 计数 / 锁配合），适合复杂逻辑。见 `references/05-spring-cache.md` §1 | 简单查询缓存用 `@Cacheable` + 显式 TTL 30min |
-| C2 | "锁" / "分布式锁" / "防重复" / "幂等" / "并发" | ① 项目是否已有 Redisson？没有 → 是否同意引入？② 业务执行时长是否可预估？ | Redisson `RLock`：看门狗自动续期，业务时长不定时不传 `leaseTime`；`SET NX EX` 自实现：零依赖但需自己处理续期与安全释放。见 `references/07-redisson-lock.md` | 引入 Redisson，`tryLock(wait)` 不指定 `leaseTime`（看门狗续期） |
+| C2 | "锁" / "分布式锁" / "防重复" / "幂等" / "并发" | ① 项目是否已有 Redisson / lock4j？没有 → 是否同意引入？② 业务执行时长是否可预估？ | Redisson `RLock`：不传 `leaseTime` 看门狗自动续期；lock4j `@Lock4j`：注解声明式，底层默认 Redisson，`expire` 是固定租期无续期。**✗ 不自写 SET NX + Lua**（续期 / 可重入 / 安全释放都是坑位）。见 `references/07-redisson-lock.md` §1-§2 | 引入 Redisson，`tryLock(wait)` 不指定 `leaseTime`（看门狗续期） |
 | C3 | "存对象" / "序列化" / "跨服务共享" / "key 可读" | 数据是否需要跨服务 / 跨语言读取？ | `GenericJackson2Json`：写入 `@class` 自动还原类型，单服务最省事；跨服务 ✗ **禁止 `@class`**（包名耦合、跨语言读不懂、类迁移即断）→ ✓ 干净 JSON + 读侧显式类型。见 `references/03-serialization.md` §4 | 单服务 `GenericJackson2Json`（含 JavaTimeModule），跨服务 StringRedisTemplate + 显式类型 |
 
 ## 决策路由
@@ -93,19 +96,20 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 | 依赖引入、单机 / 哨兵 / 集群连接配置、超时、ACL、多数据源 | `references/01-connection.md` |
 | 连接池参数、Lettuce 共享连接、pool exhausted、Jedis（存量项目） | `references/02-pool.md` |
 | 序列化方案、key 乱码、GenericJackson2Json、LocalDateTime、LinkedHashMap、跨服务契约、key 规范 / 前缀 | `references/03-serialization.md` |
-| 数据结构选型（计数 / 排行 / 签到 / 去重 / UV / 队列）、scan / pipeline、incr 原子性 | `references/04-template-operations.md` |
+| 数据结构选型（计数 / 排行 / 签到 / 去重 / UV）、String / Hash / ZSet 精用、scan / pipeline、incr 原子性 | `references/04-template-operations.md` |
 | @Cacheable / @CacheEvict、TTL 配置（默认永不过期坑）、自调用失效、多缓存名不同 TTL | `references/05-spring-cache.md` |
 | 缓存一致性：先更库还是先删缓存、穿透 / 击穿 / 雪崩三件套、延迟双删 | `references/06-cache-consistency.md` |
-| 分布式锁：SET NX EX、Redisson tryLock、看门狗 / leaseTime 互斥、同步器、延迟队列 | `references/07-redisson-lock.md` |
+| 分布式锁：Redisson / lock4j 选型、tryLock、看门狗 / leaseTime 互斥、同步器、延迟队列 | `references/07-redisson-lock.md` |
 | 排错：连不上 / 超时 / 乱码 / 序列化异常 / @Cacheable 不生效，症状 → 原因 → 修复 | `references/08-troubleshoot.md` |
+| 消息与事件：发布订阅（Pub/Sub）、Stream 可靠队列 / 消费组 / ack、键空间通知（过期事件） | `references/09-messaging.md` |
 
 ## 核心强约束
 
 1. **key 序列化器必须 `StringRedisSerializer`**：用默认 JDK 序列化，key 带二进制前缀（`\xac\xed...`），redis-cli 不可读、`keys`/`scan` 模式匹配失效。配置见 `references/03-serialization.md` §2。
 2. **缓存必须显式 TTL**：`RedisCacheManager` 默认**永不过期**、手动 `set` 不传过期参数同理——内存只增不减 + 脏数据永驻。TTL 加 10%~30% 随机抖动防雪崩（`references/06-cache-consistency.md` §4）。
 3. **`@Cacheable` 的序列化也要显式配**：`RedisCacheConfiguration.defaultCacheConfig()` 默认 value 也是 JDK 序列化——注解缓存与手动 RedisTemplate 是**两套独立序列化配置**，都要设。
-4. **禁止 `keys *`**：全量遍历阻塞单线程 Redis，生产禁用；用 `scan` 游标迭代（`references/04-template-operations.md` §3）。
-5. **加锁必须 `SET key value NX EX seconds` 原子命令**：`setnx` + `expire` 两步在进程崩溃时留下永不过期的死锁；value 必须放唯一标识，释放用 Lua 校验后删（`references/07-redisson-lock.md` §2）。
+4. **禁止 `keys *`**：全量遍历阻塞单线程 Redis，生产禁用；用 `scan` 游标迭代（`references/04-template-operations.md` §6）。
+5. **分布式锁只用成熟实现（Redisson / lock4j），禁止自写 SET NX + Lua**：`setnx` + `expire` 两步在崩溃间隔留下死锁；即便补成一条原子命令，续期、可重入、持有者校验释放仍是自己扛的坑位——存量自写锁的修复方向是迁移（`references/07-redisson-lock.md` §2）。
 6. **显式传 `leaseTime` → 看门狗失效**：Redisson `tryLock(wait, leaseTime, unit)` 到期自动释放、不再续期；业务时长不可预估时**不传 `leaseTime`**，靠看门狗（默认 30s 租期、每 10s 续期）。
 7. **unlock 必须 try-finally 且先判持有**：`if (lock.isHeldByCurrentThread()) lock.unlock()`，防租期已过被别人持有时抛 `IllegalMonitorStateException`。
 8. **写一致性默认「先更新 DB，再删缓存」**：不更新缓存（并发写覆盖）、不先删缓存（并发读回填旧值）。要更低脏读率 → 延迟双删，见 `references/06-cache-consistency.md` §2。

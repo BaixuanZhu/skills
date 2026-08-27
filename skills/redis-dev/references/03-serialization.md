@@ -83,4 +83,4 @@ public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factor
 1. key / hashKey 序列化器 = `StringRedisSerializer`（SKILL.md 强约束 1）。
 2. `GenericJackson2JsonRedisSerializer` 一律用**自定义 mapper**（JavaTime + defaultTyping + 忽略未知字段），不用默认构造。
 3. **两套序列化互不通用**：手动 `RedisTemplate` 写入的数据，`@Cacheable`（另一套配置，见 `05-spring-cache.md` §3）读出的类型可能对不上——同一份业务数据只从一条路读写。
-4. 序列化方案变更（如 JDK → JSON）后，**旧 key 读不回**：上线前按前缀清理（`scan` + `unlink`，见 `04-template-operations.md` §4）或等 TTL 自然过期，不要让两种方案读同一批 key。
+4. 序列化方案变更（如 JDK → JSON）后，**旧 key 读不回**：上线前按前缀清理（`scan` + `unlink`，见 `04-template-operations.md` §6）或等 TTL 自然过期，不要让两种方案读同一批 key。

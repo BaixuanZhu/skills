@@ -21,7 +21,7 @@
 | 业务执行中超时后并发进入（锁"失效"） | 显式传了 `leaseTime` → 无看门狗，到期自动释放 | 时长不可预估就不传 leaseTime | `07-redisson-lock.md` §4 |
 | TTL 到期的 key 在 `scan`/`dbsize` 里还在 | 惰性+定期删除机制，物理删除滞后 | 无需处理（不可读即正确语义） | — |
 | `CROSSSLOT` / 多 key 命令报错 | 集群模式 key 不在同一 slot | hash tag `{userId}` 绑定；事务改 Lua | `01-connection.md` §3.2 |
-| scan 结果有重复 | scan 语义允许重复 | 调用侧 Set 去重 | `04-template-operations.md` §3 |
+| scan 结果有重复 | scan 语义允许重复 | 调用侧 Set 去重 | `04-template-operations.md` §6 |
 | Redisson starter 引入后 RedisTemplate 行为异常 | starter 把连接工厂整体替换为 Redisson | 知情引入；不想要全局替换就用裸 `redisson` 依赖 | `07-redisson-lock.md` §1 |
 
 ## 2. @Cacheable 不生效排查清单（按序执行）

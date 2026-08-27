@@ -1,6 +1,6 @@
 # 分布式锁：Redisson 与看门狗
 
-## 1. 依赖引入
+## 1. 依赖与选型（一律用成熟实现）
 
 ```xml
 <!-- 方式一：starter（⚠️ 会把 RedisConnectionFactory 替换为 Redisson 实现，
@@ -11,11 +11,18 @@
     <version>3.27.2</version>
 </dependency>
 
-<!-- 方式二：仅锁/同步器，不动既有 Lettuce 连接（多数据源或不想全局替换时选这个） -->
+<!-- 方式二：仅锁/同步器，不动既有 Lettuce 连接（不想全局替换时选这个） -->
 <dependency>
     <groupId>org.redisson</groupId>
     <artifactId>redisson</artifactId>
     <version>3.27.2</version>
+</dependency>
+
+<!-- 方式三：lock4j 注解式（底层默认 Redisson） -->
+<dependency>
+    <groupId>com.baomidou</groupId>
+    <artifactId>lock4j-redisson-spring-boot-starter</artifactId>
+    <version>${lock4j.version}</version>
 </dependency>
 ```
 
@@ -29,34 +36,18 @@ public RedissonClient redissonClient() {
 }
 ```
 
-## 2. 自实现的最低正确线（不用 Redisson 时）
+方式三声明式用法（`@Lock4j`，方法上加注解即锁）：
 
 ```java
-// ✗ 错误：setnx + expire 两步——进程在两步之间崩溃 → 死锁永不过期
-redisTemplate.opsForValue().setIfAbsent(key, "1");
-redisTemplate.expire(key, Duration.ofSeconds(10));
-
-// ✓ 最低正确：一条原子命令；value 放唯一标识；释放必须 Lua 校验
-String token = UUID.randomUUID().toString();
-Boolean ok = stringRedisTemplate.opsForValue()
-        .setIfAbsent(key, token, Duration.ofSeconds(10));   // SET key token NX EX 10
-if (Boolean.TRUE.equals(ok)) {
-    try {
-        doBusiness();
-    } finally {
-        // 校验是自己的锁才能删，防止误删别人的锁（自己租期已过、锁已被他人持有时）
-        stringRedisTemplate.execute(new DefaultRedisScript<>("""
-                if redis.call('get', KEYS[1]) == ARGV[1] then
-                    return redis.call('del', KEYS[1])
-                else
-                    return 0
-                end
-                """, Long.class), List.of(key), token);
-    }
-}
+@Lock4j(keys = "#orderId", acquireTimeout = 3000, expire = 10000)
+public void processOrder(Long orderId) { ... }
 ```
 
-自实现没有自动续期：业务超 10s 锁已释放 → 并发进入。**业务时长不可预估，用 Redisson 看门狗**——这是引入它的核心理由。
+- `keys` 支持 SpEL（决定锁粒度）；`acquireTimeout` 获取等待（默认 3000ms，超时抛获取失败异常）；`expire` **固定租期**（默认 30000ms）——**显式 expire 即 leaseTime 语义、无看门狗续期**（§4），必须按业务执行时长上界设置。
+
+## 2. 禁止自实现（存量识别与迁移方向）
+
+存量代码里的自写锁形态：`setnx` + `expire` 两步（崩溃间隔留下永不过期的死锁），或一条 `SET NX EX` 加自写 Lua 校验释放。**修复方向一律是迁移本节的成熟实现，不是继续打补丁**——"正确的自实现"还缺：持有者唯一标识 + 校验释放（防误删他人的锁）、业务超时自动续期、可重入、主从切换语义（§7），每一项都是造轮子的新坑位。`SET NX EX` 的原子性留作 review 存量代码的识别知识即可，不是自实现的邀请。
 
 ## 3. Redisson 标准用法
 
@@ -88,6 +79,7 @@ if (lock.tryLock(3, TimeUnit.SECONDS)) {         // 等锁最多 3s；未传 lea
 | `tryLock()` | 不等待 | 30s | ✓ | 拿不到立即返回 false |
 | `tryLock(3, SECONDS)` | 3s | 30s | ✓ | **默认推荐** |
 | `tryLock(3, 10, SECONDS)` | 3s | 固定 10s | **✗** | 业务超 10s → 锁已易主，并发进入（且 unlock 抛异常） |
+| lock4j `@Lock4j(expire = 10000)` | acquireTimeout | 固定 expire | **✗** | 与显式 leaseTime 同语义（§1 方式三）——业务超 expire 并发进入 |
 | `lock()` | 不等待 | 30s | ✓ | 拿不到永久等，一般别用 |
 
 > 传 `leaseTime` 的唯一正当理由：**明确希望到期强制释放**（防持锁方长期占用），且业务时长有把握上界。拿不准 → 不传。
@@ -115,7 +107,7 @@ Redis 主从复制是异步的：加锁落在 master、未同步到 replica 时 
 
 ## 8. 自检
 
-- [ ] 没有出现 `setnx` + `expire` 两步；自实现释放是 Lua 校验后删
+- [ ] 锁全部走 Redisson / lock4j；存量自写 setnx+expire / Lua 锁已列迁移计划（不是修补）
 - [ ] `leaseTime` 决策：不可预估就不传（看门狗）；传了就知道没有续期
 - [ ] `finally` 中 `isHeldByCurrentThread()` 判断后 `unlock()`
 - [ ] `tryLock` 拿不到的分支有真实处理（繁忙返回/降级），不是 while 空转
