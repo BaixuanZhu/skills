@@ -1,105 +1,8 @@
-# 数据结构选型与 RedisTemplate 操作
+# RedisTemplate：低频 API 与易错陷阱
 
-## 1. 结构选型表（场景 → 结构 → 核心 API）
+常规读写与结构选型（get/set、opsForHash / opsForZSet 日常操作）是通用知识，不在本文；本文只收**低频 API 的非直觉语义**与**高频踩坑点**。
 
-| 场景 | 结构 | ops API | 要点 |
-|---|---|---|---|
-| 对象缓存 | String | `opsForValue().set/get` | value 是 JSON 字符串（序列化见 `03-serialization.md`） |
-| 计数器 / 限流 | String | `opsForValue().increment` | 原子自增；限流需配 TTL，见 §5 |
-| 对象部分字段读写 | Hash | `opsForHash().put/get/entries` | 只读写字段不动整体；无字段级 TTL（字段级 `HEXPIRE` 需 Redis 7.4+，勿按它设计——TTL 挂整个 key） |
-| 简单队列 | List | `opsForList().leftPush/rightPop` | 无 ack，消费者处理失败消息即丢；可靠场景用 Stream（`09-messaging.md` §3）或 MQ |
-| 去重 / 共同关注 | Set | `opsForSet().add/isMember/intersect` | |
-| 排行榜 | ZSet | `opsForZSet().incrementScore/reverseRangeWithScores` | 分数同值按字典序，需要时间戳搅局时 `score = 分数*1e13 + (MAX-时间戳)` |
-| 签到 / 活跃位图 | Bitmap | `opsForValue().setBit/bitCount` | 按用户存签到 31 bit/人/月；全局日活位图（用户 id 作偏移）1 亿用户约 12.5MB/日 |
-| UV 去重统计 | HyperLogLog | `opsForHyperLogLog().add/size` | 固定 ~12KB，误差 0.81%；要精确用 Set（吃内存） |
-| 附近的人 | Geo | `opsForGeo().add/radius` | 底层 ZSet |
-
-**String 存对象 vs Hash 存对象**：整体读写/整体过期 → String；频繁改单个字段（如 `stock`、`status`）→ Hash。Hash 没有 field 级 TTL（`HEXPIRE` 需 Redis 7.4+、客户端支持滞后），要"不同字段不同过期"就拆成多个 String key。
-
-## 2. String 精用
-
-set 族语义（写入一律显式带 TTL）：
-
-| API | 命令语义 | 典型用途 |
-|---|---|---|
-| `set(key, value, ttl)` | SET + EX | 常规写入 |
-| `setIfAbsent(key, value, ttl)` | SET NX EX | 幂等占位 / 防重（false = 已有并发在跑）；也是锁的底层命令 |
-| `setIfPresent(key, value, ttl)` | SET XX | 仅覆盖已存在的 key |
-| `getAndSet(key, value)` | GETSET | 读旧写新（**无 TTL 参数**，覆盖后原 TTL 消失） |
-
-- **set 覆盖会清掉原 TTL**：不带 TTL 的 `set`（含 `getAndSet`）覆盖后 key 变永不过期——"先查再写"的刷新代码最容易踩。查剩余：`getExpire(key)`；取消过期：`persist(key)`。
-- `increment(key, delta)` 原子，但**浮点 delta 有精度误差**（0.1 累加不准）——计数场景一律整数（金额用分）。
-
-## 3. Hash 精用
-
-```java
-// 字段级原子自增：把同类计数器收拢进一个 key（省 key 数，好按天整体过期）
-Long pv = stringRedisTemplate.opsForHash()
-        .increment("stat:pv:20260827", "product:1001", 1);
-
-// 大 Hash 遍历用 hscan 游标，不要 entries() 一次全拉
-try (Cursor<Map.Entry<String, String>> c = stringRedisTemplate.opsForHash()
-        .scan("stat:pv:20260827", ScanOptions.scanOptions().count(500).build())) {
-    c.forEachRemaining(e -> process(e.getKey(), e.getValue()));
-}
-```
-
-- `delete(key, field)` 删字段、`delete(key)` 删整个 key——只差一个参数的重载，别混用。
-- 签到这类"字段=天"的玩法用 Bitmap（§1 表），别拿 Hash 硬做。
-
-## 4. Set / ZSet 精用
-
-Set：
-
-| API | 用途 |
-|---|---|
-| `add / remove / members / isMember` | 基础去重 |
-| `intersect(k1, k2)` | 共同关注 / 交集筛选 |
-| `randomMembers(key, n)` | 抽奖（只取不删，可重复中奖场景） |
-| `move(source, value, dest)` | 集合间挪元素（SMOVE，状态流转：待处理 → 处理中） |
-
-ZSet：
-
-```java
-// 滑动窗口限流（完整版）：成员 = 请求标识，分数 = 时间戳
-ZSetOperations<String, String> z = stringRedisTemplate.opsForZSet();
-z.add(key, uuid, System.currentTimeMillis());
-z.removeRangeByScore(key, 0, System.currentTimeMillis() - windowMs);   // 清窗外
-long inWindow = z.zCard(key);                                          // 窗内计数
-```
-
-| API | 用途 |
-|---|---|
-| `add(key, member, score)` / `incrementScore` | 上榜 / 加分（原子） |
-| `reverseRangeWithScores(key, 0, 9)` | Top 10（带分数） |
-| `reverseRank(key, member)` | 查某成员名次（0 起） |
-| `removeRangeByScore` | 按分数区间删（滑窗清理 / 淘汰低分） |
-
-## 5. incr 的原子性与限流陷阱
-
-```java
-Long count = stringRedisTemplate.opsForValue().increment("rate:login:" + ip);  // 原子
-if (count == 1) {                                    // 首次
-    stringRedisTemplate.expire("rate:login:" + ip, Duration.ofMinutes(1));
-}
-```
-
-- `increment` 本身原子，但 **`increment` + `expire` 是两步**：首请求自增后进程崩溃 → key 永不过期，该 IP 永远被限。要求严格时用 Lua 原子化：
-
-```java
-private static final String RATE_LIMIT_LUA = """
-        local c = redis.call('INCR', KEYS[1])
-        if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
-        return c
-        """;
-Long count = stringRedisTemplate.execute(
-        new DefaultRedisScript<>(RATE_LIMIT_LUA, Long.class),
-        List.of("rate:login:" + ip), "60");
-```
-
-- 滑动窗口限流（更平滑）用 ZSet，完整代码见 §4。
-
-## 6. 禁 keys：scan 与批量删除
+## 1. 禁 keys：scan 家族与批量删除
 
 ```java
 // ✗ 禁止：keys("*") 阻塞 Redis 单线程，key 越多卡得越久
@@ -122,7 +25,9 @@ try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
 }
 ```
 
-## 7. mget / pipeline / 事务
+- Hash / Set / ZSet 的大集合遍历同样禁全量拉（`entries()` / `members()` / `range()` 一次全返回），用各自的游标 scan：`opsForHash().scan(key, options)` / `opsForSet().scan(key, options)` / `opsForZSet().scan(key, options)`——游标语义同上。
+
+## 2. 批量读写：mget / pipeline
 
 ```java
 // 多个已知 key 一次取回（服务端一次往返）
@@ -141,16 +46,76 @@ List<Object> results = stringRedisTemplate.executePipelined((RedisCallback<Objec
 |---|---|
 | `multiGet` / `multiSet` | 同类命令批量（cluster 模式受 slot 限制，`01-connection.md` §3.2） |
 | `executePipelined` | 混合命令打包，减少网络往返（N 次 → 1 次） |
-| `SessionCallback` + `multi()/exec()` | 要**原子串行**（事务）时才用 |
+| `SessionCallback` + `multi()/exec()` | 要**原子串行**（事务）时才用（§3） |
 | 循环单发 | ✗ N 次网络往返，批量场景禁止 |
 
-- **pipeline ≠ 事务**：pipeline 只省网络往返，命令之间可插入其他客户端命令；要原子串行用 `SessionCallback` 事务——事务独占连接（Lettuce 下走池，`02-pool.md` §1），且**集群模式不可用**（`01-connection.md` §3.2），要原子性改 Lua。
+- **multiGet 结果与入参按位对齐**：缺失的 key 对应位置是 `null`——先过滤 null 再按索引对 key 是错位 bug 的常见来源。
+- pipeline callback 里用 connection 层命令（`conn.stringCommands()`），callback 返回 null；结果按序在返回的 `List<Object>` 里，按命令预期类型转型（GET 回 `String`，INCR 回 `Long`）。
+- **pipeline ≠ 事务**：pipeline 只省网络往返，命令之间可穿插其他客户端命令；要原子串行 → 事务（§3），要原子计算 → Lua（§4）。
 
-## 8. 自检
+## 3. 事务：SessionCallback + multi/exec
 
-- [ ] 计数 / 限流 key 首建即有 TTL（或 Lua 原子化）；滑窗 ZSet 定期清窗外成员
-- [ ] 每次 set 都带 TTL（防覆盖写洗掉 TTL）；计数 / 金额是整数
-- [ ] 大集合遍历用 scan / hscan 游标；批量删除用 unlink
-- [ ] 没有 `keys`；scan 结果已按可能重复处理
-- [ ] 批量读用 multiGet / pipeline 而非循环；要原子串行用的是事务 / Lua 而不是 pipeline
+```java
+List<Object> results = stringRedisTemplate.execute(new SessionCallback<List<Object>>() {
+    @Override
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public List<Object> execute(RedisOperations operations) {
+        operations.watch("stock:1");               // 乐观锁：exec 前被他人改动 → 事务丢弃
+        operations.multi();
+        operations.opsForValue().decrement("stock:1");
+        operations.opsForList().rightPush("orders", "1001");
+        return operations.exec();                  // 各命令结果按序；watch 冲突时返回 null
+    }
+});
+```
+
+- **Redis 事务没有回滚**：入队命令某条在 exec 时运行时报错（如对 String key 执行 `rightPush`），**其余命令照常生效**——事务只保证「执行期间不被其他客户端插队」，不保证全成功全失败。与关系型数据库直觉相反，别按"出错自动回滚"设计。
+- `@Transactional` 与 Redis 事务无关——Spring 声明式事务不会自动包 multi/exec。
+- 事务期间独占连接（需要池或专用连接，`02-pool.md` §1）；**集群模式不可用**（`01-connection.md` §3.2）——跨命令原子性改 Lua（§4）。
+- 多数"看起来要事务"的场景：要么单命令本身原子（`increment` / `setIfAbsent`），要么 Lua，要么业务幂等——SessionCallback 是最后手段。
+
+## 4. Lua：DefaultRedisScript
+
+```java
+// incr + expire 两步原子化：首请求自增后崩溃 → key 永不过期、该维度永久被限
+private static final String RATE_LIMIT_LUA = """
+        local c = redis.call('INCR', KEYS[1])
+        if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
+        return c
+        """;
+Long count = stringRedisTemplate.execute(
+        new DefaultRedisScript<>(RATE_LIMIT_LUA, Long.class),
+        List.of("rate:login:" + ip), "60");
+```
+
+- `DefaultRedisScript` 建成静态常量 / 单例 bean：SDR 首次自动用 EVALSHA，脚本未缓存时降级 EVAL，无需手工管理 sha。
+- **key 一律走 KEYS、参数走 ARGV**：key 藏进 ARGV 单机能跑，集群下 slot 路由失效必错；集群下所有 KEYS 必须同 slot（跨 slot 用 hash tag `{...}` 收拢）。
+- 结果类型支持 Long / Boolean / String / List——Lua 返回 1/0 时 Boolean 结果自动映射 true / false。
+- 典型用途：incr+expire 原子化（上方）、解锁校验（识别存量自写锁用，`07-redisson.md` §2）。
+
+## 5. 陷阱速查
+
+| 陷阱 | 说明 / 修复 |
+|---|---|
+| set 覆盖清掉原 TTL | 不带 TTL 的 `set` / `getAndSet`（无 TTL 参数）覆盖后 key **永不过期**——"先查再写"刷新代码高发；写入一律显式带 TTL；查剩余 `getExpire`、取消过期 `persist` |
+| increment 浮点误差 | 浮点 delta 按 double 累加，0.1 反复加不准；计数 / 金额一律整数（金额用分） |
+| Hash 无字段级 TTL | TTL 挂整个 key（`HEXPIRE` 需 Redis 7.4+、客户端支持滞后，勿按它设计）；要字段级过期拆多个 String key，或 Redisson `RMapCache`（`07-redisson.md` §8） |
+| Hash delete 重载 | `delete(key)` 删整个 key、`delete(key, field)` 删单字段——只差一个参数语义全变 |
+| multiGet 含 null | 结果按位对齐，缺失 key 是 null（§2） |
+| List 当可靠队列 | `leftPush`/`rightPop` 无 ack，消费失败即丢；可靠场景用 Stream（`09-messaging.md` §3）或 MQ |
+
+## 6. 低频结构：Bitmap / HyperLogLog
+
+| 场景 | API | 要点 |
+|---|---|---|
+| 签到 / 日活位图 | `opsForValue().setBit/getBit`、`bitCount(key)` | 每用户每月一个 key、天作偏移（31 bit/人/月）；全站日活用户 id 作偏移，1 亿用户约 12.5MB/日 |
+| UV 去重统计 | `opsForHyperLogLog().add/size` | 固定 ~12KB、误差 0.81%；要精确用 Set（吃内存） |
+
+## 7. 自检
+
+- [ ] 没有 `keys`；大集合遍历用 scan 家族游标，批量删除用 unlink
+- [ ] multiGet 结果按位对齐（含 null），没有过滤 null 后再对位
+- [ ] pipeline 没被当事务用；用事务时知道「无回滚」
+- [ ] Lua：key 走 KEYS；集群下同 slot
+- [ ] 写入显式带 TTL（防覆盖洗掉原 TTL）；计数 / 金额整数；incr+expire 已 Lua 原子化
 - [ ] List 只用于可容忍丢失的简单队列（可靠消息 → Stream `09-messaging.md` §3 / MQ）

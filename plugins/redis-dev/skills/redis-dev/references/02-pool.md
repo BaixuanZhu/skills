@@ -58,7 +58,7 @@ Boot 2.0（2018）起 starter 默认 Lettuce；仍在 Jedis 的项目按本节�
 |---|---|
 | 池耗尽常态化 / 高并发吞吐上不去（`Could not get a resource from the pool`） | 迁——Jedis 的池就是并发上限，借还开销随流量放大 |
 | 需要响应式 / 异步 API | 迁——Lettuce 原生支持 |
-| 需要引入 Redisson | 不构成迁移理由——与客户端选择正交（starter 会整体替换连接工厂，`07-redisson-lock.md` §1） |
+| 需要引入 Redisson | 不构成迁移理由——与客户端选择正交（starter 会整体替换连接工厂，`07-redisson.md` §1） |
 | 运行稳定、无扩展需求、回归测试成本高 | 不强求——按下方 antipattern 自查后维持 |
 
 ### 如何迁移（Jedis → Lettuce）

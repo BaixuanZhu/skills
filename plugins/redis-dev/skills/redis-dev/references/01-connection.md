@@ -74,7 +74,7 @@ spring:
 
 1. **多 key 命令要求同 slot**：`mget(k1, k2)`、Lua 脚本内访问多个 key、事务——key 分布在不同 slot 会报 `CROSSSLOT` 错误。需要绑定的 key 用 **hash tag**：`order:{1001}:detail` 与 `order:{1001}:stock`（`{}` 内相同 → 同 slot）。
 2. **事务不可用**（`MULTI/EXEC` 集群不支持），`RedisTemplate#multi` 相关调用会失败；需要原子性的场景改 Lua（配合 hash tag）。
-3. **`keys`/`scan` 语义**：Spring Data Redis 的 cluster 连接会向所有 master 节点扇出，结果为聚合——但生产仍禁 `keys`（`04-template-operations.md` §6）。
+3. **`keys`/`scan` 语义**：Spring Data Redis 的 cluster 连接会向所有 master 节点扇出，结果为聚合——但生产仍禁 `keys`（`04-template-operations.md` §1）。
 
 ## 4. Boot 版本与前缀对照
 
