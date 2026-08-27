@@ -6,7 +6,7 @@
 |---|---|---|---|
 | 对象缓存 | String | `opsForValue().set/get` | value 是 JSON 字符串（序列化见 `03-serialization.md`） |
 | 计数器 / 限流 | String | `opsForValue().increment` | 原子自增；限流需配 TTL，见 §2 |
-| 对象部分字段读写 | Hash | `opsForHash().put/get/entries` | 只读写字段不动整体；无字段级 TTL（TTL 挂整个 key） |
+| 对象部分字段读写 | Hash | `opsForHash().put/get/entries` | 只读写字段不动整体；无字段级 TTL（字段级 `HEXPIRE` 需 Redis 7.4+，勿按它设计——TTL 挂整个 key） |
 | 简单队列 | List | `opsForList().leftPush/rightPop` | 无 ack，消费者处理失败消息即丢；可靠场景用 Redis Stream 或 MQ |
 | 去重 / 共同关注 | Set | `opsForSet().add/isMember/intersect` | |
 | 排行榜 | ZSet | `opsForZSet().incrementScore/reverseRangeWithScores` | 分数同值按字典序，需要时间戳搅局时 `score = 分数*1e13 + (MAX-时间戳)` |
@@ -14,7 +14,7 @@
 | UV 去重统计 | HyperLogLog | `opsForHyperLogLog().add/size` | 固定 ~12KB，误差 0.81%；要精确用 Set（吃内存） |
 | 附近的人 | Geo | `opsForGeo().add/radius` | 底层 ZSet |
 
-**String 存对象 vs Hash 存对象**：整体读写/整体过期 → String；频繁改单个字段（如 `stock`、`status`）→ Hash。Hash 没有 field 级 TTL，要"不同字段不同过期"就拆成多个 String key。
+**String 存对象 vs Hash 存对象**：整体读写/整体过期 → String；频繁改单个字段（如 `stock`、`status`）→ Hash。Hash 没有 field 级 TTL（`HEXPIRE` 需 Redis 7.4+、客户端支持滞后），要"不同字段不同过期"就拆成多个 String key。
 
 ## 2. incr 的原子性与限流陷阱
 

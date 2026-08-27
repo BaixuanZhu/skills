@@ -46,41 +46,51 @@ stringRedisTemplate.opsForValue().set(key, json, ttlWithJitter(Duration.ofMinute
 ## 5. 击穿的互斥锁回源（完整模板）
 
 ```java
-public User getUser(long id) {
+private static final ObjectMapper MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
+private static final String NULL_MARK = "<null>";   // 哨兵：序列化产物是 JSON（{ 或 [ 开头），不会撞型
+
+public User getUser(long id) throws InterruptedException {
     String key = "user:" + id;
     String cached = stringRedisTemplate.opsForValue().get(key);
     if (cached != null) {
-        return NULL_MARK.equals(cached) ? null : deserialize(cached);      // null 缓存命中（防穿透）
+        return NULL_MARK.equals(cached) ? null : fromJson(cached);      // null 缓存命中（防穿透）
     }
     RLock lock = redissonClient.getLock("lock:" + key);
-    try {
-        if (lock.tryLock(3, TimeUnit.SECONDS)) {                            // 最多等 3s；看门狗续期（07-redisson-lock.md §4）
-            try {
-                cached = stringRedisTemplate.opsForValue().get(key);        // DoubleCheck：等锁期间别人可能已回填
-                if (cached != null) {
-                    return NULL_MARK.equals(cached) ? null : deserialize(cached);
-                }
-                User user = userMapper.selectById(id);                      // 唯一回源点
-                if (user == null) {
-                    stringRedisTemplate.opsForValue().set(key, NULL_MARK, Duration.ofSeconds(60));  // 短 TTL
-                    return null;
-                }
-                stringRedisTemplate.opsForValue().set(key, serialize(user), ttlWithJitter(Duration.ofMinutes(30)));
-                return user;
-            } finally {
-                if (lock.isHeldByCurrentThread()) lock.unlock();
-            }
-        }
-        // 拿不到锁：稍候重读缓存；重读仍无 → 走降级（旧值/默认值/提示稍后）
-        return retryOnceOrFallback(key);
-    } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        return fallback(key);
+    if (!lock.tryLock(3, TimeUnit.SECONDS)) {                            // 最多等 3s；看门狗续期（07-redisson-lock.md §4）
+        TimeUnit.MILLISECONDS.sleep(200);                                // 拿不到锁：稍候重读一次缓存
+        cached = stringRedisTemplate.opsForValue().get(key);
+        return cached == null || NULL_MARK.equals(cached)
+                ? null : fromJson(cached);                               // 仍无 → 降级（null / 默认值 / 提示稍后，按业务定）
     }
+    try {
+        cached = stringRedisTemplate.opsForValue().get(key);             // DoubleCheck：等锁期间别人可能已回填
+        if (cached != null) {
+            return NULL_MARK.equals(cached) ? null : fromJson(cached);
+        }
+        User user = userMapper.selectById(id);                           // 唯一回源点
+        if (user == null) {
+            stringRedisTemplate.opsForValue().set(key, NULL_MARK, Duration.ofSeconds(60));  // 短 TTL 防穿透
+            return null;
+        }
+        stringRedisTemplate.opsForValue().set(key, toJson(user), ttlWithJitter(Duration.ofMinutes(30)));
+        return user;
+    } finally {
+        if (lock.isHeldByCurrentThread()) lock.unlock();
+    }
+}
+
+private User fromJson(String json) {
+    try { return MAPPER.readValue(json, User.class); }
+    catch (JsonProcessingException e) { throw new IllegalStateException("缓存反序列化失败", e); }
+}
+
+private String toJson(User user) {
+    try { return MAPPER.writeValueAsString(user); }
+    catch (JsonProcessingException e) { throw new IllegalStateException("缓存序列化失败", e); }
 }
 ```
 
-要点：**DoubleCheck**（拿锁后再查一次）、null 短 TTL、`finally` + `isHeldByCurrentThread` 解锁（强约束 7）。
+要点：**DoubleCheck**（拿锁后再查一次）、null 短 TTL、`finally` + `isHeldByCurrentThread` 解锁（强约束 7）；拿不到锁不无限等——重读一次仍无就降级返回（`ttlWithJitter` 见 §4）。
 
 ## 6. 自检
 

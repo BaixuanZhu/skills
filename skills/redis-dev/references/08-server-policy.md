@@ -27,6 +27,8 @@
 
 ## 2. 共库反噬：allkeys-lru 挤掉 Sa-Token session
 
+**共库 = 一个实例多个写入方**（其他服务 / Sa-Token、Spring Session 等框架）。本节以最高频的 Sa-Token session 为例；机制对所有"不可丢"数据（Spring Session、延迟队列、幂等键）同样成立。
+
 **症状**：用户使用中随机被登出，无规律、无法复现；重看代码毫无问题。
 
 **机制**：业务缓存与 Sa-Token 共用实例且策略为 `allkeys-lru`（或 `volatile-*`）→ 内存到达上限时淘汰"最久未访问"的 key → 长时间未操作（但仍在 timeout 有效期内）的用户 session 被挤掉 → 下次请求 `NotLoginException`。
@@ -59,7 +61,7 @@ Redis 过期删除 = **惰性**（访问该 key 时校验并删）+ **定期**�
 按实例用途定（不是无脑全开）：
 
 - **纯缓存实例**：RDB/AOF 都可关——重启后从 DB 回源预热即可，省掉落盘开销。
-- **session / 业务数据实例**：开 AOF（everysec）+ RDB 混合（`aof-use-rdb-preamble yes`，Redis 4+ 默认）——重启不丢登录态。
+- **session / 业务数据实例**：开 AOF（everysec）+ RDB 混合（`aof-use-rdb-preamble yes`，Redis 4.0 引入、5.0 起默认）——重启不丢登录态。
 - 本地开发 docker-compose 示例（缓存用途）：
 
 ```yaml

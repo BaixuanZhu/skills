@@ -48,7 +48,9 @@ spring:
 
 > **`max-wait` ≠ 命令超时**：`max-wait` 是从池里**借连接**的等待时间（`01-connection.md` §2 的 `timeout` 才是命令超时）。"pool exhausted" 类报错先看这里，不要去调 `timeout`。
 
-## 4. Jedis 切换（对比）
+## 4. Jedis（存量项目识别；新项目不选）
+
+Boot 2.0（2018）起 starter 默认 Lettuce，Jedis 仍在维护但新项目基本不选。本节用于接手存量 Jedis 项目时对上行为差异——**§1"普通命令不走池"的结论只对 Lettuce 成立**，Jedis 每个操作从池借还连接、池必配。存量迁移到 Lettuce 的依赖写法：
 
 ```xml
 <dependency>

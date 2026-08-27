@@ -8,6 +8,8 @@
 | `GenericJackson2JsonRedisSerializer` | ✓（key 配 String） | ✓ JSON | ✓ 自动（写入 `@class`） | **单服务默认** |
 | `StringRedisTemplate` + 手动 JSON | ✓ | ✓ JSON | 手写目标类型 | **跨服务 / 跨语言 / 契约对外** |
 
+> **类型信息三来源**：payload 里的 `@class` / template 固定类型（`Jackson2JsonRedisSerializer<T>`，一类一个 template）/ 读侧显式给出（`readValue` / `convertValue`）。去掉 `@class` 就必须从后两者补——干净 payload 与自动还原类型不可兼得，这是 §4 跨服务禁止 `@class` 的根因。
+
 ## 2. 默认配置的三个坑（为什么必须显式配）
 
 自动配置的 `RedisTemplate<String, Object>`（`redisTemplate` bean）key 与 value 都用 JDK 序列化：
@@ -37,6 +39,7 @@ public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factor
             ObjectMapper.DefaultTyping.NON_FINAL,
             JsonTypeInfo.As.PROPERTY);
     mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES); // 加字段后旧数据仍可读
+    GenericJackson2JsonRedisSerializer.registerNullValueSerializer(mapper, null); // @Cacheable 缓存 null 用（下表第 4 行）
     GenericJackson2JsonRedisSerializer jsonSer = new GenericJackson2JsonRedisSerializer(mapper);
 
     template.setValueSerializer(jsonSer);
@@ -45,49 +48,37 @@ public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factor
 }
 ```
 
-三个必须项的坑（漏一个就是一个线上问题）：
+四个必须项的坑（漏一个就是一个线上问题）：
 
 | 配置 | 漏掉的报错/症状 |
 |---|---|
 | `JavaTimeModule` | 写含 `LocalDateTime` 字段的对象抛 `InvalidDefinitionException: Java 8 date/time type not supported by default`——`GenericJackson2JsonRedisSerializer` 默认 mapper **不带** JSR310 模块 |
 | `activateDefaultTyping` | 读回 `LinkedHashMap` 而不是目标类型（无 `@class` 信息，Jackson 只能还原成 Map） |
 | `FAIL_ON_UNKNOWN_PROPERTIES` disable | 实体加字段后，旧缓存里少这个字段 → 读回抛 `UnrecognizedPropertyException`；无法平滑演进 |
+| `registerNullValueSerializer` | 序列化器被 `@Cacheable` 复用且缓存 null 时，写入 `NullValue` 抛 `No serializer found`——**仅默认构造自动注册，自定义 mapper 不会**（2.7 / 3.x / 4.x 源码一致） |
 
 > 读回 `LinkedHashMap` 的另一来源：`Jackson2JsonRedisSerializer<>(Object.class)`（无类型信息）——需要 `Jackson2JsonRedisSerializer<>(User.class)` 固定类型或改用 Generic 版。
 
-## 4. 推荐配置：跨服务 / 跨语言（String + 手动 JSON）
+## 4. 跨服务 / 跨语言：禁止 @class
 
-跨服务共享的数据**不要依赖 `@class` 自动类型**（包名耦合、其他语言读不懂、类迁移即断）：
+- ✗ **禁止**：跨服务 / 跨语言共享的数据使用 `@class` 自动类型还原（`GenericJackson2JsonRedisSerializer` + defaultTyping 那套）——payload 携带 Java 包名，其他语言读不懂、类一迁移旧数据即断。
+- ✓ **要求**：payload 为干净 JSON，目标类型由读侧显式给出（`StringRedisTemplate` + 手动映射，集合用 `new TypeReference<List<User>>() {}`）。契约 = 字段名与类型，与包结构解耦。
+- 代价必然存在（§1 类型三来源）：去掉 `@class`，读侧显式给类型这一步省不掉——封装成一对 get/set helper 写一次即可，不是每个调用点手写序列化。
 
-```java
-@Autowired
-private StringRedisTemplate stringRedisTemplate;   // Spring 自动配置直接可用，两边都是 String
+## 5. key 规范：命名空间与框架前缀
 
-private static final ObjectMapper MAPPER = new ObjectMapper()
-        .registerModule(new JavaTimeModule())
-        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+- **业务 key 统一前缀**：`<app>:<模块>:<业务id>`，如 `mall:order:1001`、`mall:stock:{1001}`（集群 hash tag）——前缀即命名空间，`scan` / 监控 / 清理都靠它。
+- 共用实例时先盘点**所有写入方**的前缀体系，避免撞名互相覆盖：
 
-public void cacheUser(User user) {
-    try {
-        stringRedisTemplate.opsForValue()
-                .set("user:" + user.getId(), MAPPER.writeValueAsString(user), Duration.ofMinutes(30));
-    } catch (JsonProcessingException e) {
-        throw new IllegalStateException("user 序列化失败: " + user.getId(), e);
-    }
-}
+| 写入方 | 前缀体系 |
+|---|---|
+| 本服务 | 自定 `<app>:` 命名空间（上行规范） |
+| Sa-Token | 集成包前缀封装（可重写 `wrapKey` 定制，见 sa-token-dev `references/07-redis-frontsep.md`） |
+| Spring Session | `spring:session:*` |
+| Spring Cache | 默认 `cacheName::key`（本技能配置为 `cache:name:key`，`05-spring-cache.md` §3） |
+| Redisson | 无自动前缀——锁 / 限流 key 与业务 key 同一空间，注意撞名 |
 
-public User getUser(long id) throws JsonProcessingException {
-    String json = stringRedisTemplate.opsForValue().get("user:" + id);
-    return json == null ? null : MAPPER.readValue(json, User.class);   // 目标类型显式写死
-}
-```
-
-集合用 `new TypeReference<List<User>>() {}` 指定泛型。契约 = 字段名与类型，与类的包结构解耦。
-
-## 5. key 规范（与 Sa-Token 共库）
-
-- **统一业务前缀**：`<app>:<模块>:<业务id>`，如 `mall:order:1001`、`mall:stock:{1001}`——前缀即命名空间，`scan` / 监控 / 清理都靠它。
-- 与 Sa-Token 共实例：Sa-Token 集成包对自己的 key 做了前缀封装（可重写 `wrapKey` 定制，见 sa-token-dev `references/07-redis-frontsep.md`），业务侧做好自己的前缀即可避免**覆盖**；但**淘汰策略仍可能挤掉 session**（随机掉线），那是容量/策略问题，前缀解决不了 → `08-server-policy.md` §2。
+- 前缀隔离只解决**覆盖冲突**；实例级的**淘汰策略**不看前缀（allkeys-lru 照样挤掉 session——随机掉线）→ `08-server-policy.md` §2。
 
 ## 6. 强约束与自检
 

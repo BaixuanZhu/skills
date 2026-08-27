@@ -13,7 +13,7 @@ description: >-
   RLock / RedissonClient / tryLock、opsForValue / opsForHash / opsForZSet 时必须使用本技能；
   用户报错出现：key 乱码（\xac\xed）、序列化 / 反序列化异常、连不上 Redis / command timeout /
   pool exhausted、OOM command not allowed、@Cacheable 不生效、读回 LinkedHashMap、
-  用户随机掉线（与 Sa-Token 共库）时必须使用本技能。
+  用户随机掉线（共库 session 被淘汰，常见于与 Sa-Token 共实例）时必须使用本技能。
   不适用于：Sa-Token 自身的 Redis 集成与 session 存储（→ sa-token-dev）、测试容器化 Redis
   （→ java-integration-test）、Redis 服务器安装部署 / 主从搭建 / 监控指标调优（运维范围）、非 Java 语言。
 agent_created: true
@@ -25,8 +25,8 @@ displayName: Redis 开发助手
 # Redis 开发助手
 
 面向 Java / Spring Boot 的 Redis 编码助手：缓存、分布式锁、序列化配置、连接配置、缓存一致性。
-版本基准：**Spring Data Redis 3.x（Spring Boot 3.x 自带，Lettuce 6.x）+ Redisson 3.x，Redis 服务器 6.x/7.x**。
-Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data.redis.*`）。
+版本基准：**Spring Data Redis 3.x/4.x（Spring Boot 3.x/4.x 自带，Lettuce 6.x/7.x）+ Redisson 3.x，Redis 服务器 6.x/7.x**。
+Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data.redis.*`——Boot 3/4 前缀相同，无此坑）。
 采用**完全本地自包含**策略：所有知识沉淀于本地 `references/`，运行时不依赖任何外部文档站点。
 
 ## 版本与依赖
@@ -36,11 +36,11 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 | 缓存 / 任意 Redis 读写 | `spring-boot-starter-data-redis` | 默认 Lettuce 客户端，自带 |
 | 声明式缓存 @Cacheable | `spring-boot-starter-data-redis` + `spring-boot-starter-cache` | 还需 `@EnableCaching` |
 | 分布式锁 / 布隆过滤器 / 延迟队列 | `redisson-spring-boot-starter`（或仅 `org.redisson:redisson` 手动配置） | 仅缓存场景**不要**引入 |
-| 连接池（池参数生效） | `org.apache.commons:commons-pool2` | 配了 `pool.*` 才需要 |
+| 连接池（池参数生效） | `org.apache.commons:commons-pool2` | **池实现库，不是 Redis 客户端**；仅配 `lettuce.pool.*` 时需要（普通命令不走池，`references/02-pool.md` §1） |
 
-- **配置命名空间**：Boot 3.x 用 `spring.data.redis.*`，Boot 2.x 用 `spring.redis.*`——配错导致连不上（症状见 `references/09-troubleshoot.md`）。
+- **配置命名空间**：Boot 3/4 用 `spring.data.redis.*`，Boot 2.x 用 `spring.redis.*`——配错导致连不上（症状见 `references/09-troubleshoot.md`）。
 - **redisson-spring-boot-starter 会把 RedisConnectionFactory 替换为 Redisson 实现**（RedisTemplate 底层随之切换），引入即全局生效，详见 `references/07-redisson-lock.md` §1。
-- **与 Sa-Token 共库**：Sa-Token 集成包（sa-token-redis-template）自带 key 前缀隔离；但**淘汰策略会波及 session**（用户随机掉线的头号嫌疑），见 `references/08-server-policy.md` §2。
+- **共用实例（多写入方）**：其他服务、Sa-Token / Spring Session 等框架与业务共写一个实例——前缀隔离只防覆盖，**防不了淘汰策略挤掉 session**（随机掉线的头号嫌疑），见 `references/08-server-policy.md` §2。
 
 ## 第 0 步：依赖探测与激活分支
 
@@ -86,15 +86,15 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 |---|---|---|---|---|
 | C1 | "加缓存" / "缓存" / "cache"（未指明方式） | ① 声明式 `@Cacheable` 还是手动 `RedisTemplate`？② 缓存能接受多长的脏读窗口（TTL）？ | 声明式：简洁、注解即生效，适合整对象读缓存；手动：精细控制（部分更新 / 计数 / 锁配合），适合复杂逻辑。见 `references/05-spring-cache.md` §1 | 简单查询缓存用 `@Cacheable` + 显式 TTL 30min |
 | C2 | "锁" / "分布式锁" / "防重复" / "幂等" / "并发" | ① 项目是否已有 Redisson？没有 → 是否同意引入？② 业务执行时长是否可预估？ | Redisson `RLock`：看门狗自动续期，业务时长不定时不传 `leaseTime`；`SET NX EX` 自实现：零依赖但需自己处理续期与安全释放。见 `references/07-redisson-lock.md` | 引入 Redisson，`tryLock(wait)` 不指定 `leaseTime`（看门狗续期） |
-| C3 | "存对象" / "序列化" / "跨服务共享" / "key 可读" | 数据是否需要跨服务 / 跨语言读取？ | `GenericJackson2Json`：写入 `@class` 自动还原类型，单服务最省事；`StringRedisTemplate` + 手动 JSON：无类型标记、契约清晰，跨服务首选。见 `references/03-serialization.md` §1 | 单服务 `GenericJackson2Json`（含 JavaTimeModule），跨服务手动 JSON |
-| C4 | "共用 Redis" / "同一个实例" / 与 Sa-Token / session 共库 | 业务缓存与登录 session / 持久数据是否必须同实例？ | 同实例：key 前缀隔离只能防覆盖，**防不了淘汰策略挤掉 session**（随机掉线）；分实例：彻底隔离，多一个运维对象。见 `references/08-server-policy.md` §2 | 提示风险；有条件 → 分实例，无条件 → 前缀隔离 + 容量留余量 |
+| C3 | "存对象" / "序列化" / "跨服务共享" / "key 可读" | 数据是否需要跨服务 / 跨语言读取？ | `GenericJackson2Json`：写入 `@class` 自动还原类型，单服务最省事；跨服务 ✗ **禁止 `@class`**（包名耦合、跨语言读不懂、类迁移即断）→ ✓ 干净 JSON + 读侧显式类型。见 `references/03-serialization.md` §4 | 单服务 `GenericJackson2Json`（含 JavaTimeModule），跨服务 StringRedisTemplate + 显式类型 |
+| C4 | "共用 Redis" / "同一个实例" / "共库" / 与 Sa-Token / Spring Session / session 共库 | 业务缓存与登录 session / 持久数据是否必须同实例？ | 同实例：key 前缀隔离只能防覆盖，**防不了淘汰策略挤掉 session**（随机掉线）；分实例：彻底隔离，多一个运维对象。见 `references/08-server-policy.md` §2 | 提示风险；有条件 → 分实例，无条件 → 前缀隔离 + 容量留余量 |
 
 ## 决策路由
 
 | 需求场景（关键词） | 读取文件 |
 |---|---|
 | 依赖引入、单机 / 哨兵 / 集群连接配置、超时、ACL、多数据源 | `references/01-connection.md` |
-| 连接池参数、Lettuce 共享连接、pool exhausted、Jedis 切换 | `references/02-pool.md` |
+| 连接池参数、Lettuce 共享连接、pool exhausted、Jedis（存量项目） | `references/02-pool.md` |
 | 序列化方案、key 乱码、GenericJackson2Json、LocalDateTime、LinkedHashMap、跨服务契约 | `references/03-serialization.md` |
 | 数据结构选型（计数 / 排行 / 签到 / 去重 / UV / 队列）、scan / pipeline、incr 原子性 | `references/04-template-operations.md` |
 | @Cacheable / @CacheEvict、TTL 配置（默认永不过期坑）、自调用失效、多缓存名不同 TTL | `references/05-spring-cache.md` |
@@ -114,7 +114,7 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
 7. **unlock 必须 try-finally 且先判持有**：`if (lock.isHeldByCurrentThread()) lock.unlock()`，防租期已过被别人持有时抛 `IllegalMonitorStateException`。
 8. **写一致性默认「先更新 DB，再删缓存」**：不更新缓存（并发写覆盖）、不先删缓存（并发读回填旧值）。要更低脏读率 → 延迟双删，见 `references/06-cache-consistency.md` §2。
 9. **null 缓存必须短 TTL**：穿透防护里缓存空值 TTL 控制在 30s~5min，且 `unless="#result == null"` 会**关闭** null 缓存——别写反。
-10. **配置命名空间随 Boot 版本**：Boot 3.x `spring.data.redis.*`、Boot 2.x `spring.redis.*`；哨兵/集群拓扑下 `database` 仅哨兵/单机有效，**cluster 模式不支持 SELECT、配置静默无效**（`references/01-connection.md` §3）。
+10. **配置命名空间随 Boot 版本**：Boot 3/4 `spring.data.redis.*`、Boot 2.x `spring.redis.*`；哨兵/集群拓扑下 `database` 仅哨兵/单机有效，**cluster 模式不支持 SELECT、配置静默无效**（`references/01-connection.md` §3）。
 
 ## 使用流程
 
@@ -130,10 +130,10 @@ Spring Boot 2.7（Spring Data Redis 2.x）差异在文中以 `Boot2.x` 标注（
    - 锁：try-finally + isHeldByCurrentThread 判断 + leaseTime 决策（预估不了就不传）？
    - 没有出现 `keys *`、`setnx`+`expire` 两步、先删缓存后更新 DB？
    - 配置前缀与 Boot 版本一致（spring.data.redis vs spring.redis）？
-   - 与 Sa-Token / session 共库场景已提示淘汰策略风险（C4）？
+   - 共用实例场景已提示淘汰策略风险（C4）？
 
 ## 版本注意
 
-- **Spring Data Redis 3.x**（Boot 3.x）：配置前缀 `spring.data.redis.*`；2.x（Boot 2.7）为 `spring.redis.*`，其余 API 一致。
-- **Redisson 3.x**：`lockWatchdogTimeout` 默认 30000ms；`redisson-spring-boot-starter` 版本需与 Boot 大版本匹配（过老版本只认 `spring.redis.*` 前缀，Boot 3 下连不上）。
+- **Spring Data Redis 3.x/4.x**（Boot 3.x/4.x）：配置前缀均为 `spring.data.redis.*`；2.x（Boot 2.7）为 `spring.redis.*`，其余 API 一致。Boot 4 起 Lettuce 升 7.x（应用侧 API 无感）。
+- **Redisson**：`lockWatchdogTimeout` 默认 30000ms；`redisson-spring-boot-starter` 版本随 Boot 大版本走——Boot 3 用近期 3.x，**Boot 4 必须用 4.x 线 starter（2025-12 起），3.x starter 在 Boot 4 下启动报错**；过老版本只认 `spring.redis.*` 前缀、Boot 3 下连不上。
 - **LFU 淘汰策略需 Redis 4.0+**，Stream 需 5.0+，本文数据结构以 6.x/7.x 为基准。

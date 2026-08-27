@@ -10,6 +10,7 @@
 ```
 
 默认客户端 **Lettuce**（Netty 实现、连接线程安全可共享，普通场景无需连接池——池的适用边界见 `02-pool.md`）。
+注意 `commons-pool2` 不是客户端、starter 也不自带——它只是池实现库，仅配 `lettuce.pool.*` 时才需要引入（`02-pool.md` §2）。
 
 ## 2. 单机配置（基准写法）
 
@@ -30,7 +31,7 @@ spring:
 - `password: ""`（空串）在部分版本被当作密码参与 AUTH，导致 `ERR Client sent AUTH, but no password is set`——无密码就删掉这行。
 - **Redis 6+ ACL**：有独立账号时加 `username: appuser`（与 `password` 成对）。
 - **url 简写**：`spring.data.redis.url: redis://appuser:secret@host:6379/1`——设置了 url 会覆盖 host/port/password/database 的散装配置，混用时注意优先级。
-- **TLS**：`ssl.enabled: true`（Boot 3.x；Boot 2.x 为 `spring.redis.ssl: true`）。
+- **TLS**：`ssl.enabled: true`（Boot 3.1+ 与 4.x；Boot 3.0 是布尔型 `ssl: true`；Boot 2.x 为 `spring.redis.ssl: true`）。
 
 ## 3. 三种拓扑
 
@@ -64,7 +65,7 @@ spring:
     redis:
       cluster:
         nodes: host1:6379,host2:6379,host3:6379,host4:6379,host5:6379,host6:6379
-        max-redirects: 3          # MOVED/ASK 重定向跟随上限，默认 3
+        max-redirects: 3          # MOVED/ASK 重定向跟随上限；不配置时 Boot 层无默认值、走 Lettuce 驱动默认 5
       # database: 1               # ❌ 集群没有 SELECT，此配置静默无效
       timeout: 3s
 ```
@@ -75,19 +76,21 @@ spring:
 2. **事务不可用**（`MULTI/EXEC` 集群不支持），`RedisTemplate#multi` 相关调用会失败；需要原子性的场景改 Lua（配合 hash tag）。
 3. **`keys`/`scan` 语义**：Spring Data Redis 的 cluster 连接会向所有 master 节点扇出，结果为聚合——但生产仍禁 `keys`（`04-template-operations.md` §3）。
 
-## 4. Boot 2.x / 3.x 配置对照
+## 4. Boot 版本与前缀对照
 
-| Boot 3.x | Boot 2.x | 说明 |
+| Boot 3.x / 4.x | Boot 2.x | 说明 |
 |---|---|---|
-| `spring.data.redis.*` | `spring.redis.*` | 全部属性平移，仅前缀不同 |
-| `spring.data.redis.ssl.enabled` | `spring.redis.ssl` | TLS 开关 |
+| `spring.data.redis.*` | `spring.redis.*` | 全部属性平移，仅前缀不同（3.x 与 4.x 前缀相同） |
+| `spring.data.redis.ssl.enabled` | `spring.redis.ssl` | TLS 开关（Boot 3.0 为布尔 `ssl`，3.1 起对象型） |
 | 其余属性名 | 同名 | host/port/timeout/cluster/sentinel 等不变 |
 
 配错的典型症状：`Unable to connect to Redis` 但地址密码都对——先查前缀与 Boot 版本是否匹配（排错表见 `09-troubleshoot.md`）。
 
 ## 5. 多数据源（两个 Redis 实例）
 
-自动配置只认一套连接属性；需要第二个实例时手动建工厂：
+**先判对：仅当需要两个物理隔离的实例才走这里**——典型是 C4 检查点 / `08-server-policy.md` §2 的分实例方案（缓存实例可丢、session / 持久数据实例不可丢），或第二实例属另一环境。单实例内隔离用 `database` / key 前缀（§2、`03-serialization.md` §5）。
+
+自动配置只认一套连接属性；第二实例手动建工厂。密码与命令超时必须在工厂里自带——**不走 `spring.data.redis.*`**：
 
 ```java
 @Configuration
@@ -97,15 +100,27 @@ public class RedisConfig {
     @Primary
     public LettuceConnectionFactory defaultFactory(
             @Value("${spring.data.redis.host}") String host,
-            @Value("${spring.data.redis.port}") int port) {
-        return new LettuceConnectionFactory(host, port);
+            @Value("${spring.data.redis.port}") int port,
+            @Value("${spring.data.redis.password}") String password) {
+        return factoryOf(host, port, password);
     }
 
     @Bean
     public LettuceConnectionFactory cacheFactory(
             @Value("${app.cache-redis.host}") String host,
-            @Value("${app.cache-redis.port}") int port) {
-        return new LettuceConnectionFactory(host, port);
+            @Value("${app.cache-redis.port}") int port,
+            @Value("${app.cache-redis.password}") String password) {
+        return factoryOf(host, port, password);
+    }
+
+    // 仅 host/port 的构造不携带密码——有密码实例上直接 NOAUTH
+    private LettuceConnectionFactory factoryOf(String host, int port, String password) {
+        RedisStandaloneConfiguration conf = new RedisStandaloneConfiguration(host, port);
+        conf.setPassword(password);
+        LettuceClientConfiguration client = LettuceClientConfiguration.builder()
+                .commandTimeout(Duration.ofSeconds(3))   // 命令超时也要自带
+                .build();
+        return new LettuceConnectionFactory(conf, client);
     }
 
     @Bean
@@ -121,13 +136,13 @@ public class RedisConfig {
 }
 ```
 
-- 必须标 `@Primary`（自动配置与 `@Cacheable` 都按主 bean 走）；第二实例的地址属性自定义前缀（如 `app.cache-redis.*`），不要复用 `spring.data.redis.*`。
-- 注意 `LettuceConnectionFactory` 需要 `afterPropertiesSet()`（`@Bean` 方式 Spring 自动调用）。
+- 必须标 `@Primary`（自动配置与 `@Cacheable` 都按主 bean 走）；第二实例的属性用自定义前缀（如 `app.cache-redis.*`），不要复用 `spring.data.redis.*`。
+- `@Bean` 方式 Spring 自动调用 `afterPropertiesSet()`，无需手动。
 
 ## 6. 生产配置清单
 
 - [ ] `timeout` 已显式配置（1~5s），不依赖默认 60s
 - [ ] `password` 不落明文进 git（环境变量 / 配置中心占位符 `${REDIS_PASSWORD}`）
-- [ ] 共用实例时 `database` 或 key 前缀与其他服务约定（含 Sa-Token——见 `08-server-policy.md` §2）
+- [ ] 共用实例时 `database` 或 key 前缀与其他写入方约定（框架前缀速查 `03-serialization.md` §5；淘汰风险 `08-server-policy.md` §2）
 - [ ] 集群模式：确认没有用到事务 / 跨 slot 多 key 操作
 - [ ] 连接池是否真需要（见 `02-pool.md` §1——多数场景 Lettuce 不需要）
