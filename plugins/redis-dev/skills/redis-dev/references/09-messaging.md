@@ -57,7 +57,7 @@ StreamMessageListenerContainerOptions<String, MapRecord<String, String, String>>
 StreamMessageListenerContainer<String, MapRecord<String, String, String>> container =
         StreamMessageListenerContainer.create(redisConnectionFactory, options);
 
-container.receive(                                                         // receiveAutoAck = 收到即 ack
+container.receive(                                                         // 手动 ack 版；另有 receiveAutoAck 变体 = 收到即 ack（坑 2）
         Consumer.from("order-group", "consumer-1"),
         StreamOffset.create("stream:order-events", ReadOffset.lastConsumed()),
         msg -> {

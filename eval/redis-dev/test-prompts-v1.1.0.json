@@ -1,0 +1,68 @@
+{
+  "skill": "redis-dev",
+  "version": "v1.1.0",
+  "date": "2026-08-27",
+  "note": "v1.0.0 全量审查轮后的重盲评。12 条 prompt 与 v1.0.0 相比：T8 换题（原'共库淘汰反噬'内容已在审查轮删除，改为延迟任务选型——覆盖 09 选型表 + 07 RDelayedQueue + 键空间通知误用）；其余保留原题。锁类 prompt 的期望答案随技能口径翻转（显式 leaseTime / 禁止自实现），锚点见 rubric.md。",
+  "prompts": [
+    {
+      "id": "T1",
+      "scenario": "触发竞争+缓存路线（宽泛场景未提 Redis）",
+      "prompt": "SpringBoot 3 项目里订单查询接口每次都查库太慢了，帮我加个缓存。"
+    },
+    {
+      "id": "T2",
+      "scenario": "序列化乱码反向题",
+      "prompt": "我用 RedisTemplate 存了用户对象，redis-cli 里 keys 看到一堆 \\xac\\xed\\x00\\x05 开头的乱码 key，而且 keys 'user:*' 一个都查不出来。怎么回事？怎么修？"
+    },
+    {
+      "id": "T3",
+      "scenario": "Redisson 锁+leaseTime 决策",
+      "prompt": "订单提交接口要防重复提交，用 Redisson 分布式锁实现一下。注意业务里有个下游调用偶尔要跑 40 多秒。"
+    },
+    {
+      "id": "T4",
+      "scenario": "自实现锁（不引 Redisson）",
+      "prompt": "不想为了一个锁引入 Redisson，就用 setnx 手写一个分布式锁，有什么必须要注意的？"
+    },
+    {
+      "id": "T5",
+      "scenario": "@Cacheable 不生效（自调用）",
+      "prompt": "@Cacheable 加了但是没生效，每次还是查库。注解加在 Service 的 getOrder 方法上，同一个类里的 view 方法调用它。帮我看下为什么。"
+    },
+    {
+      "id": "T6",
+      "scenario": "缓存一致性整体设计",
+      "prompt": "商品详情页要做缓存，读多写少，怎么设计读写流程？要求尽量别读到脏数据，热门商品过期瞬间也别把数据库打挂。"
+    },
+    {
+      "id": "T7",
+      "scenario": "连接配置（Boot3 前缀+哨兵）",
+      "prompt": "SpringBoot 3.2 项目连不上 Redis，地址密码都检查过没问题；另外我们生产是哨兵部署（3 个哨兵节点，master 名叫 mymaster），连接配置应该怎么写？"
+    },
+    {
+      "id": "T8",
+      "scenario": "延迟任务选型（订单超时关闭）",
+      "prompt": "订单下单后 30 分钟未支付要自动关闭、释放库存。想用 Redis 实现，不要定时任务轮询全表。怎么做？"
+    },
+    {
+      "id": "T9",
+      "scenario": "incr 限流原子性",
+      "prompt": "用 Redis 给登录接口做个限流：每个 IP 每分钟最多 5 次，超了返回 429。"
+    },
+    {
+      "id": "T10",
+      "scenario": "LocalDateTime 序列化报错",
+      "prompt": "用 GenericJackson2JsonRedisSerializer 往 Redis 存对象报错：InvalidDefinitionException: Java 8 date/time type `java.time.LocalDateTime` not supported by default。怎么解决？"
+    },
+    {
+      "id": "T11",
+      "scenario": "连接池排错",
+      "prompt": "日志里出现 Could not get a resource from the pool，我配了 lettuce pool max-active=16 还是报。哪里的问题？"
+    },
+    {
+      "id": "T12",
+      "scenario": "边界让位（三合一）",
+      "prompt": "三件事：①帮我用 Testcontainers 在集成测试里起个 Redis；②Redis 最近变慢，帮我巡检一下大 key；③搭一套 Redis 主从+哨兵集群用于测试环境。"
+    }
+  ]
+}

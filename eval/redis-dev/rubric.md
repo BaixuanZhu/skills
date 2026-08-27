@@ -1,6 +1,6 @@
 # 评分标准（redis-dev 达尔文盲评用）
 
-> 你是独立盲评 agent。你手里有：redis-dev 技能（SKILL.md + 9 个 references，`skills/redis-dev/`）、12 条 test-prompt（`eval/redis-dev/test-prompts-v1.0.0.json`）。
+> 你是独立盲评 agent。你手里有：redis-dev 技能（SKILL.md + 9 个 references，`skills/redis-dev/`）、12 条 test-prompt（`eval/redis-dev/test-prompts-v1.1.0.json`）。
 >
 > 对每个 prompt，假设你是"接到该请求的 coding agent，手里只有这套技能"，逐步走技能的流程（触发判定 → 依赖探测 → 决策检查点 → 决策路由 → 读 reference），判断能否产出合格结果。按 9 维度打分。
 
@@ -32,35 +32,35 @@
 
 ### T2（key 乱码反向题）—— 重点 D2/D4/D5
 
-- **D2**：从症状到 `09-troubleshoot.md` 乱码行的跳转是否直达
-- **D4/D5**：修复是否完整——改 String 序列化器**并清理旧 key**（残留旧乱码 key 的后患是否点名）
+- **D2**：从症状（`\xac\xed` 前缀、模式匹配失效）到 03 §2 的直达（SKILL 强约束 1 是常读层兜底）
+- **D4/D5**：修复完整 = key 改 String 序列化器**并清理旧乱码 key**（03 §6 第 4 条：scan+unlink 或等 TTL）
 
 **判分锚点**：只改序列化器不提旧数据清理 → D5 扣。
 
-### T3（Redisson 锁+看门狗）—— 重点 D4/D5
+### T3（Redisson 锁+leaseTime 决策）—— 重点 D4/D5
 
-- **D4**：40 多秒下游调用 → 是否走到"业务时长不可预估 → 不传 leaseTime → 看门狗"决策
+- **D4**：40 多秒下游调用 → `leaseTime` 必须**显式且大于业务上界**（如 60s+ 余量）；waitTime 另算
 - **D5**：try-finally + `isHeldByCurrentThread`、拿不到锁的真实处理（非空转）
 
-**判分锚点**：给出 `tryLock(wait, 40, SECONDS)` 之类固定租约 → D4/D5 重扣（看门狗失效）。
+**判分锚点**：不传 leaseTime 裸靠看门狗（业务挂死=锁被无限续期）或 leaseTime 小于业务上界（如 30s < 40s 业务）→ D4/D5 重扣。
 
 ### T4（自实现锁）—— 重点 D4/D5
 
-- **D4**：`SET NX EX` 原子 + 唯一 value + Lua 校验释放三件套是否齐
-- **D5**：setnx+expire 两步的崩溃窗口是否点名；无续期的局限是否说明
+- **D4**：答案应是**迁移成熟实现**，不是"教他写对的自实现"——裸 `org.redisson:redisson` 不引 starter、不动 Lettuce，"不想为一个锁引 Redisson"的顾虑已不成立
+- **D5**：setnx+expire 两步的崩溃窗口、自实现缺续期/可重入/校验释放——作为"为什么迁移"的论据出现
 
-**判分锚点**：接受 `setIfAbsent` 后补 `expire` 的两步写法 → D4/D5 重扣。
+**判分锚点**：接受手写并把 SET NX EX+Lua 三件套当答案 → D4/D5 重扣（修复方向是迁移不是打补丁）。
 
 ### T5（@Cacheable 不生效）—— 重点 D2/D4
 
-- **D2**：症状能否路由到 05 §4 / 09 排查清单
+- **D2**：症状能否路由到 05 §4（自调用 + 失效清单）
 - **D4**：自调用根因 + 三种解法是否可执行
 
 **判分锚点**：错误根因（如"没配 CacheManager"当第一嫌疑）→ D4 扣。
 
 ### T6（一致性整体设计）—— 重点 D3/D5
 
-- **D3**：读路径（回源+TTL 抖动）/ 写路径（先更 DB 再删）/ 击穿（互斥回源 DoubleCheck）/ 穿透（null 缓存）是否成体系
+- **D3**：读路径（回源+TTL 抖动）/ 写路径（先更 DB 再删）/ 击穿（互斥回源 DoubleCheck 或逻辑过期异步重建）/ 穿透（null 缓存）是否成体系
 - **D5**：延迟双删的局限、"先删缓存"的反例是否讲清
 
 **判分锚点**：写路径推荐"更新缓存"或"先删缓存" → D5 重扣。
@@ -72,24 +72,25 @@
 
 **判分锚点**：哨兵 nodes 写成数据节点地址 → D4 重扣。
 
-### T8（共库随机掉线）—— 重点 D2/D5
+### T8（延迟任务选型）—— 重点 D2/D4/D5
 
-- **D2**：从"随机掉线"症状到 08 §2 的路由是否直达（排错表有该行）
-- **D5**：淘汰机制解释 + `evicted_keys` 排查 + 分实例/容量方案；前缀隔离防不了淘汰是否点破
+- **D2**：从"订单 30 分钟未支付自动关闭"到 09 §1 选型表 → 07 §7 的路由是否直达
+- **D4**：RDelayedQueue 双队列写法可执行（getBlockingQueue + getDelayedQueue + offer(延迟) + take）
+- **D5**：三个坑是否点名——到期搬运由客户端实例驱动（重启须重建、消费方也要常驻创建）、无 ack 取走即丢（高可靠走 MQ/定时兜底）、别用键空间通知做订单超时
 
-**判分锚点**：归因为 Sa-Token 配置问题（timeout 等）而不查淘汰 → D2/D5 重扣。
+**判分锚点**：推荐键空间通知（TTL 过期回调）做订单超时 → D5 重扣；只写 offer 不提消费方重建实例 → D5 扣。
 
 ### T9（incr 限流）—— 重点 D4/D5
 
-- **D4**：计数+窗口方案可执行（incr + TTL / ZSet 滑动窗口）
+- **D4**：计数+窗口方案可执行（INCR + TTL 固定窗口，Lua 原子化）
 - **D5**：incr 与 expire 两步的竞态（首请求崩溃 key 永不过期）→ Lua 原子化是否点名
 
 **判分锚点**：裸 incr+expire 不提竞态 → D5 扣。
 
 ### T10（LocalDateTime 报错）—— 重点 D2/D4
 
-- **D2**：症状→09 表→03 §3 的跳转
-- **D4**：JavaTimeModule + 三个必须项（default typing / 忽略未知字段）是否齐
+- **D2**：症状→08 排错路由→03 §3 的跳转
+- **D4**：JavaTimeModule + 三个必须项（default typing / 忽略未知字段 / NullValueSerializer）是否齐
 
 **判分锚点**：只给 registerModule 不提 default typing 的连锁坑 → D5 扣。
 

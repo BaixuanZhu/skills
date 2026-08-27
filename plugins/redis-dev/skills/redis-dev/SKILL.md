@@ -19,7 +19,7 @@ description: >-
   不适用于：Sa-Token 等框架自身的会话 / 登录集成、测试容器化 Redis、
   Redis 服务器安装部署 / 主从搭建 / 监控指标调优 / 内存与淘汰策略（运维范围）、非 Java 语言。
 agent_created: true
-version: 1.0.0
+version: 1.1.0
 slug: redis-dev
 displayName: Redis 开发助手
 ---
@@ -27,7 +27,7 @@ displayName: Redis 开发助手
 # Redis 开发助手
 
 面向 Java / Spring Boot 的 Redis 编码助手：缓存、分布式锁、Redisson 分布式对象（限流 / 延迟队列 / 布隆过滤器）、序列化配置、连接配置、缓存一致性、消息与事件。
-版本基准：**Spring Boot 3.x/4.x（Spring Data Redis 3.x/4.x、Lettuce 6.x/7.x）+ Redisson 3.x**；
+版本基准：**Spring Boot 3.x/4.x（Spring Data Redis 3.x/4.x、Lettuce 6.x/7.x）+ Redisson 3.x（Boot 4 下 starter 用 4.x 线，`references/07-redisson.md` §1）**；
 Boot 2.7 差异以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data.redis.*`——Boot 3/4 前缀相同）。
 采用**完全本地自包含**策略：所有知识沉淀于本地 `references/`，运行时不依赖任何外部文档站点。
 
@@ -86,8 +86,8 @@ Boot 2.7 差异以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data
 
 | # | 触发信号（逐字关键词） | 必须确认的问题 | 方案差异（一句话） | 默认推荐 |
 |---|---|---|---|---|
-| C1 | "加缓存" / "缓存" / "cache"（未指明方式） | ① 声明式 `@Cacheable` 还是手动 `RedisTemplate`？② 缓存能接受多长的脏读窗口（TTL）？ | 声明式：简洁、注解即生效，适合整对象读缓存；手动：精细控制（部分更新 / 计数 / 锁配合），适合复杂逻辑。见 `references/05-spring-cache.md` §1 | 简单查询缓存用 `@Cacheable` + 显式 TTL 30min |
-| C2 | "锁" / "分布式锁" / "防重复" / "幂等" / "并发" | ① 项目是否已有 Redisson / lock4j？没有 → 是否同意引入？② 业务执行时长上界是多少？ | Redisson `RLock`：显式 waitTime + leaseTime（持锁硬上限，防挂死被看门狗无限续期）；lock4j `@Lock4j`：注解声明式，底层默认 Redisson，`expire` 即固定租期。**✗ 不自写 SET NX + Lua**（续期 / 可重入 / 安全释放都是坑位）。见 `references/07-redisson.md` §1-§2 | 引入 Redisson，`tryLock(wait, leaseTime)` 两个时间都显式（leaseTime > 业务上界） |
+| C1 | "加缓存" / "缓存" / "cache"（未指明方式） | ① 声明式 `@Cacheable` 还是手动 `RedisTemplate`？② TTL 档位：30min（默认推荐）/ 10min~24h 自定？ | 声明式：简洁、注解即生效，适合整对象读缓存；手动：精细控制（部分更新 / 计数 / 锁配合），适合复杂逻辑。见 `references/05-spring-cache.md` §1 | 简单查询缓存用 `@Cacheable` + 显式 TTL 30min |
+| C2 | "锁" / "分布式锁" / "防重复" / "幂等" / "并发" | ① 项目是否已有 Redisson / lock4j？没有 → 是否同意引入？② 业务执行时长上界：<30s / <5min / 不可预估？ | Redisson `RLock`：显式 waitTime + leaseTime（持锁硬上限，防挂死被看门狗无限续期）；lock4j `@Lock4j`：注解声明式，底层默认 Redisson，`expire` 即固定租期。**✗ 不自写 SET NX + Lua**（续期 / 可重入 / 安全释放都是坑位）。见 `references/07-redisson.md` §1-§2 | 引入 Redisson，`tryLock(wait, leaseTime)` 两个时间都显式（leaseTime > 业务上界） |
 | C3 | "存对象" / "序列化" / "跨服务共享" / "key 可读" | 数据是否需要跨服务 / 跨语言读取？ | `GenericJackson2Json`：写入 `@class` 自动还原类型，单服务最省事；跨服务 ✗ **禁止 `@class`**（包名耦合、跨语言读不懂、类迁移即断）→ ✓ 干净 JSON + 读侧显式类型。见 `references/03-serialization.md` §4 | 单服务 `GenericJackson2Json`（含 JavaTimeModule），跨服务 StringRedisTemplate + 显式类型 |
 
 ## 决策路由
@@ -100,7 +100,7 @@ Boot 2.7 差异以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data
 | scan / keys 禁用 / 批量删除 / unlink、mget / pipeline、事务（multi/exec 无回滚）、Lua 脚本、set 覆盖清 TTL 等陷阱、Bitmap / HyperLogLog | `references/04-template-operations.md` |
 | @Cacheable / @CacheEvict、TTL 配置（默认永不过期坑）、自调用失效、多缓存名不同 TTL | `references/05-spring-cache.md` |
 | 缓存一致性：先更库还是先删缓存、穿透 / 击穿 / 雪崩三件套、互斥回源 / 逻辑过期异步重建、延迟双删 | `references/06-cache-consistency.md` |
-| Redisson：分布式锁（RLock / lock4j / 看门狗 / leaseTime）、限流 RRateLimiter、延迟队列 RDelayedQueue、布隆过滤器 / 信号量 / 读写锁 | `references/07-redisson.md` |
+| Redisson：分布式锁（RLock / lock4j / 看门狗 / leaseTime）、限流 RRateLimiter、延迟队列 / 延迟任务 / 超时关单（RDelayedQueue）、布隆过滤器 / 信号量 / 读写锁 | `references/07-redisson.md` |
 | 排错路由：症状 → 去哪节查（NullValue / LinkedHashMap / 锁失效 / @Cacheable 不生效 / pool exhausted / 惰性删除） | `references/08-troubleshoot.md` |
 | 消息与事件：发布订阅（Pub/Sub）、Stream 可靠队列 / 消费组 / ack、键空间通知（过期事件） | `references/09-messaging.md` |
 

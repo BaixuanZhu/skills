@@ -11,6 +11,8 @@
 | `CROSSSLOT` / 集群多 key 命令报错 | `01-connection.md` §3.2 |
 | `Could not get a resource from the pool` | `02-pool.md` §5（先确认 client-type：Jedis 与 Lettuce 的处置完全不同） |
 | scan 结果有重复 | `04-template-operations.md` §1 |
+| key 前缀 `\xac\xed` 乱码、`match` 模式匹配失效 | `03-serialization.md` §2 |
+| `InvalidDefinitionException: Java 8 date/time ...` | `03-serialization.md` §3 |
 | 读回 `LinkedHashMap`，强转实体报 `ClassCastException` | `03-serialization.md` §3-§4 |
 | `No serializer found ... NullValue`（`@Cacheable` 缓存 null 触发） | `03-serialization.md` §3 |
 | 换序列化方案后旧 key 全部读不回 | `03-serialization.md` §6 |
