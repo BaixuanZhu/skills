@@ -99,7 +99,7 @@ Boot 2.7 差异以 `Boot2.x` 标注（主要是 `spring.redis.*` vs `spring.data
 | 序列化方案、key 乱码、GenericJackson2Json、LocalDateTime、LinkedHashMap、跨服务契约、key 规范 / 前缀 | `references/03-serialization.md` |
 | scan / keys 禁用 / 批量删除 / unlink、mget / pipeline、事务（multi/exec 无回滚）、Lua 脚本、set 覆盖清 TTL 等陷阱、Bitmap / HyperLogLog | `references/04-template-operations.md` |
 | @Cacheable / @CacheEvict、TTL 配置（默认永不过期坑）、自调用失效、多缓存名不同 TTL | `references/05-spring-cache.md` |
-| 缓存一致性：先更库还是先删缓存、穿透 / 击穿 / 雪崩三件套、延迟双删 | `references/06-cache-consistency.md` |
+| 缓存一致性：先更库还是先删缓存、穿透 / 击穿 / 雪崩三件套、互斥回源 / 逻辑过期异步重建、延迟双删 | `references/06-cache-consistency.md` |
 | Redisson：分布式锁（RLock / lock4j / 看门狗 / leaseTime）、限流 RRateLimiter、延迟队列 RDelayedQueue、布隆过滤器 / 信号量 / 读写锁 | `references/07-redisson.md` |
 | 排错路由：症状 → 去哪节查（NullValue / LinkedHashMap / 锁失效 / @Cacheable 不生效 / pool exhausted / 惰性删除） | `references/08-troubleshoot.md` |
 | 消息与事件：发布订阅（Pub/Sub）、Stream 可靠队列 / 消费组 / ack、键空间通知（过期事件） | `references/09-messaging.md` |
