@@ -20,6 +20,8 @@
 
 ## 3. 推荐配置：单服务（GenericJackson2Json）
 
+依赖：`com.fasterxml.jackson.datatype:jackson-datatype-jsr310`（Boot 管版本）——纯 data-redis（无 starter-web / starter-json）项目它不在 classpath，`new JavaTimeModule()` 直接编译失败（Boot 3.3 实测）。
+
 ```java
 @Bean
 public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
@@ -54,7 +56,7 @@ public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factor
 |---|---|
 | `JavaTimeModule` | 写含 `LocalDateTime` 字段的对象抛 `InvalidDefinitionException: Java 8 date/time type not supported by default`——`GenericJackson2JsonRedisSerializer` 默认 mapper **不带** JSR310 模块 |
 | `activateDefaultTyping` | 读回 `LinkedHashMap` 而不是目标类型（无 `@class` 信息，Jackson 只能还原成 Map） |
-| `FAIL_ON_UNKNOWN_PROPERTIES` disable | 实体加字段后，旧缓存里少这个字段 → 读回抛 `UnrecognizedPropertyException`；无法平滑演进 |
+| `FAIL_ON_UNKNOWN_PROPERTIES` disable | 字段**改名 / 删除**后，旧缓存 JSON 残留类没有的字段 → 读回抛 `UnrecognizedPropertyException`（加字段、旧数据少字段**不抛**，null 兜底——Boot 3.3 实测） |
 | `registerNullValueSerializer` | 序列化器被 `@Cacheable` 复用且缓存 null 时，写入 `NullValue` 抛 `No serializer found`——**仅默认构造自动注册，自定义 mapper 不会**（2.7 / 3.x / 4.x 源码一致） |
 
 > 读回 `LinkedHashMap` 的另一来源：`Jackson2JsonRedisSerializer<>(Object.class)`（无类型信息）——需要 `Jackson2JsonRedisSerializer<>(User.class)` 固定类型或改用 Generic 版。
