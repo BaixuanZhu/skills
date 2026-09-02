@@ -12,6 +12,7 @@
 | 属性拷贝（**默认**） | 手写 getter/setter 逐个 | **MapStruct**（编译期生成） |
 | 属性拷贝（**降级**：无 annotation processor / 一次性临时） | `BeanUtils.copyProperties`（Spring/Apache 顺序相反） | `BeanUtil.copyProperties(source, target)` |
 | 拷贝到新对象 | 手写 | `BeanUtil.copyProperties(source, TargetClass.class)` |
+| 拷贝到已有对象（忽略 null） | 手写 | `BeanUtil.copyProperties(source, target, CopyOptions.create().ignoreNullValue())` |
 | 转 Map | 手写 getXxx+put | `BeanUtil.beanToMap(bean, true, true)` |
 | Map 转 Bean | 已废弃 `mapToBean` | `BeanUtil.toBean(map, Cls.class)` |
 | 相等（防 NPE） | `a.equals(b)` | `ObjectUtil.equal(a, b)` |
@@ -96,24 +97,3 @@ public interface OrderMapper {
 ```
 
 MapStruct 坐标与 annotation processor 配置见 SKILL.md「C-CHECK 询问（仅高风险能力缺失时触发）」（编译期，零运行时依赖；JDK 8 兼容）。
-
-## BeanUtil 运行时示例
-
-```java
-// 拷贝到新对象
-UserDTO dto = BeanUtil.copyProperties(user, UserDTO.class);
-// 拷贝到已有对象（忽略 null 值）
-BeanUtil.copyProperties(source, target, CopyOptions.create().ignoreNullValue());
-// 转 Map
-Map<String, Object> map = BeanUtil.beanToMap(user, true, true);
-// Map 转 Bean
-User u = BeanUtil.toBean(map, User.class);
-```
-
-## 对象工具示例
-
-```java
-if (ObjectUtil.equal(a, b)) { ... }
-String name = ObjectUtil.defaultIfNull(user.getName(), "匿名");
-User copy = ObjectUtil.cloneByStream(user); // 深拷贝（需 Serializable）
-```

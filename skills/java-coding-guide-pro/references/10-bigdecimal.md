@@ -15,6 +15,9 @@
 | 浮点相等 | `if (d == 0.1)` | `Math.abs(d - 0.1) < 1e-9` 或用 BigDecimal |
 | 金额格式化 | 手拼字符串 | `bd.setScale(2, RoundingMode.HALF_UP).toPlainString()` |
 | 取整 | `(int) x` 截断 | `bd.setScale(0, RoundingMode.HALF_UP)` |
+| 千分位金额 | 手拼 / 依赖默认 locale | `String.format(Locale.US, "%,.2f", bd)` |
+
+> **String.format 边界**：`String.format(Locale, pattern)` 做数字/货币格式化**允许**（`StrUtil.format` 不支持 locale）；`01` 禁的是 `String.format` 做**字符串插值**（`%s` 占位），该场景用 `StrUtil.format("{}")`。
 
 ## 反例详解（antipattern）
 
@@ -87,7 +90,7 @@ if (amount * 0.1 == 1.0) { ... }    // 数学上相等也可能 false
 if (Math.abs(amount * 0.1 - 1.0) < 1e-9) { ... }
 ```
 
-### 8. `Math.abs(Integer.MIN_VALUE)` 仍为负（SonarQube S2133）
+### 8. `Math.abs(Integer.MIN_VALUE)` 仍为负
 ```java
 // ✗ Math.abs(Integer.MIN_VALUE) == Integer.MIN_VALUE（仍为负！）
 int x = Integer.MIN_VALUE;
@@ -102,7 +105,7 @@ if (x == Integer.MIN_VALUE) {
 ```
 > `Integer.MIN_VALUE` 是 `-2147483648`，其绝对值 `2147483648` 超过 `Integer.MAX_VALUE`（`2147483647`），`Math.abs` 对 `MIN_VALUE` 返回自身（仍为负）。同理 `Long.MIN_VALUE`。**对 `MIN_VALUE` 取绝对值时转 `long` 或显式边界处理**。`Math.absExact`（JDK 15+）会抛异常而非返回负值，适合需要严格正确性的场景。
 
-### 9. 位运算 `byte` 符号扩展（SonarQube S3037）
+### 9. 位运算 `byte` 符号扩展
 ```java
 // ✗ byte 转 int 时高位符号扩展，导致拼接结果错误
 byte b = (byte) 0xFF;        // -1
@@ -112,31 +115,6 @@ int result = b << 8;         // 0xFFFFFF00（符号扩展），不是 0x0000FF00
 int result = (b & 0xFF) << 8;  // 0x0000FF00 ✓
 ```
 > `byte` 是有符号类型，`0xFF` 表示 `-1`。转 `int` 时 Java 做符号扩展：`0xFF` → `0xFFFFFFFF`（-1），位移后高位全是 1。**`byte` 参与位运算/拼接时先 `& 0xFF` 转无符号**（`0xFF & 0xFF = 0x000000FF`）。协议解析、二进制 IO、哈希计算等场景高发。
-
-## 推荐示例
-
-```java
-// 金额计算：构造 → 运算 → 定精度 → 比较/格式化
-BigDecimal price    = new BigDecimal("19.99");
-BigDecimal qty      = new BigDecimal("3");
-BigDecimal subtotal = price.multiply(qty);                          // 59.97
-BigDecimal discount = new BigDecimal("0.05");                       // 5%
-BigDecimal total = subtotal.multiply(BigDecimal.ONE.subtract(discount))
-                             .setScale(2, RoundingMode.HALF_UP);    // 56.97
-
-// 除法：显式 scale + 舍入
-BigDecimal avg = total.divide(qty, 2, RoundingMode.HALF_UP);
-
-// 比较：compareTo，不是 equals
-if (total.compareTo(BigDecimal.ZERO) > 0) { ... }
-
-// 确定性格式化（无 locale 依赖）
-String s = total.setScale(2, RoundingMode.HALF_UP).toPlainString(); // "56.97"
-// 千分位金额（显式 Locale，避免欧洲逗号小数点）
-String money = String.format(java.util.Locale.US, "%,.2f", total);   // "56.97"
-```
-
-> **String.format 边界**：`String.format(Locale, pattern)` 用于 locale 数字/货币格式化是**允许**的（`StrUtil.format` 不支持 locale）；`01` 禁的是 `String.format` 做**字符串插值**（`%s` 占位），该场景用 `StrUtil.format("{}")` 更安全。
 
 ## 选型：BigDecimal（默认）与 `long` 分（仅超大规模性能场景）
 

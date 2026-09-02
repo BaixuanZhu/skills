@@ -124,25 +124,9 @@ String name = root.get("name").asText();
 
 **antipattern**：
 ```java
-// ✗ 手拼/手解析 JSON 字符串（转义/嵌套易错）
-String json = "{\"id\":" + id + ",\"name\":\"" + name + "\"}";
-
-// ✗ 每次 new ObjectMapper（性能差）
+// ✗ 每次 new ObjectMapper（创建开销大，非单例复用）
 new ObjectMapper().readValue(json, User.class);
 ```
 
 Jackson 坐标见 SKILL.md「C-CHECK 询问（仅高风险能力缺失时触发）」。
 
-## 推荐示例（HTTP + JSON 组合）
-
-```java
-public User fetchUser(String userId) throws IOException {
-    Request req = new Request.Builder()
-        .url("https://api.example.com/users/" + userId).build();
-    try (Response resp = client.newCall(req).execute()) {
-        if (resp.code() == 404) return null;
-        if (!resp.isSuccessful()) throw new RuntimeException("status " + resp.code());
-        return MAPPER.readValue(resp.body().byteStream(), User.class);
-    }
-}
-```

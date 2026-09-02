@@ -64,28 +64,6 @@ byte[] raw2 = DigestUtil.sha256(s);   // → byte[]（需要原始字节时用�
 String hex3 = DigestUtil.sha256Hex(s); // → hex String
 ```
 
-## 推荐示例
-
-```java
-// 摘要（默认 UTF-8，自动补零，返回 hex）
-String md5  = SecureUtil.md5("hello");
-String sha  = SecureUtil.sha256("hello");
-
-// 文件 MD5（流式，支持大文件）
-String fileMd5 = SecureUtil.md5(new File("/data/a.zip"));
-
-// Base64
-String enc = Base64.encode("data".getBytes(StandardCharsets.UTF_8));
-String dec = Base64.decodeStr(enc);
-
-// 密码哈希（引 hutool-crypto）
-String hashed = BCrypt.hashpw(rawPassword);
-boolean valid = BCrypt.checkpw(rawPassword, hashed);
-
-// AES 对称加密（引 hutool-crypto）
-String cipher = SecureUtil.aes("key123456789012".getBytes()).encryptHex("plain");
-```
-
 ## 密钥管理（安全强约束）
 
 ```java

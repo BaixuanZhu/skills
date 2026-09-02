@@ -72,7 +72,7 @@ Throwable root = ExceptionUtil.getRootCause(e);
 | 系统异常 | `RuntimeException`（非业务） | `NullPointerException`/`ClassCastException` | catch 后记 error + 降级/告警 |
 | 第三方异常 | 原始异常包装 | `RpcException("超时", cause)` | catch 后重试/降级 + 记 warn |
 
-### antipattern：InterruptedException 空吞（SonarQube S2142）
+### antipattern：InterruptedException 空吞
 ```java
 // ✗ 吞掉中断状态，上层无法感知中断信号
 try { Thread.sleep(1000); }
@@ -88,7 +88,7 @@ catch (InterruptedException e) {
 ```
 > `InterruptedException` 被捕获后中断标志**会被清除**——不调 `Thread.currentThread().interrupt()` 恢复，上层无法感知中断信号，线程池优雅关闭会失效。
 
-### antipattern：finally 抛异常 / return（SonarQube S1181）
+### antipattern：finally 抛异常 / return
 ```java
 // ✗ finally 抛异常会掩盖 try 块的原始异常
 try { riskyOp(); }
@@ -104,7 +104,7 @@ try (var conn = dataSource.getConnection()) {
 } // 自动关闭，异常不丢失
 ```
 
-### antipattern：catch 丢堆栈（SonarQube S1166）
+### antipattern：catch 丢堆栈
 ```java
 // ✗ 只记 getMessage()，丢掉完整堆栈
 catch (Exception e) {
@@ -138,7 +138,7 @@ try {
 }
 ```
 
-### antipattern：catch 只 rethrow 不处理（SonarQube S2221）
+### antipattern：catch 只 rethrow 不处理
 ```java
 // ✗ catch 后只 rethrow，无任何处理（等于没 catch）
 try { riskyOp(); }
@@ -200,7 +200,7 @@ String date = DateUtil.format(LocalDateTime.now(), "yyyyMMdd");
 String seq = String.format("%05d", (int) (Math.random() * 100000));
 String orderNo = date + seq;
 
-// ✓ 唯一性由单调发号器承担（Redis INCR 按天自增 / DB 序列 / 雪花 ID）；now() 显式传时区（java:S8688，见 03）
+// ✓ 唯一性由单调发号器承担（Redis INCR 按天自增 / DB 序列 / 雪花 ID）；now() 显式传时区（见 03）
 String date = LocalDate.now(ZoneId.of("Asia/Shanghai")).format(DateTimeFormatter.BASIC_ISO_DATE);
 String orderNo = date + String.format("%07d", redis.opsForValue().increment("order:seq:" + date));
 // 仅需防猜后缀（允许重复）时：RandomUtil.randomNumbers(5)
@@ -218,30 +218,6 @@ byte[] buf = new byte[24];
 sr.nextBytes(buf);
 String token = Base64.getUrlEncoder().withoutPadding().encodeToString(buf);
 int code = sr.nextInt(900000) + 100000;          // 6 位验证码
-```
-
-## 推荐示例
-
-```java
-private static final Logger log = LoggerFactory.getLogger(OrderService.class);
-
-public void process(Order order) {
-    Assert.notNull(order, "order required");
-    Assert.isTrue(order.getAmount().signum() > 0, "amount must > 0");
-    try {
-        doProcess(order);
-        log.info("订单完成, orderId={}, amount={}", order.getId(), order.getAmount());
-    } catch (Exception e) {
-        log.error("订单处理失败, orderId={}", order.getId(), e);
-        throw new BizException("处理失败: " + ExceptionUtil.getMessage(e), e);
-    }
-}
-
-// 验证码（安全凭证 → SecureRandom，见上节 antipattern）
-int code = secureRandom.nextInt(900000) + 100000;
-// 普通随机（抽样/测试数据）
-int sample = RandomUtil.randomInt(0, 100);
-String mockName = RandomUtil.randomString(8);
 ```
 
 ## 引入 SLF4J + Logback

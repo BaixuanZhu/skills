@@ -6,6 +6,7 @@
 ## 命名风格
 
 ### 1. POJO 布尔属性禁 `is` 前缀
+
 ```java
 // ✗
 public class User {
@@ -24,64 +25,53 @@ public class User {
 ```java
 // ✗
 int data[];
-String args[];
 // ✓
 int[] data;
-String[] args;
 ```
 
 ### 3. 抽象类用 `Abstract` 或 `Base` 开头
 ```java
 // ✗
 public abstract class Service { }
-public abstract class Repository { }
 // ✓
 public abstract class AbstractService { }
-public abstract class BaseRepository { }
 ```
 
 ### 4. 异常类用 `Exception` 结尾
+
 ```java
 // ✗
 public class BizError extends RuntimeException { }
-public class UserNotFound extends RuntimeException { }
 // ✓
 public class BizException extends RuntimeException { }
-public class UserNotFoundException extends RuntimeException { }
 ```
 > **为什么**：`Error` 后缀易与 `java.lang.Error`（JVM 级错误）混淆——业务异常**禁用 `Error` 后缀**，统一用 `Exception`。
 
 ### 5. 包名全小写、单数、禁下划线
 ```java
 // ✗
-package com.company.User_Service;
 package com.company.utils_tool;
 // ✓
-package com.company.userservice;
 package com.company.util;
 ```
 
 ### 6. 禁拼音与英文混用
 ```java
-// ✗
-public class YonghuService { }       // 全拼音
-public class UserService { }         // 英文
-public class UserFWService { }       // 混用（fw=服务）
-// ✓
-public class UserService { }         // 全英文，统一
+// ✗ 拼音与英文混用（fw=服务）
+public class UserFWService { }
+// ✓ 全英文
+public class UserService { }
 ```
 
 ### 7. 常量全大写、下划线分隔
 ```java
 // ✗
 static final int maxRetry = 3;
-static final String defaultCharset = "UTF-8";
 // ✓
 static final int MAX_RETRY = 3;
-static final String DEFAULT_CHARSET = "UTF-8";
 ```
 
-## 常量定义
+## 常量与字面量
 
 ### 8. 禁魔法值（未定义常量直出）
 ```java
@@ -99,7 +89,48 @@ if (ROLE_ADMIN.equals(user.getRole())) { ... }
 ```
 > 状态/类型码优先用**枚举**（`enum`），全局配置用常量类。
 
-### 9. `long` 字面量用大写 `L`
+### 9. 字面量出现 ≥2 处必须提取
+
+```java
+// ✗ 同一个 "PENDING" 在两个类各写一遍
+class OrderService  { if ("PENDING".equals(o.getStatus())) { ... } }
+class RefundService { if ("PENDING".equals(r.getStatus())) { ... } }
+
+// ✓ 状态/类型码 → 枚举
+if (OrderStatus.PENDING == o.getStatus()) { ... }
+// ✓ 阈值/配置 → 常量类
+if (retry > OrderConstants.MAX_RETRY) { ... }
+```
+> 判据：同一字面量出现 **≥2 处**即提取，不分同类跨类。状态/类型码 → 枚举；阈值/配置 → 常量类。
+
+### 10. 常量按共享范围放对位置
+
+| 共享范围 | 放置位置 | 判据 |
+|---|---|---|
+| 仅本类内部 | 本类 `private static final` | 无其他类引用 |
+| 同包多类 | 包级常量类 | ≥2 个同包类引用 |
+| 跨包 | 按域拆分的常量类（`OrderConstants`） | 被 ≥2 个包引用 |
+| 有限取值且有语义 | `enum` | 状态/类型码 |
+| 随环境变化 | 配置文件 / 配置中心 | 不同环境取值不同 |
+
+```java
+// ✗ 实现类里堆常量，其他 Service 要用只能复制一份
+public class OrderServiceImpl {
+    private static final String STATUS_PENDING = "PENDING";
+    private static final int MAX_RETRY = 3;
+    private static final long TIMEOUT_MS = 5000L;
+}
+
+// ✓ 被多处引用 → 按域提出去
+public enum OrderStatus { PENDING, PAID }
+public final class OrderConstants {
+    public static final int MAX_RETRY = 3;
+    private OrderConstants() { }   // 常量类禁实例化
+}
+```
+> ✗ 禁 `Constants` 万能类（所有域常量堆一起，改一处全量重编译）——按域拆分命名。
+
+### 11. `long` 字面量用大写 `L`
 ```java
 // ✗
 long value = 10000l;     // 小写 l 易与数字 1 混淆
@@ -109,7 +140,7 @@ long value = 10000L;     // 大写 L 一眼可辨
 
 ## OOP 规约
 
-### 10. 组合优于继承
+### 12. 组合优于继承
 ```java
 // ✗ 为了复用 extends 一个实现类
 public class OrderService extends BaseRepository<Order> {
@@ -124,7 +155,7 @@ public class OrderService {
 ```
 > 边界：仅「真正的 is-a 关系」才继承（如 `Circle extends Shape`）；复用代码优先组合（has-a，松耦合）。
 
-### 11. `equals`/`hashCode`/`toString` 重写须遵守契约
+### 13. `equals`/`hashCode`/`toString` 重写须遵守契约
 ```java
 // ✗ 只重写 equals 不重写 hashCode → HashMap/HashSet 行为异常
 public class User {
@@ -151,7 +182,7 @@ public class User {
 ```
 > 契约：`a.equals(b)` 为 true 则 `a.hashCode() == b.hashCode()` 必须为 true；只重写 equals 不重写 hashCode，HashMap/HashSet 会把「相等」对象放到不同桶。**推荐用 Lombok `@EqualsAndHashCode`/`@ToString` 或 record 自动生成**。
 
-### 12. `@Override` 必加
+### 14. `@Override` 必加
 ```java
 // ✗ 重写父类方法不加 @Override
 public class OrderService extends BaseService {
@@ -166,7 +197,7 @@ public class OrderService extends BaseService {
 ```
 > 不加 `@Override`，若父类签名变更或子类拼错方法名，会**静默变成新方法**（bug 不显式报错）；加了则编译期报错。
 
-### 13. 禁 raw type 滥用
+### 15. 禁 raw type 滥用
 ```java
 // ✗ raw type，类型安全丧失
 List list = new ArrayList();
@@ -182,7 +213,7 @@ Map<String, User> map = new HashMap<>();
 ```
 > raw type 跳过编译期检查，运行时 `ClassCastException` 难排查。**例外**：与遗留 API 交互被迫用 raw type 时，加 `@SuppressWarnings("unchecked")` + 注释说明。
 
-### 14. 接口 `default` 方法边界
+### 16. 接口 `default` 方法边界
 ```java
 // ✗ default 方法写业务逻辑，接口变臃肿
 public interface UserService {
@@ -205,7 +236,7 @@ public interface UserService {
 
 ## 控制语句
 
-### 15. 复杂布尔表达式先赋具名变量
+### 17. 复杂布尔表达式先赋具名变量
 ```java
 // ✗ 嵌套条件，读不出语义
 if (user != null && user.getAge() > 18 && user.getStatus() == ACTIVE
@@ -221,9 +252,9 @@ if (isAdult && isActive && isAdmin) {
     doSomething();
 }
 ```
-> 阈值：超过 3 个逻辑子条件时必须拆（关联 Sonar java:S3776 认知复杂度，见 `12-complexity.md`）。
+> 阈值：超过 3 个逻辑子条件时必须拆（认知复杂度，见 `12-complexity.md`）。
 
-### 16. `switch` 必有 `default`
+### 18. `switch` 必有 `default`
 ```java
 // ✗ 无 default，未知值静默跳过
 switch (status) {
@@ -245,7 +276,7 @@ switch (status) {
 
 ## 代码格式
 
-### 17. 单行 ≤120 字符
+### 19. 单行 ≤120 字符
 ```java
 // ✗ 超长行，横向滚动读不完
 String result = someVeryLongMethodName(param1, param2, param3, param4, param5, param6, param7, param8, param9);
@@ -256,7 +287,7 @@ String result = someVeryLongMethodName(
     param6, param7, param8, param9);
 ```
 
-### 18. 4 空格缩进，禁 tab
+### 20. 4 空格缩进，禁 tab
 ```java
 // ✗ tab 缩进（不同编辑器 tab 宽度不同，显示不一致）
 if (cond) {
@@ -275,7 +306,7 @@ if (cond) {
 }
 ```
 
-### 19. 无用 import 必须移除（Sonar java:S1128）
+### 21. 无用 import 必须移除
 ```java
 // ✗ 四类无用 import
 import java.util.List;            // 未使用

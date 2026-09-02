@@ -1,6 +1,6 @@
-# 12 · 认知复杂度（Sonar java:S3776）
+# 12 · 认知复杂度
 
-> **规则**：单方法认知复杂度（Cognitive Complexity）≤ 15（Sonar 默认阈值）。
+> **规则**：单方法认知复杂度（Cognitive Complexity）≤ 15。
 > **定级 A**：只约束新生成代码；存量超标方法不主动改写（见文末「存量治理」）。
 > **核心策略**：Agent 无法边写边跑 Sonar——用「生成时预算」的代理信号预判，命中即先重构再输出。
 
@@ -130,7 +130,7 @@ for (Item item : items) {              // +1
 // ✗ 混用 && / || 且多项：+3（切换 2 次），读者需在脑内解括号
 if (user != null && user.isActive() && (user.isVip() || user.getPoints() > 1000)) { ... }
 
-// △ 命名局部变量：可读性提升，但分数仍留在本方法（11-conventions 第 15 条的做法）
+// △ 命名局部变量：可读性提升，但分数仍留在本方法（11-conventions「复杂布尔表达式先赋具名变量」的做法）
 boolean eligible = user != null && user.isActive() && (user.isVip() || user.getPoints() > 1000);
 if (eligible) { ... }
 

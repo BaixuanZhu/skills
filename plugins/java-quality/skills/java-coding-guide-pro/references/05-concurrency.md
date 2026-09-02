@@ -117,7 +117,7 @@ ThreadPoolExecutor pool = new ThreadPoolExecutor(
 ```
 > 线程必须有业务语义命名。禁用默认 `pool-x-thread-y`；必须通过 `ThreadFactory` 设置 `线程名前缀-序号`。线程 dump、日志、APM 追踪都依赖线程名定位问题。
 
-### 7. 非线程安全对象 `static` 共享（SonarQube S6373）
+### 7. 非线程安全对象 `static` 共享
 ```java
 // ✗ SimpleDateFormat 非线程安全，static 共享 → 多线程数据错乱
 static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
@@ -129,7 +129,7 @@ static DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 // 或 Hutool DateUtil（内部线程安全）
 String formatted = DateUtil.format(new Date(), "yyyy-MM-dd");
 ```
-> **SonarQube S6373**：`SimpleDateFormat`、`ArrayList`、`HashMap` 等非线程安全对象禁 `static` 共享。多线程并发访问会产生数据错乱/死循环/`ConcurrentModificationException`。用线程安全替代（`DateTimeFormatter`/`ConcurrentHashMap`）或实例化（每线程一份）。
+> `SimpleDateFormat`、`ArrayList`、`HashMap` 等非线程安全对象禁 `static` 共享。多线程并发访问会产生数据错乱/死循环/`ConcurrentModificationException`。用线程安全替代（`DateTimeFormatter`/`ConcurrentHashMap`）或实例化（每线程一份）。
 
 ## CompletableFuture 异步编排（JDK 8+）
 
@@ -159,7 +159,7 @@ try (ExecutorService vt = Executors.newVirtualThreadPerTaskExecutor()) {
 ```
 
 > JDK 8/11/17 项目**禁用**虚拟线程。检测到 JDK < 21 时跳过本节。
-> **synchronized 与虚拟线程（LTS 版本差异）**：JDK 21 LTS 中虚拟线程遇到 `synchronized` 会被钉住载体线程（pin），失去并发优势——建议改用 `ReentrantLock`。JDK 25 LTS（吸收 JEP 491）已修复，synchronized 不再 pin，可直接使用。按目标 LTS 版本判断，不一刀切。详见 `09-modern-java.md` antipattern 3。
+> **synchronized 与虚拟线程（LTS 版本差异）**：JDK 21 LTS 中虚拟线程遇到 `synchronized` 会被钉住载体线程（pin），失去并发优势——建议改用 `ReentrantLock`。JDK 25 LTS（吸收 JEP 491）已修复，synchronized 不再 pin，可直接使用。按目标 LTS 版本判断，不一刀切。详见 `09-modern-java.md`「synchronized LTS 版本陷阱」antipattern。
 
 ## Scoped Values（JDK 25+，ThreadLocal 安全替代）
 
@@ -189,40 +189,4 @@ ScopedValue.where(REQ_ID, requestId).run(() ->
 | 生命周期 | 手动 remove，易泄漏 | **作用域自动清理** |
 | 线程池复用 | 串值风险 | **无串值**（作用域隔离） |
 | JDK 门控 | 8+ | **25+** |
-
-## 推荐示例
-
-```java
-public class TaskRunner {
-    private static final Logger log = LoggerFactory.getLogger(TaskRunner.class);
-
-    public void processAll(List<Runnable> tasks) {
-        if (CollUtil.isEmpty(tasks)) return;
-        ThreadPoolExecutor pool = new ThreadPoolExecutor(
-            10, 10, 0L, TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<>(100),
-            new ThreadFactory() {                                   // 手写命名工厂
-                private final AtomicInteger n = new AtomicInteger(1);
-                @Override public Thread newThread(Runnable r) {
-                    return new Thread(r, "task-" + n.getAndIncrement());
-                }
-            },
-            new ThreadPoolExecutor.CallerRunsPolicy());            // 默认拒绝策略：背压
-
-        try {
-            for (int i = 0; i < tasks.size(); i++) {
-                final int idx = i;
-                pool.submit(() -> {
-                    try { tasks.get(idx).run(); }
-                    catch (Throwable t) { log.error("任务 #{} 失败", idx, t); } // 异常隔离
-                });
-            }
-            pool.shutdown();
-            pool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
-}
-```
 

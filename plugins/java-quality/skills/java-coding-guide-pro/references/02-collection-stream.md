@@ -13,7 +13,7 @@
 | 遍历前守卫 | `for(x : list)`（null NPE） | `if (CollUtil.isNotEmpty(list)) {...}` |
 | 新建初始化 | `new ArrayList<>(); add(a); add(b);` | `CollUtil.newArrayList(a, b)` |
 | 新建 Set | `new HashSet<>()` + add | `CollUtil.newHashSet(a, b)` |
-| 分块（每 N 个一组） | `list.subList(from, to)` | `ListUtil.partition(list, size)`（**`CollUtil.partition` 不存在**，分块在 `ListUtil`） |
+| 分块（每 N 个一组） | `list.subList(from, to)` | `ListUtil.partition(list, size)` |
 | 取第几页 | `subList` 手写 | `CollUtil.page(pageNum, pageSize, list)` |
 | 按 key 分组 | 手写 `Map`+`for`+`computeIfAbsent` | **`Collectors.groupingBy(Bean::getX)`**（链式组合用 `CollStreamUtil.groupByKey`） |
 | 转 Map | 手写 for+put | **Stream `Collectors.toMap(k, v)`**（链式组合用 `CollStreamUtil.toMap`） |
@@ -36,7 +36,7 @@
 int from = page * size;
 List<Item> pageItems = list.subList(from, from + size); // from+size 越界？
 
-// ✓ ListUtil.partition 自动处理边界，返回独立子列表（注意：CollUtil 无 partition，在 ListUtil）
+// ✓ ListUtil.partition 自动处理边界，返回独立子列表
 List<List<Item>> chunks = ListUtil.partition(list, 50);
 // ✓ 取指定页（0 基，CollUtil.page 存在）
 List<Item> p = CollUtil.page(0, 50, list);
@@ -60,6 +60,7 @@ Map<String, List<User>> byDept = users.stream().collect(Collectors.groupingBy(Us
 > 同类「CollUtil 上不存在」的误用：`CollUtil.shuffle`（用 `Collections.shuffle`）、`CollUtil.toMap(list, k, v)`（CollUtil 的 toMap 需传入目标 Map）——遇到编译错误先查签名。
 
 ### 3. 转 Map 签名易错
+
 ```java
 // ✗ CollUtil.toMap 不是这个签名（CollUtil 的 toMap 需要传入目标 Map）
 Map<Long, String> idName = CollUtil.toMap(users, User::getId, User::getName); // 编译错误
@@ -90,7 +91,7 @@ Item first = CollUtil.getFirst(list);
 Item last  = CollUtil.get(list, -1); // -1 = 末尾
 ```
 
-### 6. `Arrays.asList` 返回固定大小（SonarQube）
+### 6. `Arrays.asList` 返回固定大小
 ```java
 // ✗ Arrays.asList 返回 Arrays$ArrayList（固定大小，非 java.util.ArrayList）
 List<String> list = Arrays.asList("a", "b", "c");
@@ -103,7 +104,8 @@ List<String> list2 = CollUtil.newArrayList("a", "b", "c"); // ✓ Hutool
 ```
 > `Arrays.asList` 返回的是 `Arrays$ArrayList`（内部类，固定大小），**不是** `java.util.ArrayList`。支持 `set`（替换元素）但不支持 `add`/`remove`（结构变更）。需可变列表必须包装：`new ArrayList<>(Arrays.asList(...))` 或直接用 `CollUtil.newArrayList`。
 
-### 7. `isEmpty()` 优于 `size() == 0`（SonarQube S2200）
+### 7. `isEmpty()` 优于 `size() == 0`
+
 ```java
 // ✗ size()==0 语义不直观；对 ConcurrentLinkedQueue 等集合 size() 是 O(n)
 if (list.size() == 0) { ... }
@@ -169,24 +171,3 @@ String csv = list.stream().map(String::valueOf).collect(Collectors.joining(","))
 > `Stream.toList()`（JDK 16+）返回**不可变**列表；`Collectors.toList()` 返回可变。按需选择，JDK 8 项目只能用后者。
 > **Stream Gatherers（JDK 25+）**：JDK 25 LTS 提供 `java.util.stream.Gatherer`，支持自定义中间操作（弥补 `Collectors` 只能做终端操作的不足）。如 `Gatherers.windowFixed(n)` 固定窗口分组。详见 `09-modern-java.md`。
 
-## 推荐示例
-
-```java
-// 判空守卫
-if (CollUtil.isNotEmpty(orders)) { ... }
-
-// 新建初始化
-List<String> tags = CollUtil.newArrayList("a", "b", "c");
-
-// 分块处理（ListUtil.partition，非 CollUtil）
-List<List<Order>> chunks = ListUtil.partition(orders, 20);
-
-// 分组（默认 JDK Collectors；链式组合才用 CollStreamUtil.groupByKey）
-Map<Long, List<Order>> byUser = orders.stream().collect(Collectors.groupingBy(Order::getUserId));
-
-// 交并差
-List<Integer> both = new ArrayList<>(CollUtil.intersection(listA, listB));
-
-// 取字段值列表
-List<Object> names = CollUtil.getFieldValues(users, "name");
-```

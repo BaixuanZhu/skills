@@ -18,7 +18,7 @@
 | 去两端空白 | `s.trim()` | `StrUtil.trim(s)` |
 | 去两端空白，全空则 null | 手写三元 | `StrUtil.trimToNull(s)` |
 | 去所有空白字符 | `s.replaceAll("\\s+", "")` | `StrUtil.cleanBlank(s)` |
-| 截取（防越界） | `s.substring(s.indexOf("-")+1)` | `StrUtil.subAfter(s, "-", false)` |
+| 截取（防越界） | `s.substring(s.indexOf("-")+1)` | `StrUtil.subAfter(s, sep, isLast)`（`true` 取最后一个分隔符） |
 | 分隔 | `s.split(".")`（正则坑） | `StrUtil.split(s, '.')` → `List<String>` |
 | 拼接集合 | 手写 for+StringBuilder | `StrUtil.join(",", list)` |
 | 驼峰→下划线 | 手写正则 | `StrUtil.toUnderlineCase(s)` |
@@ -29,6 +29,7 @@
 ## 反例详解（antipattern）
 
 ### 1. `isBlank` vs `isEmpty` 空格陷阱
+
 ```java
 // ✗ " "（纯空格）判为"非空"，后续逻辑可能出错
 if (str != null && !str.isEmpty()) { ... }
@@ -57,6 +58,7 @@ String v = StrUtil.subAfter(s, "-", false); // 第三参 isLastSeparator
 ```
 
 ### 4. `split` 正则转义坑
+
 ```java
 // ✗ "." 是正则元字符，split(".") 结果为空数组
 String[] ps = s.split(".");
@@ -94,22 +96,3 @@ String name = findUser(id)
     .orElse("匿名");
 ```
 
-## 推荐示例
-
-```java
-// 判空 + 默认值
-String name = StrUtil.blankToDefault(userInput, "anonymous");
-
-// 格式化（{} 占位，slf4j 风格）
-String path = StrUtil.format("/user/{}/order/{}", uid, orderId);
-
-// 取后缀（越界安全）
-String ext = StrUtil.subAfter(fileName, ".", true); // isLastSeparator=true 取最后一个点
-
-// 集合拼接
-String ids = StrUtil.join(",", userIds);
-
-// 命名转换
-String column = StrUtil.toUnderlineCase("userName"); // user_name
-String camel  = StrUtil.toCamelCase("user_name");     // userName
-```

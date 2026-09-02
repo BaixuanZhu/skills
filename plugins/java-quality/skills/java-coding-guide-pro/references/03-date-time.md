@@ -2,7 +2,7 @@
 
 > **优先 JDK `java.time`**（原生完善、线程安全）；处理遗留 `java.util.Date` 用 Hutool `DateUtil`（`cn.hutool.core.date`）。
 > **禁 `SimpleDateFormat` 作共享/静态变量**（线程不安全）；**禁 `Calendar` 手算**（月从 0 易错）。
-> **`.now()` 必须显式传 `ZoneId` 或 `Clock`**（Sonar java:S8688）；裸 `now()` 隐式依赖 JVM 默认时区，详见 antipattern 6。
+> **`.now()` 必须显式传 `ZoneId` 或 `Clock`**；裸 `now()` 隐式依赖 JVM 默认时区，详见 antipattern 6。
 
 ## 规范速查
 
@@ -83,7 +83,7 @@ int sec = (int)(System.currentTimeMillis() / 1000);
 long sec = DateUtil.currentSeconds();
 ```
 
-### 6. 裸 `.now()` 隐式依赖 JVM 默认时区（Sonar java:S8688）
+### 6. 裸 `.now()` 隐式依赖 JVM 默认时区
 ```java
 // ✗ 裸 now() 用 JVM 默认时区：容器/云主机默认常是 UTC，与开发机（如 GMT+8）不一致，
 //    跨天边界（日切、对账、到期判断）相差 8 小时；且无法注入 Clock 做时间相关单测
