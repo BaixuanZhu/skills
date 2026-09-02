@@ -19,8 +19,8 @@ description: >-
   密码加密 / 哈希存储、金额 / 价格计算、线程池 / 异步任务、日期格式化 / 时区。
   跟随项目既有技术栈（Spring / Hutool / commons-lang3 等），不强加任何库。
   不适用：业务架构设计、框架选型、DDL、纯算法、前端代码。
-version: "3.6.0"
-last_verified: "2026-09-02"
+version: "3.5.0"
+last_verified: "2026-08-23"
 ---
 
 # Java 编码指南
@@ -60,7 +60,7 @@ last_verified: "2026-09-02"
 | 虚拟线程 / `switch` 模式匹配 / `SequencedCollection` | 21 |
 | 未命名变量 `_` / Stream Gatherers / Scoped Values（22–24 转正，完整清单见 09） | 25 |
 
-> 22–24 转正特性统一按 25 门控；preview/incubator 不纳入。虚拟线程 + `synchronized` 在 21 会钉住载体线程（改 `ReentrantLock`），25 解除（JEP 491）。完整门控表见 `references/09-modern-java.md`。
+> 22–24 转正特性统一按 25 门控；preview/incubator 不纳入。虚拟线程 + `synchronized` 在 21 会钉住载体线程（改 `ReentrantLock`），25 解除（JEP 491）。完整门控表（含推荐度）见 `references/09-modern-java.md`。
 
 ## 风险分级与构件选择
 
@@ -90,7 +90,7 @@ last_verified: "2026-09-02"
 | 随机数/随机字符串/安全凭证 | `ThreadLocalRandom`；有 Hutool 用 `RandomUtil`；凭证类用 `SecureRandom` | `references/08-exception-logging.md` |
 | 现代 Java 语法（版本门控） | 按「JDK 版本策略」特性最低版本 | `references/09-modern-java.md` |
 | 金额/精确小数 | JDK `BigDecimal` | `references/10-bigdecimal.md` |
-| 命名/OOP 规约/格式/常量与字面量 | 规约条目（无库选型） | `references/11-conventions.md` |
+| 命名/OOP 规约/格式 | 规约条目（无库选型） | `references/11-conventions.md` |
 | 方法嵌套过深/分支膨胀/认知复杂度 | 卫语句 + 提炼语义方法 + 分支分发 | `references/12-complexity.md` |
 
 ## 规则表（S/A 分级）
@@ -120,14 +120,13 @@ last_verified: "2026-09-02"
 | A | `a.equals(b)` 且 a 可能 null | `Objects.equals` / `ObjectUtil.equal` / 常量在前 |
 | A | 仅初始化就 `new ArrayList<>()` 逐个 add；`subList` 手写分块 | `List.of` / `CollUtil.newArrayList`/`partition` |
 | A | `log.error("x=" + e)` 字符串拼接 | 占位符 `log.error("x={}", x, e)`，异常作最后参数 |
-| A | 裸 `LocalDateTime.now()`/`LocalDate.now()` 等 time-based `now()`（隐式 JVM 默认时区） | `now(zoneId)` / `now(clock)`（应用级统一 ZoneId 常量或注入 Clock） |
+| A | 裸 `LocalDateTime.now()`/`LocalDate.now()` 等 time-based `now()`（隐式 JVM 默认时区；Sonar java:S8688） | `now(zoneId)` / `now(clock)`（应用级统一 ZoneId 常量或注入 Clock） |
 | A | `new Random().nextInt()` 手算范围、`(int)(Math.random()*n)` 强转 | `RandomUtil.randomInt(min, max)`（[min, max) 半开）/ `ThreadLocalRandom.current().nextInt(min, max)` |
 | A | 手拼随机字符串（`Math.random()`+`String.format`/自建字符表循环） | `RandomUtil.randomString(len)` / `randomNumbers(len)` |
 | A | POJO 布尔属性 `isXxx` 前缀 | 用 `deleted` 而非 `isDeleted` |
 | A | 魔法值直出 | 抽 `static final` 常量或枚举 |
-| A | 字面量 ≥2 处未提取；常量堆在实现类中不共享 | 状态/类型码 → 枚举；阈值/配置 → 按域拆分的常量类 |
-| A | 无用 import（未使用/重复/java.lang/同包）残留 | 移除；删掉某类最后一处使用时同步删 import |
-| A | 单方法嵌套 ≥3 层、else-if ≥3 连、布尔混用 ≥3 项（认知复杂度阈值 15） | 卫语句早返回 / 提炼语义方法 / switch、策略 Map 分发（禁无语义拆块） |
+| A | 无用 import（未使用/重复/java.lang/同包；Sonar java:S1128）残留 | 移除；删掉某类最后一处使用时同步删 import |
+| A | 单方法嵌套 ≥3 层、else-if ≥3 连、布尔混用 ≥3 项（Sonar java:S3776 认知复杂度阈值 15） | 卫语句早返回 / 提炼语义方法 / switch、策略 Map 分发（禁无语义拆块） |
 | A | `get`/`find` 类方法返回 null | `Optional<T>` 或空集合 |
 
 ## C-CHECK 询问（仅高风险能力缺失时触发）
@@ -159,7 +158,7 @@ last_verified: "2026-09-02"
 2. **定位并阅读 reference**：查「域 → 默认」路由表，**生成对应域代码前先读「详见」列文件**（含该域完整规则与 antipattern，本文规则表仅是摘要）。
 3. **生成代码遵循规则表**：S 级禁止项不出现；A 级约定用于新代码；审查/修改时 S 级命中既有代码 → 提出改写。
 4. **高风险能力缺失** → 触发 C-CHECK 询问，拒绝则受控降级。
-5. **输出前对 S 级规则逐项自检**（尤其线程池、日期、金额、加密、随机数当序号、异常处理、常量提取与放置）。
+5. **输出前对 S 级规则逐项自检**（尤其线程池、日期、金额、加密、随机数当序号、异常处理）。
 
 ## 版本与范围
 

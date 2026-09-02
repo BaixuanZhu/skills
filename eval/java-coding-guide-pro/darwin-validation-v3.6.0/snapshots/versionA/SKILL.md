@@ -20,7 +20,7 @@ description: >-
   跟随项目既有技术栈（Spring / Hutool / commons-lang3 等），不强加任何库。
   不适用：业务架构设计、框架选型、DDL、纯算法、前端代码。
 version: "3.6.0"
-last_verified: "2026-09-02"
+last_verified: "2026-08-23"
 ---
 
 # Java 编码指南
