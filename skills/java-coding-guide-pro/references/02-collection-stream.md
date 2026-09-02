@@ -168,6 +168,6 @@ Map<Long, User> byId = users.stream()
 String csv = list.stream().map(String::valueOf).collect(Collectors.joining(","));
 ```
 
-> `Stream.toList()`（JDK 16+）返回**不可变**列表；`Collectors.toList()` 返回可变。按需选择，JDK 8 项目只能用后者。
+> `Stream.toList()`（JDK 16+）返回**不可变**列表（`add` 抛 `UnsupportedOperationException`）；`Collectors.toList()` 返回可变。按需选择，JDK 8 项目只能用后者。
 > **Stream Gatherers（JDK 25+）**：JDK 25 LTS 提供 `java.util.stream.Gatherer`，支持自定义中间操作（弥补 `Collectors` 只能做终端操作的不足）。如 `Gatherers.windowFixed(n)` 固定窗口分组。详见 `09-modern-java.md`。
 

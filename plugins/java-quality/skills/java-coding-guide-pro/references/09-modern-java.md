@@ -27,6 +27,8 @@
 | Flexible Constructor Bodies | **25** |
 | Scoped Values | **25** |
 
+> 门控不满足时的降级写法（JDK 8 等价）：`var x` → 显式类型；`record Point(...)` → final 类 + 全参构造 + getter；文本块 → 普通字符串（转义）；`switch` 表达式 → 传统 `switch` 语句 + break。
+
 ## 反例详解（antipattern）
 
 ### 1. 虚拟线程 + synchronized 的 LTS 版本陷阱（JDK 21 vs 25）
