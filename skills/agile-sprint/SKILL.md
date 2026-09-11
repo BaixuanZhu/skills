@@ -5,7 +5,7 @@ displayName: Sprint规划
 description: |
   当用户说"开 Sprint""规划迭代""关闭 Sprint"或 using-agile 路由到此，且 PRODUCT-BACKLOG.yaml 已有条目时触发。
 agent_created: true
-version: 4.5.1
+version: 4.6.0
 dependencies:
   - skill: using-agile
     reason: 提供 DOD.md 模板
