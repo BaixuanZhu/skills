@@ -1,0 +1,71 @@
+{
+  "total": {
+    "count": 7,
+    "points": 25
+  },
+  "active": {
+    "count": 7,
+    "points": 25,
+    "note": "排除已撤回条目,等于\"参与排序的有效条目\""
+  },
+  "by_priority": {
+    "Must": {
+      "count": 3,
+      "points": 10
+    },
+    "Should": {
+      "count": 2,
+      "points": 5
+    },
+    "Could": {
+      "count": 2,
+      "points": 10
+    },
+    "Won't": {
+      "count": 0,
+      "points": 0
+    },
+    "__other__": {
+      "count": 0,
+      "points": 0
+    }
+  },
+  "by_status": {
+    "待办": {
+      "count": 6,
+      "points": 23
+    },
+    "已完成": {
+      "count": 0,
+      "points": 0
+    },
+    "已撤回": {
+      "count": 1,
+      "points": 2
+    },
+    "__other__": {
+      "count": 0,
+      "points": 0
+    }
+  },
+  "by_type": {
+    "技术": {
+      "count": 2,
+      "points": 10
+    },
+    "功能": {
+      "count": 5,
+      "points": 15
+    },
+    "__other__": {
+      "count": 0,
+      "points": 0
+    }
+  },
+  "adr_coverage": {
+    "covered": 7,
+    "total_active": 7,
+    "rate": 100
+  },
+  "unconfirmed_active": 1
+}

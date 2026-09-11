@@ -119,16 +119,20 @@ for (const id of mdIds) {
   const yp = (y.priority || '').trim();
   if (mp && yp && mp !== yp) add('priority', id, `md="${mp}" vs yaml="${yp}"`);
 
-  // ④ status
-  const ms = (m.status || '').trim();
-  const ys = (y.status || '').trim();
-  if (ms && ys && ms !== ys) add('status', id, `md="${ms}" vs yaml="${ys}"`);
+  // ④ status — md/yaml 是契约同义:md 人类用语 ↔ yaml schema 枚举
+  const msRaw = (m.status || '').trim();
+  const ysRaw = (y.status || '').trim();
+  const statusAlias = { '待办': '待办', '已完成': '已完成', '已撤回': 'withdrawn' };
+  const ms = statusAlias[msRaw] || msRaw;
+  const ys = ysRaw;
+  if (ms && ys && ms !== ys) add('status', id, `md="${msRaw}" vs yaml="${ysRaw}"`);
 
-  // ⑤ adr_refs(把 .md 关联列按 / 、 , 、空格拆分;过滤占位符 —/-/无;yaml 直接是数组)
-  const mdRefs = (m.refs || '').split(/[\/,，\s]+/).map(s => s.trim()).filter(s => s && s !== '—' && s !== '-' && s !== '无');
+  // ⑤ adr_refs(.md 关联列可混条目 id 与 ADR id,仅比对 ADR 编号 ADR-NNN;
+  //    占位符 —/-/无 跳过;yaml 直接是数组)
+  const mdRefsRaw = (m.refs || '').split(/[\/,，\s]+/).map(s => s.trim()).filter(s => s && s !== '—' && s !== '-' && s !== '无');
+  const mdAdrRefs = mdRefsRaw.filter(r => /^ADR[-]?\d+$/i.test(r));
   const yRefs = y.adr_refs || [];
-  // 排序后比(避免顺序差异)
-  const mdSet = new Set(mdRefs), ySet = new Set(yRefs);
+  const mdSet = new Set(mdAdrRefs.map(r => r.toUpperCase())), ySet = new Set(yRefs.map(r => r.toUpperCase()));
   for (const r of mdSet) if (!ySet.has(r)) add('adr_refs', id, `.md 含 ${r} 但 .yaml 无`);
   for (const r of ySet) if (!mdSet.has(r)) add('adr_refs', id, `.yaml 含 ${r} 但 .md 无`);
 
