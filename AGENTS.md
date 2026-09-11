@@ -6,7 +6,7 @@
 
 两个内容目录是核心，其余是配套：
 
-- `skills/<name>/` —— **技能内容唯一编辑源**（npx skills / SkillHub / ZCode-npx 扫描这里）。每个含 `SKILL.md`（YAML frontmatter：`name`/`description`/`version`/`slug`/`displayName`，敏捷族另有 `dependencies`）+ `references/`（编号 `NN-topic.md`，1~14 个）+ 个别有 `assets/`（仅 java-coding-quality）。
+- `skills/<name>/` —— **技能内容唯一编辑源**（npx skills / SkillHub / ZCode-npx 扫描这里）。每个含 `SKILL.md`（YAML frontmatter：`name`/`description`/`version`/`slug`/`displayName`，敏捷族另有 `dependencies`）+ `references/`（编号 `NN-topic.md`，1~14 个）+ 个别有 `assets/`（`java-coding-quality` 含规则集；`agile-backlog` 含 `scripts/{inventory,check-consistency}.mjs` —— 消费方项目内运行，sync hook 自动同步到 plugins/）。
 - `plugins/<name>/` —— **skills/ 的镜像**（Claude Code / ZCode / Codex 插件规范要求 manifest + `skills/<name>/` 嵌套，故与扁平的 `skills/` 分开存放）。每个含 `.claude-plugin/plugin.json`（Claude Code / ZCode 读）+ `.codex-plugin/plugin.json`（Codex 读）。支持「多 skill 合并入 1 个 plugin」（agile / java-test / java-quality 三个 group，见下文「group 映射」）。**不要手改这里**——pre-commit hook 从 `skills/` 自动同步。
 - `.claude-plugin/marketplace.json` —— Claude Code / ZCode 插件市场清单，`plugins[]` 每条 `source` 指 `./plugins/<name>`。
 - `.agents/plugins/marketplace.json` —— Codex 插件市场清单，`plugins[]` 每条 `source` 是对象（`{"source":"local","path":"./plugins/<name>"}` + `policy` + `category`），与 Claude 的字符串 `source` 不同。

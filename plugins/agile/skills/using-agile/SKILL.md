@@ -59,7 +59,7 @@ version: 4.5.1
    - `PRODUCT-BACKLOG.md` + `PRODUCT-BACKLOG.yaml` → 执行层待办池
    - `DOD.md` → 完成定义
    - `sprints/` 下未关闭的 `.md` → 活跃 Sprint（若检测到 >1 个活跃 Sprint，警告并请用户选择关闭/合并其一后再继续，见 `references/status-routing.md`）
-3. **双文件一致性检查**：若 `PRODUCT-BACKLOG.md` 和 `.yaml` 均存在，对比 id 集合、条目数、同 id 的 priority/status（唯一权威口径见 `agile-backlog/references/backlog-rules.md §七`）。不一致 → 停下报告差异，请用户确认以哪份为准后再继续路由。
+3. **双文件一致性检查**：若 `PRODUCT-BACKLOG.md` 和 `.yaml` 均存在，跑 `node agile-backlog/assets/scripts/check-consistency.mjs`（机械步骤自动跑）校验 id 集合 / 条目数 / 同 id 的 priority / status / adr_refs / point 六项（唯一权威口径见 `agile-backlog/references/backlog-rules.md §七`）。不一致 → 停下报告差异，请用户确认以哪份为准后再继续路由。
 4. 输出三层状态表（见 `references/status-routing.md`）。
 5. **逐层询问**"更新 or 继续下一步"（话术见 reference）。
 6. 按用户选择路由到对应业务技能，**不自己写**。

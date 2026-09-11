@@ -33,11 +33,11 @@ dependencies:
 | 阶段 | 产出 | 前置 |
 |------|------|------|
 | 阶段 0 | （无文件）决策问询 | 读 VISION/ADR + 项目画像 |
-| 阶段 1 | 优先级排序表 + 估点建议（§3 阶段1） | 阶段 0 完成 |
-| 阶段 2 | 任务详情展开 + 验收标准（§3 阶段2） | 阶段 1 确认 |
-| 阶段 3 | 生成/同步 `PRODUCT-BACKLOG.yaml`（§3 阶段3） | 阶段 2 确认 |
-| 阶段 4 | 下游影响评估（§3 阶段4，仅更新已有 Backlog 时） | 阶段 3 完成 |
-| 阶段 5 | 接受 .done 同步（§3 阶段5，仅 .done.yaml 回传时） | `.done.yaml` 存在（入口闭环路由；Sprint 未关闭时先经 agile-sprint 关闭） |
+| 阶段 1 | 阶段表 + 估点建议（§3 阶段 1，**阶段表即唯一结构**，多阶段分组同步落同一 `.md`） | 阶段 0 完成 |
+| 阶段 2 | 任务详情展开 + 验收标准（§3 阶段 2） | 阶段 1 确认 |
+| 阶段 3 | 生成/同步 `PRODUCT-BACKLOG.yaml`（§3 阶段 3） | 阶段 2 确认 |
+| 阶段 4 | 下游影响评估（§3 阶段 4，仅更新已有 Backlog 时） | 阶段 3 完成 |
+| 阶段 5 | 接受 .done 同步（§3 阶段 5，仅 .done.yaml 回传时） | `.done.yaml` 存在（入口闭环路由；Sprint 未关闭时先经 agile-sprint 关闭） |
 
 **决策用选择题问**（`using-agile/references/interview-protocol.md`）：先读 VISION/ADR 补事实（文档优先），只把真决策（范围/优先级/估点/验收）用「候选 + 推荐 + 自定义」一次一问地喂给用户。变更时先分级（`using-agile/references/change-matrix.md §二`），禁止整层重访。
 
@@ -48,7 +48,8 @@ dependencies:
 - 用 VISION 的"核心原则 / 战略红线"校验每个条目的归属（不服务愿景的不进 Backlog）
 - 用 ADR.md 中的决策推导技术任务（T-NNN），每条 T-NNN 关联对应 ADR 章节
 - 确认优先级排序逻辑（见 `references/backlog-rules.md`）
-- **双文件一致性校验**：若 .yaml 与 .md 均存在，对比 id 集合、条目数、同 id 的 priority/status（权威口径见 `references/backlog-rules.md §七`）。不一致 → 停下报告差异，请用户确认以哪份为准后再继续
+- **双文件一致性校验**：若 .yaml 与 .md 均存在，跑 `node assets/scripts/check-consistency.mjs`（机械步骤自动跑），校验 id 集合 / 条目数 / 同 id 的 priority / status / adr_refs / point 六项（权威口径见 `references/backlog-rules.md §七`）。不一致 → 停下报告差异，请用户确认以哪份为准后再继续
+- **盘点（取代增量手算）**：改动条目后必跑 `node assets/scripts/inventory.mjs`（机械步骤自动跑），覆盖式统计总条目 / 总点数 / 按优先级分组 / 按状态分组 / ADR 关联覆盖，**禁止人工口算增量**（历史多次因增量手算漂移：+15 点漏记 / F-861 漏更 / 阶段 31 漏更）
 
 ### 2b. 决策问询（写前必跑，`using-agile/references/interview-protocol.md`）
 
@@ -84,26 +85,32 @@ dependencies:
 
 ## 3. 产出（分阶段，每阶段写完即停）
 
-### 阶段 1：优先级排序表 + 估点建议（先出排序，不展开详情）
+### 阶段 1：阶段表 + 估点建议（先出排序，不展开详情）
 
-先写 `PRODUCT-BACKLOG.md` 的「优先级排序表」段（含 id/标题/类型/仓库/点/优先级/状态/关联/来源），**暂不写「任务详情」段**。写完停，结构化审阅后再进阶段 2。
+**阶段表即唯一结构**——`PRODUCT-BACKLOG.md` 不再单独维护"优先级排序表"。条目按"阶段 N"分块（如 `## 阶段 1` / `## 阶段 2`），所有阶段共用同一 `.md` 文件、同一张 .yaml。**禁止制造"池表 + 阶段表"双轨结构**——任何"待办池"只是各阶段表的并集，不单独立表。
+
+先写 `PRODUCT-BACKLOG.md` 的「阶段表」段（含 id/标题/类型/仓库/点/优先级/状态/关联/来源/已确认），**暂不写「任务详情」段**。写完停，结构化审阅后再进阶段 2。
 
 ```markdown
 # Product Backlog
 
-> 维护说明：待办池，按优先级排序。技术任务与功能需求平级。
+> 维护说明：条目按"阶段 N"分块排序。技术任务与功能需求平级。改完必跑盘点 + 一致性校验。
 
-## 优先级排序表
+## 阶段 1
 
-| ID | 标题 | 类型 | 仓库 | 点 | 优先级 | 状态 | 关联 | 来源/依据 |
-|----|------|------|------|---|--------|------|------|-----------|
-| T-001 | {标题} | 技术 | api-server | 5 | Must | 待办 | ADR-001/005 | 用户确认 / 依赖优先 |
-| F-001 | {标题} | 功能 | — | 2 | Must | 待办 | — | agent 推荐 / MoSCoW |
+| ID | 标题 | 类型 | 仓库 | 点 | 优先级 | 状态 | 关联 | 来源/依据 | 已确认 |
+|----|------|------|------|---|--------|------|------|-----------|--------|
+| T-001 | {标题} | 技术 | api-server | 5 | Must | 待办 | ADR-001/005 | 用户确认 / 依赖优先 | ✓ |
+| F-001 | {标题} | 功能 | — | 2 | Must | 待办 | — | agent 推荐 / MoSCoW | 待确认 |
 ...
 ```
 
 - 「来源/依据」列承载两个标注：点的来源（`agent 推荐` 或 `用户确认`）+ 优先级依据（开发顺序 / MoSCoW / 依赖 / ADR 优先级，见 `references/backlog-rules.md §三`）。
 - 「仓库」列仅多仓库项目填写（条目标注归属仓库，供 Sprint 规划识别跨仓库交接点，见 `references/backlog-rules.md §二`）；单仓库项目可省略该列。
+- 「已确认」列：优先级 / 点数 / 验收已与用户确认 → `✓`；`agent 推荐待确认` → `待确认`；Sprint 取用前必须把 `待确认` 行显式转 `✓`（否则 `agile-sprint` 跳过该条目并告警）。
+- **改完必跑**：
+  - 盘点：`node assets/scripts/inventory.mjs`（覆盖式统计，取代增量手算）
+  - 一致性：`node assets/scripts/check-consistency.mjs`（id 集合 / priority / status / adr_refs / point 五项）
 
 ### 阶段 2：任务详情展开 + 验收标准（仅非显然条目）
 
@@ -133,16 +140,22 @@ items:
   - id: "F-001"
     priority: "Must"
     status: "待办"
+    confirmed: true              # 默认 true(缺字段视作已确认);agent 推荐待确认 → false
   - id: "T-001"
     priority: "Must"
     status: "待办"
     adr_refs: ["ADR-001", "ADR-005"]
+    confirmed: true
   - id: "T-002"
     priority: "Should"
     status: "已完成"
+  - id: "T-003"
+    priority: "Won't"
+    status: "已撤回"
+    withdrawn: true              # 已撤回:不参与排序/统计,但仍留痕;盘点脚本自动排除
 ```
 
-**同步规则**：首次产出时阶段 1/2 只写 `.md`，阶段 3 才生成 `.yaml`；**`.yaml` 生成后**，每次编辑 `.md` 同步更新 `.yaml`。YAML 始终反映最新排序和状态，不含 acceptance/constraints 等描述详情。消费 Agent 读 YAML 拿排序，按需回读 `.md` 取详情。
+**同步规则**：首次产出时阶段 1/2 只写 `.md`，阶段 3 才生成 `.yaml`；**`.yaml` 生成后**，每次编辑 `.md` 同步更新 `.yaml`。YAML 始终反映最新排序和状态，不含 acceptance/constraints 等描述详情。消费 Agent 读 YAML 拿排序，按需回读 `.md` 取详情。**改动后必跑** `assets/scripts/check-consistency.mjs` 验证同步结果（`--strict` 用于提交前强校验）。
 
 ### 阶段 4：下游影响评估（更新已有 Backlog 时的审阅清单项）
 
@@ -176,12 +189,15 @@ items:
 - ✅ 产出 `PRODUCT-BACKLOG.md` + `PRODUCT-BACKLOG.yaml` 双文件；❌ **不顺手写** VISION / ARCHITECTURE / ADR / Sprint。
 - ✅ **决策问询是产出前环节**（§2b，口径见 `using-agile/references/interview-protocol.md`），决策点未确认不落盘。
 - ✅ **产出分阶段**（排序+估点 → 详情+验收 → YAML，§3），每阶段写完即停；❌ 禁止一次性出全部。
+- ✅ **阶段表即唯一结构**——`PRODUCT-BACKLOG.md` 按 `## 阶段 N` 分块落同一文件（§3 阶段 1），**禁止**单独维护"优先级排序表 / 待办池"等平级结构（历史双轨导致池表严重漂移，已废弃）。
 - ✅ 技术任务（T-NNN）和功能需求（F-NNN）平级；仅"非显然"条目展开（§3 阶段2）。
 - ❌ 不使用 INVEST / Given-When-Then 仪式，不拆 epics/enablers 子目录，不用 US/EN/EPIC 命名。
 - ✅ 涉及架构决策的 T-NNN 必须关联 ADR（门禁 ①，判定细则见 `using-agile/references/gate-protocol.md §二 ①`）。
 - ✅ **关键决策落盘带来源标注**（用户给出 / agent 推断 / agent 推荐待确认）。
 - ✅ **Backlog 条目只写范围**（可观察验收行为 / 业务与非功能约束 / 边界 / 依赖关联），❌ **不写实现**（技术方案 / 框架选型 / 代码结构 / SQL / 伪代码）——技术决策由 ADR 承载，实现归消费 Agent 判断（细则见 `references/backlog-rules.md §四`）。
-- ✅ `.yaml` 已存在后，每次编辑 .md 必须同步更新 .yaml（id/priority/status 字段）。
+- ✅ `.yaml` 已存在后，每次编辑 .md 必须同步更新 .yaml（id/priority/status/confirmed/withdrawn 字段），同步后必跑 `assets/scripts/check-consistency.mjs`。
+- ✅ **盘点机械步骤**：改动条目后必跑 `assets/scripts/inventory.mjs`（§2a），覆盖式统计取代人工增量手算（历史多次因手算漂移：+15 点漏记 / F-861 漏更 / 阶段 31 漏更）。
+- ✅ **未确认条目 Sprint 取用前必须显式 confirm**：`.md` 阶段表「已确认」列 `待确认` 或 `.yaml` `confirmed: false` 的「待办」条目，`agile-sprint` 取用时跳过并告警；不私自默认 `true`（agent 推荐 ≠ 用户确认）。
 
 ## 6. 门禁
 - **T-NNN 无 ADR**：技术任务涉及架构决策但未关联 ADR.md 章节 → 停下，先回 agile-strategic 阶段 B 补 ADR 章节，再回填关联字段。现有 ADR 无合适章节时同样回阶段 B 补，**禁止发明"待 ADR-NNN 确认"之类的占位关联**（判定细则见 `using-agile/references/gate-protocol.md §二 ①`）。

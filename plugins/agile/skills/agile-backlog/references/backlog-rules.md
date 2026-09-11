@@ -61,16 +61,35 @@ Backlog 是给消费 Agent 定**范围**（做什么），不是定**实现**（
 - 技术决策已在 ADR 拍板 → T-NNN 关联 ADR 章节即可，条目内不展开实现方案
 - 反例（✗）：`"双 SecurityFilterChain 场景 → 展开 admin/app 两套分离 / 独立 SecurityFilterChain bean"` —— "独立 bean"即实现建议，应删，只留范围："两套访问控制互不影响"
 
-## 五、状态流转
+## 五、状态流转与「可注记不可改写」
 
 ```
-待办 → 已完成
+待办 ─────────────→ 已完成（通过 DoD）
+  │
+  └─→ 已撤回（withdrawn=true，不参与排序 / 统计，留痕追溯）
 ```
+
+**三态枚举**：`待办 / 已完成 / 已撤回`
 
 - **待办**：默认状态（含已纳入 Sprint 但未完成——执行态追踪由消费 Agent 负责，不在规范层体现）
 - **已完成**：通过 DoD 验收
+- **已撤回**：本阶段/本 Sprint 不再需要的条目，从池中摘出不参与排序与统计（盘点脚本自动排除），仍留痕可追溯。撤回时追加「撤回时间 / 撤回原因 / 决策来源」，不改写条目原内容
 
-> Backlog 状态只有两态。Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改 priority，自然回到取用顺序前列），**不设「移至下个Sprint」状态**——该表述只出现在 Sprint 文件的「条目状态建议」里，不进 Backlog。
+**确认状态**（独立于 status，与 confirmed 字段对应）：
+- 「已确认」：优先级 / 点数 / 验收已与用户确认 → `confirmed: true`（或缺字段，默认）
+- 「agent 推荐待确认」：未与用户确认 → `confirmed: false`，Sprint 取用前必须显式 confirm（agile-sprint 跳过并告警，§五 引用 §七字段表）
+
+Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改 priority，自然回到取用顺序前列），**不设「移至下个Sprint」状态**——该表述只出现在 Sprint 文件的「条目状态建议」里，不进 Backlog。
+
+### 已完成条目：「可注记、不可改写」
+
+**已完成条目的事实不可变**（验收行为 / 关联 ADR / 当时决策内容）。后续需要修订时：
+
+- ✅ **追加注记**：在条目下方追加 `> [YYYY-MM-DD] {变更摘要}。**已完成状态不变**。`——明确区分历史事实与后续决策；不篡改交付时快照
+- ❌ **改写历史**：删旧验收 / 改点数 / 篡改关联——禁止（审计追溯的基础）
+- 例外：用户明确裁决"撤回 / 废止已完成条目"→ 走本节撤回流程（status → 已撤回, withdrawn=true），历史事实仍不删，仅追加注记
+
+惯例来源：评审类裁决影响已交付条目时（如 ADR 替代影响已完成条目的口径），追加注记而非改写历史，效果已验证（见 agile-strategic 门禁② 与 change-matrix.md §四 下游影响评估）。
 
 ## 六、门禁
 
@@ -87,14 +106,21 @@ Backlog 是给消费 Agent 定**范围**（做什么），不是定**实现**（
 | version | ✅ | schema 版本，当前 "1.0" |
 | items[].id | ✅ | T-NNN 或 F-NNN |
 | items[].priority | ✅ | Must / Should / Could / Won't |
-| items[].status | ✅ | 待办 / 已完成 |
+| items[].status | ✅ | 待办 / 已完成 / 已撤回 |
 | items[].adr_refs | — | 关联 ADR 编号列表 |
+| items[].confirmed | — | `true`（默认；缺字段视作已确认）/ `false`（agent 推荐待确认，Sprint 取用前需显式确认，见 §五） |
+| items[].withdrawn | — | `true` 表示已撤回，不参与排序 / 统计；与 `status: "已撤回"` 同步出现（盘点脚本两条件联合判定） |
 
 **规则**：消费 Agent 统一读 YAML 获取排序和状态，不应解析 Markdown 表格。需要详情时按 id 回读 `.md` 中对应展开段落。
 
-**一致性校验**（双文件一致性检查的唯一权威口径；每次读取 YAML 前执行）：
+**一致性校验**（双文件一致性检查的唯一权威口径；每次读取 YAML 前执行；机械步骤用脚本取代人工比对）：
 1. id 集合一致（.md 表格行与 .yaml items 无遗漏/多余）
 2. 条目数一致
-3. 同 id 的 priority/status 一致
+3. 同 id 的 priority 一致（**优先级双源**：.md 阶段表「优先级」列与 .yaml `priority` 字段双向绑定，禁单边改）
+4. 同 id 的 status 一致
+5. 同 id 的 adr_refs 一致（.md 关联列 vs .yaml `adr_refs` 数组，占位符 — / - / 无 视为空）
+6. 同 id 的 point 一致（.md 点列 vs .yaml 若后续扩展 `point` 字段时双向绑定；当前 yaml 不存 point 仅校验 md 内部数字字段合法）
 
 任一不符 → 停下报告差异，以用户确认为准。
+
+**机械步骤**：`node assets/scripts/check-consistency.mjs`（默认报告模式，显示差异但不阻塞）/ `--strict`（阻塞模式，CI 与提交前强校验）。**禁止人工逐项比对**——历史上 63 条手工比对才确认无漂，机械步骤避免再次漂移。
