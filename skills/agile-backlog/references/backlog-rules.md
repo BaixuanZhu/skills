@@ -89,11 +89,11 @@ Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改 
 - ❌ **改写历史**：删旧验收 / 改点数 / 篡改关联——禁止（审计追溯的基础）
 - 例外：用户明确裁决"撤回 / 废止已完成条目"→ 走本节撤回流程（status → 已撤回, withdrawn=true），历史事实仍不删，仅追加注记
 
-惯例来源：评审类裁决影响已交付条目时（如 ADR 替代影响已完成条目的口径），追加注记而非改写历史，效果已验证（见 agile-strategic 门禁② 与 change-matrix.md §四 下游影响评估）。
+惯例来源：评审类裁决影响已交付条目时（如 ADR 替代影响已完成条目的口径），追加注记而非改写历史（见 agile-strategic 门禁② 与 change-matrix.md §四 下游影响评估）。
 
 ## 六、门禁
 
-详见 `using-agile/references/gate-protocol.md §二`（① 技术任务须关联 ADR）+ §三 异常表 ⑤（过大条目拆分后估点）。
+详见 `using-agile/references/gate-protocol.md §二`（① 技术任务须关联 ADR）+ §三 边界异常 ⑤（过大条目拆分后估点）。
 
 ## 七、YAML 接口契约（消费 Agent 读此文件）
 
@@ -123,4 +123,4 @@ Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改 
 
 任一不符 → 停下报告差异，以用户确认为准。
 
-**机械步骤**：`node assets/scripts/check-consistency.mjs`（默认报告模式，显示差异但不阻塞）/ `--strict`（阻塞模式，CI 与提交前强校验）。**禁止人工逐项比对**——历史上 63 条手工比对才确认无漂，机械步骤避免再次漂移。
+**机械步骤**：`node assets/scripts/check-consistency.mjs`（默认报告模式，显示差异但不阻塞）/ `--strict`（阻塞模式，CI 与提交前强校验）。**禁止人工逐项比对**——机械步骤取代。

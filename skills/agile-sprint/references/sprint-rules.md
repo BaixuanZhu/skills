@@ -22,7 +22,7 @@
 ## 三、关闭流程
 
 1. 确认环节 B 的 DoD 检查结果已全部落地（「条目状态建议」清单已产出）。
-2. **统计快照重算**：跑 `node agile-backlog/assets/scripts/inventory.mjs --root <项目根>` 输出本 Sprint 关闭后的 Backlog 快照（总条目 / 有效条目 / 按优先级分组 / 按状态分组 / ADR 关联覆盖），作为 Sprint 文件「变更记录」段的当前事实底（取代人工增量手算——历史多次因手算漂移）。
+2. **统计快照重算**：跑 `node agile-backlog/assets/scripts/inventory.mjs --root <项目根>` 输出本 Sprint 关闭后的 Backlog 快照（总条目 / 有效条目 / 按优先级分组 / 按状态分组 / ADR 关联覆盖），作为 Sprint 文件「变更记录」段的当前事实底（取代人工增量手算）。
 3. 在本 Sprint 文件头标注执行结果来源（.done.yaml 路径或"人工确认"）。
 4. 本 Sprint 文件头"状态"改为"已关闭"（不删除，自然保留作历史）。
 5. 提示用户：入口下次激活时检测到 `.done.yaml` 即默认执行闭环（DoD 关闭 → Backlog 同步 + 反馈处理）；**同步完成后 .done.yaml 改后缀为 .done.processed.yaml 留痕（不删除，防重复同步）**。

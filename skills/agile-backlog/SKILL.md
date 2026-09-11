@@ -49,7 +49,7 @@ dependencies:
 - 用 ADR.md 中的决策推导技术任务（T-NNN），每条 T-NNN 关联对应 ADR 章节
 - 确认优先级排序逻辑（见 `references/backlog-rules.md`）
 - **双文件一致性校验**：若 .yaml 与 .md 均存在，跑 `node assets/scripts/check-consistency.mjs`（机械步骤自动跑），校验 id 集合 / 条目数 / 同 id 的 priority / status / adr_refs / point 六项（权威口径见 `references/backlog-rules.md §七`）。不一致 → 停下报告差异，请用户确认以哪份为准后再继续
-- **盘点（取代增量手算）**：改动条目后必跑 `node assets/scripts/inventory.mjs`（机械步骤自动跑），覆盖式统计总条目 / 总点数 / 按优先级分组 / 按状态分组 / ADR 关联覆盖，**禁止人工口算增量**（历史多次因增量手算漂移：+15 点漏记 / F-861 漏更 / 阶段 31 漏更）
+- **盘点（取代增量手算）**：改动条目后必跑 `node assets/scripts/inventory.mjs`（机械步骤自动跑），覆盖式统计总条目 / 总点数 / 按优先级分组 / 按状态分组 / ADR 关联覆盖，**禁止人工口算增量**
 
 ### 2b. 决策问询（写前必跑，`using-agile/references/interview-protocol.md`）
 
@@ -110,7 +110,7 @@ dependencies:
 - 「已确认」列：优先级 / 点数 / 验收已与用户确认 → `✓`；`agent 推荐待确认` → `待确认`；Sprint 取用前必须把 `待确认` 行显式转 `✓`（否则 `agile-sprint` 跳过该条目并告警）。
 - **改完必跑**：
   - 盘点：`node assets/scripts/inventory.mjs`（覆盖式统计，取代增量手算）
-  - 一致性：`node assets/scripts/check-consistency.mjs`（id 集合 / priority / status / adr_refs / point 五项）
+  - 一致性：`node assets/scripts/check-consistency.mjs`（id 集合 / 条目数 / priority / status / adr_refs / point 六项）
 
 ### 阶段 2：任务详情展开 + 验收标准（仅非显然条目）
 
@@ -189,14 +189,14 @@ items:
 - ✅ 产出 `PRODUCT-BACKLOG.md` + `PRODUCT-BACKLOG.yaml` 双文件；❌ **不顺手写** VISION / ARCHITECTURE / ADR / Sprint。
 - ✅ **决策问询是产出前环节**（§2b，口径见 `using-agile/references/interview-protocol.md`），决策点未确认不落盘。
 - ✅ **产出分阶段**（排序+估点 → 详情+验收 → YAML，§3），每阶段写完即停；❌ 禁止一次性出全部。
-- ✅ **阶段表即唯一结构**——`PRODUCT-BACKLOG.md` 按 `## 阶段 N` 分块落同一文件（§3 阶段 1），**禁止**单独维护"优先级排序表 / 待办池"等平级结构（历史双轨导致池表严重漂移，已废弃）。
+- ✅ **阶段表即唯一结构**——`PRODUCT-BACKLOG.md` 按 `## 阶段 N` 分块落同一文件（§3 阶段 1），**禁止**单独维护"优先级排序表 / 待办池"等平级结构。
 - ✅ 技术任务（T-NNN）和功能需求（F-NNN）平级；仅"非显然"条目展开（§3 阶段2）。
 - ❌ 不使用 INVEST / Given-When-Then 仪式，不拆 epics/enablers 子目录，不用 US/EN/EPIC 命名。
 - ✅ 涉及架构决策的 T-NNN 必须关联 ADR（门禁 ①，判定细则见 `using-agile/references/gate-protocol.md §二 ①`）。
 - ✅ **关键决策落盘带来源标注**（用户给出 / agent 推断 / agent 推荐待确认）。
 - ✅ **Backlog 条目只写范围**（可观察验收行为 / 业务与非功能约束 / 边界 / 依赖关联），❌ **不写实现**（技术方案 / 框架选型 / 代码结构 / SQL / 伪代码）——技术决策由 ADR 承载，实现归消费 Agent 判断（细则见 `references/backlog-rules.md §四`）。
 - ✅ `.yaml` 已存在后，每次编辑 .md 必须同步更新 .yaml（id/priority/status/confirmed/withdrawn 字段），同步后必跑 `assets/scripts/check-consistency.mjs`。
-- ✅ **盘点机械步骤**：改动条目后必跑 `assets/scripts/inventory.mjs`（§2a），覆盖式统计取代人工增量手算（历史多次因手算漂移：+15 点漏记 / F-861 漏更 / 阶段 31 漏更）。
+- ✅ **盘点机械步骤**：改动条目后必跑 `assets/scripts/inventory.mjs`（§2a），覆盖式统计取代人工增量手算。
 - ✅ **未确认条目 Sprint 取用前必须显式 confirm**：`.md` 阶段表「已确认」列 `待确认` 或 `.yaml` `confirmed: false` 的「待办」条目，`agile-sprint` 取用时跳过并告警；不私自默认 `true`（agent 推荐 ≠ 用户确认）。
 
 ## 6. 门禁
