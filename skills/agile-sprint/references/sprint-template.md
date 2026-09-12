@@ -21,7 +21,7 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
 - 目标: {一句 Sprint 目标}
 - 容量: 团队 {N} 人 × {D} 天 × {专注系数} ≈ {可用点} 点
 - 估点体系: 斐波那契（默认）/ 线性（仅纯研究型 Sprint，见 `references/sprint-rules.md §四`）
-- 来源: PRODUCT-BACKLOG.yaml（按 priority 顶部取条目）
+- 来源: PRODUCT-BACKLOG.md（按 priority 顶部取条目）
 - 消费方: 本文件是单向交付，任务状态由消费 Agent 自行追踪
 - 执行结果: 待回填（消费 Agent 执行后生成 .done.yaml，见下方「回填要求」段）
 
@@ -76,7 +76,7 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
 
 - [ ] 关联的 .done.yaml 已存在并读取（或无 .done 时用户已人工确认完成情况）
 - [ ] DoD 全部通过
-- [ ] 统计快照已重算（跑 `node agile-backlog/assets/scripts/inventory.mjs`，输出附在「变更记录」段）
+- [ ] 统计快照已重算（从阶段表全量统计，输出附在「变更记录」段）
 - [ ] 文件头标注执行结果来源（.done 路径或"人工确认"）
 - [ ] 本文件头"状态"改为"已关闭"
 
@@ -93,7 +93,7 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
 | 时间 | 变更 | 来源 |
 |------|------|------|
 | {YYYY-MM-DD HH:MM} | Sprint 关闭：本批完成 {N} 条 / 移下 Sprint {M} 条 / 反馈 {K} 条 | agile-sprint 关闭环节（脚本 + 人工裁决） |
-| {YYYY-MM-DD HH:MM} | 统计快照：总 {X} 条 {Y} 点 / 有效 {X'} 条 {Y'} 点 / ADR 覆盖 {P}% | `assets/scripts/inventory.mjs` 输出 |
+| {YYYY-MM-DD HH:MM} | 统计快照：总 {X} 条 {Y} 点 / 有效 {X'} 条 {Y'} 点 / ADR 覆盖 {P}% | 阶段表全量统计输出 |
 | {YYYY-MM-DD HH:MM} | {其它裁决/追加注记} | {用户裁决 / agent 推荐} |
 
 > **变更日志与统计区分区**：统计快照只保留当前一句口径；历史快照与全部变更走本段。禁止把历史快照累计进统计区。

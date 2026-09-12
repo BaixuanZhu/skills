@@ -6,7 +6,7 @@
 
 两个内容目录是核心，其余是配套：
 
-- `skills/<name>/` —— **技能内容唯一编辑源**（npx skills / SkillHub / ZCode-npx 扫描这里）。每个含 `SKILL.md`（YAML frontmatter：`name`/`description`/`version`/`slug`/`displayName`，敏捷族另有 `dependencies`）+ `references/`（编号 `NN-topic.md`，1~14 个）+ 个别有 `assets/`（`java-coding-quality` 含规则集；`agile-backlog` 含 `scripts/{inventory,check-consistency}.mjs` + `scripts/lib/yaml-mini.mjs` 零依赖共享解析器——消费方项目内运行，**零外部 npm 依赖**）。sync hook 自动同步整个 `assets/` 子树到 `plugins/`。
+- `skills/<name>/` —— **技能内容唯一编辑源**（npx skills / SkillHub / ZCode-npx 扫描这里）。每个含 `SKILL.md`（YAML frontmatter：`name`/`description`/`version`/`slug`/`displayName`，敏捷族另有 `dependencies`）+ `references/`（编号 `NN-topic.md`，1~14 个）+ 个别有 `assets/`（如 `java-coding-quality` 含规则集）。sync hook 自动同步整个 `assets/` 子树到 `plugins/`。
 - `plugins/<name>/` —— **skills/ 的镜像**（Claude Code / ZCode / Codex 插件规范要求 manifest + `skills/<name>/` 嵌套，故与扁平的 `skills/` 分开存放）。每个含 `.claude-plugin/plugin.json`（Claude Code / ZCode 读）+ `.codex-plugin/plugin.json`（Codex 读）。支持「多 skill 合并入 1 个 plugin」（agile / java-test / java-quality 三个 group，见下文「group 映射」）。**不要手改这里**——pre-commit hook 从 `skills/` 自动同步。
 - `.claude-plugin/marketplace.json` —— Claude Code / ZCode 插件市场清单，`plugins[]` 每条 `source` 指 `./plugins/<name>`。
 - `.agents/plugins/marketplace.json` —— Codex 插件市场清单，`plugins[]` 每条 `source` 是对象（`{"source":"local","path":"./plugins/<name>"}` + `policy` + `category`），与 Claude 的字符串 `source` 不同。
@@ -81,7 +81,7 @@
 
 历轮达尔文评估（`eval/agile/`）反复出现的错误形态——多数不是"写得差"而是"**改漏了**"。编辑任何技能（尤其套件）时：
 
-1. **改规则先 grep 旧口径**：新增/修改一条规则时，grep 该规则在套件内的全部出现处（含「硬约束」节——复述重灾区）。旧规则要么删、要么显式限定适用范围（如"`.yaml` 生成后"）；新旧并存互斥是历轮 P1 的主要形态。
+1. **改规则先 grep 旧口径**：新增/修改一条规则时，grep 该规则在套件内的全部出现处（含「硬约束」节——复述重灾区），注意非字面量变体（如 `PRODUCT-BACKLOG（.md + .yaml）` 这种写法 replace_all 扫不到）。旧规则要么删、要么显式限定适用范围；新旧并存互斥是历轮 P1 的主要形态。
 2. **每个 reference 必须被 SKILL.md 指针引用**：agent 只读 SKILL.md 也应能发现全部 references——孤儿 reference = 内容不可达（曾致整个 DOD 模板不可见）。
 3. **要求落盘必查承接字段**：凡写"标注 X / 记录 Y / 文件头标注 Z"，检查模板、表格列、schema 枚举确有对应位置；没有就先加字段。反向同理：改状态枚举时 grep 引用它的 schema / 模板 / 同步规则（曾出现永不被写入的死枚举）。
 4. **新增产物文件同步所有清单**：新文件产物（如 STRATEGY_CONFLICT.md）要同步进检测清单 / 状态表 / 路由决策——否则产物存在而链路对它不可见。

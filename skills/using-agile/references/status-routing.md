@@ -14,8 +14,8 @@
 | `agile-docs/ARCHITECTURE.md` | 架构图已产出 | agile-strategic（阶段 B） |
 | `agile-docs/ADR.md` | ADR 决策已产出 | agile-strategic（阶段 B） |
 | `agile-docs/STRATEGY_CONFLICT.md` | 战略冲突待裁决 | using-agile（写前门禁生成，裁决后吸收可删） |
-| `agile-docs/PRODUCT-BACKLOG.yaml` | 待办池已产出（Agent 读） | agile-backlog |
-| `agile-docs/PRODUCT-BACKLOG.md` | 待办池已产出（人读） | agile-backlog |
+| `agile-docs/PRODUCT-BACKLOG.md` | 待办池已产出（人读与 Agent 共读） | agile-backlog |
+| `agile-docs/PRODUCT-BACKLOG.yaml` / `.json` | **旧格式接口文件**（v4.x 及之前），待迁移进阶段表后删除 | agile-backlog（旧格式迁移） |
 | `agile-docs/DOD.md` | 完成定义已就绪 | using-agile（初始化） |
 | `sprints/*.done.yaml` | Sprint 执行结果已回传 | using-agile（本入口，默认执行回填闭环：agile-sprint 关闭 → agile-backlog 同步 + 反馈处理） |
 | `sprints/` 下含状态非"已关闭"的 `.md` | 活跃 Sprint | agile-sprint |
@@ -32,14 +32,15 @@
 | 战略 | ADR | {ADR.md: N 条决策} |
 | 战略 | 冲突待裁决 | {STRATEGY_CONFLICT.md: 有（待裁决）/无} |
 | 执行 | DoD | {DOD.md: ✅/❌} |
-| 执行 | Backlog MD | {PRODUCT-BACKLOG.md: ✅/❌，N 条} |
-| 执行 | Backlog YAML | {PRODUCT-BACKLOG.yaml: ✅/❌} |
+| 执行 | Backlog | {PRODUCT-BACKLOG.md: ✅/❌，N 条} |
 | 执行 | 活跃 Sprint | {有/无，文件名} |
 | 执行 | Sprint 回填 | {sprints/*.done.yaml: N 个待闭环处理（闭环后为 .done.processed.yaml）} |
 | 执行 | 执行反馈 | {.done.yaml feedback: N 条待处理（issue/decision）} |
 ```
 
 > ⚠️ 若检测到 >1 个活跃 Sprint（状态非"已关闭"），警告并请用户选择关闭/合并其一后再继续。
+
+> ⚠️ 若检测到旧格式 `PRODUCT-BACKLOG.yaml` / `PRODUCT-BACKLOG.json`（v4.x 及之前的双文件格式）：提示用户迁移——把旧文件中仅机器侧持有的信息（adr_refs / confirmed / withdrawn）核对进阶段表对应列（关联 / 已确认 / 状态），删除旧文件后再继续路由（口径见 `agile-backlog/references/backlog-rules.md §七`）。
 
 ## 三、路由决策
 
@@ -51,4 +52,4 @@
 | 战略层已就绪 + 想拆待办 | agile-backlog |
 | Backlog 非空 + 想开冲刺 | agile-sprint |
 | 想改已有文档（任意类型） | using-agile §6 变更协调（按 change-matrix 路由到对应业务技能） |
-| .done.yaml 存在（任意 Sprint 状态） | **默认执行回填闭环**：agile-sprint 环节 B/C 关闭（如未关闭）→ agile-backlog 阶段 5 同步 + 反馈处理 → `.done.processed.yaml` 留痕；机械步骤自动，裁决点停下 |
+| .done.yaml 存在（任意 Sprint 状态） | **默认执行回填闭环**：agile-sprint 环节 B/C 关闭（如未关闭）→ agile-backlog 阶段 4 同步 + 反馈处理 → `.done.processed.yaml` 留痕；机械步骤自动，裁决点停下 |

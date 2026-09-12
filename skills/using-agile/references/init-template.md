@@ -8,8 +8,7 @@ project-root/
 │   ├── VISION.md                  # [战略层] 由 agile-strategic 阶段 A 产出
 │   ├── ARCHITECTURE.md            # [战略层] 由 agile-strategic 阶段 B 产出（C4 合并）
 │   ├── ADR.md                     # [战略层] 由 agile-strategic 阶段 B 产出（章节式）
-│   ├── PRODUCT-BACKLOG.md         # [执行层] 由 agile-backlog 产出（人读）
-│   ├── PRODUCT-BACKLOG.yaml       # [执行层] 由 agile-backlog 产出（Agent 轻量读取）
+│   ├── PRODUCT-BACKLOG.md         # [执行层] 由 agile-backlog 产出（人读与 Agent 共读）
 │   ├── DOD.md                     # [执行层] 完成定义（本技能生成模板）
 │   └── interfaces/
 │       └── sprint-schema.yaml     # Sprint 接口契约（本技能初始化时生成）

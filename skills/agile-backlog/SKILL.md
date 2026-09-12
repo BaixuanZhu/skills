@@ -5,7 +5,7 @@ displayName: 敏捷产品待办
 description: |
   当用户说"写待办""拆任务""Backlog""Product Backlog""使能项""优先级排序""排迭代"或 using-agile 路由到此，且战略层（VISION + ARCHITECTURE/ADR）已确认时触发。
 agent_created: true
-version: 4.6.1
+version: 5.0.0
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架与路由
@@ -24,7 +24,7 @@ dependencies:
 | `agile-docs/ARCHITECTURE.md` + `ADR.md` 存在 | → agile-strategic 阶段 B（用户明确跳层时可缺，T-NNN 由门禁 ① 拦截） |
 
 ## 1. 定位
-本技能是执行层中枢，产出**两个文件**：`agile-docs/PRODUCT-BACKLOG.md`（人读）+ `agile-docs/PRODUCT-BACKLOG.yaml`（Agent 轻量读取）。
+本技能是执行层中枢，产出**单一文件**：`agile-docs/PRODUCT-BACKLOG.md`——人读与 Agent 共读同一份。阶段表即机器接口（列名固定契约，见 `references/backlog-rules.md §七`），消费 Agent 读表拿排序和状态，按 id 回读「任务详情」段取详情。
 
 它是**待办池**（to-do list）。技术任务（T-NNN）和功能需求（F-NNN）**平级**进入待办池。不强制 INVEST/Given-When-Then 仪式。
 
@@ -35,9 +35,8 @@ dependencies:
 | 阶段 0 | （无文件）决策问询 | 读 VISION/ADR + 项目画像 |
 | 阶段 1 | 阶段表 + 估点建议（§3 阶段 1，**阶段表即唯一结构**，多阶段分组同步落同一 `.md`） | 阶段 0 完成 |
 | 阶段 2 | 任务详情展开 + 验收标准（§3 阶段 2） | 阶段 1 确认 |
-| 阶段 3 | 生成/同步 `PRODUCT-BACKLOG.yaml`（§3 阶段 3） | 阶段 2 确认 |
-| 阶段 4 | 下游影响评估（§3 阶段 4，仅更新已有 Backlog 时） | 阶段 3 完成 |
-| 阶段 5 | 接受 .done 同步（§3 阶段 5，仅 .done.yaml 回传时） | `.done.yaml` 存在（入口闭环路由；Sprint 未关闭时先经 agile-sprint 关闭） |
+| 阶段 3 | 下游影响评估（§3 阶段 3，仅更新已有 Backlog 时） | 阶段 2 确认 |
+| 阶段 4 | 接受 .done 同步（§3 阶段 4，仅 .done.yaml 回传时） | `.done.yaml` 存在（入口闭环路由；Sprint 未关闭时先经 agile-sprint 关闭） |
 
 **决策用选择题问**（`using-agile/references/interview-protocol.md`）：先读 VISION/ADR 补事实（文档优先），只把真决策（范围/优先级/估点/验收）用「候选 + 推荐 + 自定义」一次一问地喂给用户。变更时先分级（`using-agile/references/change-matrix.md §二`），禁止整层重访。
 
@@ -48,8 +47,8 @@ dependencies:
 - 用 VISION 的"核心原则 / 战略红线"校验每个条目的归属（不服务愿景的不进 Backlog）
 - 用 ADR.md 中的决策推导技术任务（T-NNN），每条 T-NNN 关联对应 ADR 章节
 - 确认优先级排序逻辑（见 `references/backlog-rules.md`）
-- **双文件一致性校验**：若 .yaml 与 .md 均存在，跑 `node assets/scripts/check-consistency.mjs`（机械步骤自动跑），校验 id 集合 / 条目数 / 同 id 的 priority / status / adr_refs / point 六项（权威口径见 `references/backlog-rules.md §七`）。不一致 → 停下报告差异，请用户确认以哪份为准后再继续
-- **盘点（取代增量手算）**：改动条目后必跑 `node assets/scripts/inventory.mjs`（机械步骤自动跑），覆盖式统计总条目 / 总点数 / 按优先级分组 / 按状态分组 / ADR 关联覆盖，**禁止人工口算增量**
+- **旧格式迁移检测**：若 `agile-docs/` 下存在旧接口文件 `PRODUCT-BACKLOG.yaml` 或 `PRODUCT-BACKLOG.json`（v4.x 及之前的双文件格式）→ 把其中仅机器侧持有的信息（adr_refs / confirmed / withdrawn）核对进阶段表对应列（关联 / 已确认 / 状态），删除旧文件后再继续
+- **全量统计（取代增量手算）**：改动条目后从阶段表**重新全量统计**——总条目 / 总点数 / 按优先级分组 / 按状态分组 / ADR 关联覆盖。覆盖式重算，**禁止在旧统计数字上增量加减**
 
 ### 2b. 决策问询（写前必跑，`using-agile/references/interview-protocol.md`）
 
@@ -87,14 +86,14 @@ dependencies:
 
 ### 阶段 1：阶段表 + 估点建议（先出排序，不展开详情）
 
-**阶段表即唯一结构**——`PRODUCT-BACKLOG.md` 不再单独维护"优先级排序表"。条目按"阶段 N"分块（如 `## 阶段 1` / `## 阶段 2`），所有阶段共用同一 `.md` 文件、同一张 .yaml。**禁止制造"池表 + 阶段表"双轨结构**——任何"待办池"只是各阶段表的并集，不单独立表。
+**阶段表即唯一结构**——`PRODUCT-BACKLOG.md` 不再单独维护"优先级排序表"。条目按"阶段 N"分块（如 `## 阶段 1` / `## 阶段 2`），所有阶段共用同一 `.md` 文件。**禁止制造"池表 + 阶段表"双轨结构**——任何"待办池"只是各阶段表的并集，不单独立表。
 
-先写 `PRODUCT-BACKLOG.md` 的「阶段表」段（含 id/标题/类型/仓库/点/优先级/状态/关联/来源/已确认），**暂不写「任务详情」段**。写完停，结构化审阅后再进阶段 2。
+先写 `PRODUCT-BACKLOG.md` 的「阶段表」段（列名固定：id/标题/类型/仓库/点/优先级/状态/关联/来源/已确认，契约见 `references/backlog-rules.md §七`），**暂不写「任务详情」段**。写完停，结构化审阅后再进阶段 2。
 
 ```markdown
 # Product Backlog
 
-> 维护说明：条目按"阶段 N"分块排序。技术任务与功能需求平级。改完必跑盘点 + 一致性校验。
+> 维护说明：条目按"阶段 N"分块排序。技术任务与功能需求平级。改完重新全量统计。
 
 ## 阶段 1
 
@@ -108,9 +107,7 @@ dependencies:
 - 「来源/依据」列承载两个标注：点的来源（`agent 推荐` 或 `用户确认`）+ 优先级依据（开发顺序 / MoSCoW / 依赖 / ADR 优先级，见 `references/backlog-rules.md §三`）。
 - 「仓库」列仅多仓库项目填写（条目标注归属仓库，供 Sprint 规划识别跨仓库交接点，见 `references/backlog-rules.md §二`）；单仓库项目可省略该列。
 - 「已确认」列：优先级 / 点数 / 验收已与用户确认 → `✓`；`agent 推荐待确认` → `待确认`；Sprint 取用前必须把 `待确认` 行显式转 `✓`（否则 `agile-sprint` 跳过该条目并告警）。
-- **改完必跑**：
-  - 盘点：`node assets/scripts/inventory.mjs`（覆盖式统计，取代增量手算）
-  - 一致性：`node assets/scripts/check-consistency.mjs`（id 集合 / 条目数 / priority / status / adr_refs / point 六项）
+- **改完重新全量统计**（§2a，覆盖式重算，禁止增量口算）。
 
 ### 阶段 2：任务详情展开 + 验收标准（仅非显然条目）
 
@@ -130,34 +127,7 @@ dependencies:
 
 - 验收写不出可观察行为 → 回决策问询追问（§2b 决策点 3），不许脑补；用户明确跳过 → 标 `{待确认}`。
 
-### 阶段 3：生成/同步 `agile-docs/PRODUCT-BACKLOG.yaml`（Agent 读）
-
-轻量接口文件，仅含消费 Agent 需要的排序字段。**在前两阶段确认后生成/同步**，避免提前出 YAML 导致排序未定就落盘。
-
-```yaml
-version: "1.0"
-items:
-  - id: "F-001"
-    priority: "Must"
-    status: "待办"
-    confirmed: true              # 默认 true(缺字段视作已确认);agent 推荐待确认 → false
-  - id: "T-001"
-    priority: "Must"
-    status: "待办"
-    adr_refs: ["ADR-001", "ADR-005"]
-    confirmed: true
-  - id: "T-002"
-    priority: "Should"
-    status: "已完成"
-  - id: "T-003"
-    priority: "Won't"
-    status: "已撤回"
-    withdrawn: true              # 已撤回:不参与排序/统计,但仍留痕;盘点脚本自动排除
-```
-
-**同步规则**：首次产出时阶段 1/2 只写 `.md`，阶段 3 才生成 `.yaml`；**`.yaml` 生成后**，每次编辑 `.md` 同步更新 `.yaml`。YAML 始终反映最新排序和状态，不含 acceptance/constraints 等描述详情。消费 Agent 读 YAML 拿排序，按需回读 `.md` 取详情。**改动后必跑** `assets/scripts/check-consistency.mjs` 验证同步结果（`--strict` 用于提交前强校验）。
-
-### 阶段 4：下游影响评估（更新已有 Backlog 时的审阅清单项）
+### 阶段 3：下游影响评估（更新已有 Backlog 时的审阅清单项）
 
 **首次产出跳过**；本次若是「更新已有 Backlog」，作为**结构化审阅清单的一项**评估下游 Sprint 是否需要改变（`using-agile/references/change-matrix.md §四`），不单独成环节：
 
@@ -166,38 +136,36 @@ items:
   - 否 → 审阅清单记「下游无影响」。
 - 增删条目 → 检查活跃 Sprint 任务清单是否受影响。
 
-### 阶段 5：接受 .done 同步
+### 阶段 4：接受 .done 同步
 
 当 using-agile 检测到 `sprints/*.done.yaml`（默认执行回填闭环）并路由到本技能：
 
-1. 读取 `.done.yaml`，按 completed / moved_next 批量更新 PRODUCT-BACKLOG.yaml（status 字段）
-   - completed 条目 → status: "已完成"
-   - moved_next 条目 → status: "待办"，**仅改 status，priority 字段保持原值不动**（原属顶部条目，状态复位后自然回到取用顺序前列；禁止为"保回顶部"擅自调高优先级）
-2. 同步更新 PRODUCT-BACKLOG.md 表格
-3. **处理 feedback**（`.done.yaml` 的 feedback 列表）：
+1. 读取 `.done.yaml`，按 completed / moved_next 批量更新 PRODUCT-BACKLOG.md 阶段表「状态」列
+   - completed 条目 → 状态: "已完成"
+   - moved_next 条目 → 状态: "待办"，**仅改状态，优先级列保持原值不动**（原属顶部条目，状态复位后自然回到取用顺序前列；禁止为"保回顶部"擅自调高优先级）
+2. **处理 feedback**（`.done.yaml` 的 feedback 列表）：
    - `reason`（未完成原因）→ 已由 agile-sprint 在关闭环节展示，此处无需处理
-   - `issue`（执行中发现的新问题）→ 转为 Backlog **新条目候选**：列出建议条目（标题 / 类型 / 优先级建议 / 来源标注"消费 Agent 反馈"），请用户确认后新增并同步双文件
+   - `issue`（执行中发现的新问题）→ 转为 Backlog **新条目候选**：列出建议条目（标题 / 类型 / 优先级建议 / 来源标注"消费 Agent 反馈"），请用户确认后新增进阶段表
    - `decision`（需产品层裁决）→ 停下请用户裁决；裁决结果落盘为条目或明确忽略
-4. 将 `.done.yaml` 文件后缀改为 `.done.processed.yaml`（留痕，不删除）
-5. 完成后停下，报告同步结果 + 反馈处理结果
+3. 将 `.done.yaml` 文件后缀改为 `.done.processed.yaml`（留痕，不删除）
+4. 完成后停下，报告同步结果 + 反馈处理结果
 
 ## 4. 写完即停（结构化审阅，每阶段都走）
 
-每个产出阶段写完即停，按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列排序依据 / 优先级判断 / agent 自估点数及理由 × 来源；阶段 4 追加「下游影响评估」结论），问"**继续下一阶段 / 下一步**（agile-sprint）还是**更新**本层？"。
+每个产出阶段写完即停，按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列排序依据 / 优先级判断 / agent 自估点数及理由 × 来源；阶段 3 追加「下游影响评估」结论），问"**继续下一阶段 / 下一步**（agile-sprint）还是**更新**本层？"。
 
 ## 5. 硬约束
-- ✅ 产出 `PRODUCT-BACKLOG.md` + `PRODUCT-BACKLOG.yaml` 双文件；❌ **不顺手写** VISION / ARCHITECTURE / ADR / Sprint。
+- ✅ 产出 `PRODUCT-BACKLOG.md` **单文件**（人读与 Agent 共读，阶段表即机器接口）；❌ **不顺手写** VISION / ARCHITECTURE / ADR / Sprint；❌ **不另建任何机器侧副本文件**（.yaml/.json 接口文件已废弃）。
 - ✅ **决策问询是产出前环节**（§2b，口径见 `using-agile/references/interview-protocol.md`），决策点未确认不落盘。
-- ✅ **产出分阶段**（排序+估点 → 详情+验收 → YAML，§3），每阶段写完即停；❌ 禁止一次性出全部。
-- ✅ **阶段表即唯一结构**——`PRODUCT-BACKLOG.md` 按 `## 阶段 N` 分块落同一文件（§3 阶段 1），**禁止**单独维护"优先级排序表 / 待办池"等平级结构。
+- ✅ **产出分阶段**（排序+估点 → 详情+验收，§3），每阶段写完即停；❌ 禁止一次性出全部。
+- ✅ **阶段表即唯一结构**——`PRODUCT-BACKLOG.md` 按 `## 阶段 N` 分块落同一文件（§3 阶段 1），**禁止**单独维护"优先级排序表 / 待办池"等平级结构；**列名严格固定**（§七 机读契约），不自由增删改列名。
 - ✅ 技术任务（T-NNN）和功能需求（F-NNN）平级；仅"非显然"条目展开（§3 阶段2）。
 - ❌ 不使用 INVEST / Given-When-Then 仪式，不拆 epics/enablers 子目录，不用 US/EN/EPIC 命名。
 - ✅ 涉及架构决策的 T-NNN 必须关联 ADR（门禁 ①，判定细则见 `using-agile/references/gate-protocol.md §二 ①`）。
 - ✅ **关键决策落盘带来源标注**（用户给出 / agent 推断 / agent 推荐待确认）。
 - ✅ **Backlog 条目只写范围**（可观察验收行为 / 业务与非功能约束 / 边界 / 依赖关联），❌ **不写实现**（技术方案 / 框架选型 / 代码结构 / SQL / 伪代码）——技术决策由 ADR 承载，实现归消费 Agent 判断（细则见 `references/backlog-rules.md §四`）。
-- ✅ `.yaml` 已存在后，每次编辑 .md 必须同步更新 .yaml（id/priority/status/confirmed/withdrawn 字段），同步后必跑 `assets/scripts/check-consistency.mjs`。
-- ✅ **盘点机械步骤**：改动条目后必跑 `assets/scripts/inventory.mjs`（§2a），覆盖式统计取代人工增量手算。
-- ✅ **未确认条目 Sprint 取用前必须显式 confirm**：`.md` 阶段表「已确认」列 `待确认` 或 `.yaml` `confirmed: false` 的「待办」条目，`agile-sprint` 取用时跳过并告警；不私自默认 `true`（agent 推荐 ≠ 用户确认）。
+- ✅ **全量统计取代增量手算**：改动条目后从阶段表重新全量统计（§2a），禁止在旧数字上加减。
+- ✅ **未确认条目 Sprint 取用前必须显式 confirm**：阶段表「已确认」列为 `待确认` 的「待办」条目，`agile-sprint` 取用时跳过并告警；不私自默认 `✓`（agent 推荐 ≠ 用户确认）。
 
 ## 6. 门禁
 - **T-NNN 无 ADR**：技术任务涉及架构决策但未关联 ADR.md 章节 → 停下，先回 agile-strategic 阶段 B 补 ADR 章节，再回填关联字段。现有 ADR 无合适章节时同样回阶段 B 补，**禁止发明"待 ADR-NNN 确认"之类的占位关联**（判定细则见 `using-agile/references/gate-protocol.md §二 ①`）。

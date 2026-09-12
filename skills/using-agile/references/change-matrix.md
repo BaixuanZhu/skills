@@ -7,9 +7,9 @@
 | 改 VISION（核心原则/红线） | PRODUCT-BACKLOG 排序逻辑、现有任务归属、对齐检查基准 |
 | 改 ARCHITECTURE | 关联 ADR、Sprint 技术任务、架构瓶颈条目 |
 | 改 ADR（技术选型） | 关联 PRODUCT-BACKLOG 任务、Sprint 技术任务、ARCHITECTURE 图 |
-| 改 PRODUCT-BACKLOG 任务 | 所在 Sprint 规划、`PRODUCT-BACKLOG.yaml`（同步 id/priority/status） |
+| 改 PRODUCT-BACKLOG 任务 | 所在 Sprint 规划 |
 | 加新任务到 Backlog（Sprint 执行中） | 对当前 Sprint 无直接影响（进 Backlog 池等待下个 Sprint 取用），需校验与 VISION/ADR 的对齐 |
-| 关 Sprint | `PRODUCT-BACKLOG.yaml`（相关条目 status 更新）、`PRODUCT-BACKLOG.md` 表格 |
+| 关 Sprint | `PRODUCT-BACKLOG.md` 阶段表（相关条目状态列更新） |
 | 改 DoD | Sprint 出口检查、已完成条目复核 |
 
 ## 二、变更分级（响应速度的关键，先分级再动手）
@@ -18,7 +18,7 @@
 
 | 级别 | 判定 | 动作 |
 |------|------|------|
-| **L1 措辞级** | 改标题/描述/验收措辞，不影响排序、点数、架构边界、优先级 | 就地改，**不重访**；同步 .yaml 对应字段（若涉及）；结构化审阅时一句带过 |
+| **L1 措辞级** | 改标题/描述/验收措辞，不影响排序、点数、架构边界、优先级 | 就地改，**不重访**；结构化审阅时一句带过 |
 | **L2 同层级** | 影响同层多个条目（如改某条核心原则、改某条目优先级/点数、增删同层条目） | 只对**受影响维度**做增量问询，其余维度复用现有文档；改完就地更新 |
 | **L3 跨层/战略级** | 改定位/使命/战略红线，或改架构选型（触发 ADR 替代），或影响面跨到下游（Backlog→Sprint） | 走完整问询 + 变更传播评估；跨层按依赖顺序逐层路由 |
 

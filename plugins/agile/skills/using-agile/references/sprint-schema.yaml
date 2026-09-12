@@ -42,5 +42,5 @@ done_file:
   note: completed 和 moved_next 至少一个可为空数组；不应包含 Sprint 任务清单之外的 ID；两个列表之外的清单内条目视为未执行，DoD 时归入 moved_next；含交接契约的任务，completed 前须已产出对应交接文档
   mandatory: true  # 回填是硬性义务：消费 Agent 执行完毕必须生成，否则 Sprint 无法关闭、Backlog 无法同步
   timing: 消费 Agent 执行完毕后生成（含部分完成）
-  lifecycle: 写入（消费 Agent）→ 读取（agile-sprint DoD 检查，含 feedback）→ 检测（using-agile 默认闭环）→ 消费（agile-backlog 同步到 .yaml+.md + 反馈处理）→ 改后缀 .done.processed.yaml（留痕，不删除）
+  lifecycle: 写入（消费 Agent）→ 读取（agile-sprint DoD 检查，含 feedback）→ 检测（using-agile 默认闭环）→ 消费（agile-backlog 同步到 PRODUCT-BACKLOG.md 阶段表 + 反馈处理）→ 改后缀 .done.processed.yaml（留痕，不删除）
 

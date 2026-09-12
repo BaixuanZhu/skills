@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户说"开始项目""敏捷""Sprint""待办""Backlog""用户故事""迭代""架构决策""ADR""C4""需求变了""要改故事""依赖检查"或进入含 agile-docs/ 目录的项目时触发。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 4.6.1
+version: 5.0.0
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -40,7 +40,7 @@ version: 4.6.1
 | 层 | 产出物 | 负责技能 |
 |----|--------|----------|
 | **战略与约束层** | 愿景 VISION、架构图 ARCHITECTURE、决策 ADR | `agile-strategic`（两阶段一体化） |
-| **执行层** | DoD、PRODUCT-BACKLOG（.md + .yaml）、Sprint（规划/关闭） | `agile-backlog` / `agile-sprint` |
+| **执行层** | DoD、PRODUCT-BACKLOG.md、Sprint（规划/关闭） | `agile-backlog` / `agile-sprint` |
 | **跨层（变更协调）** | 变更传播矩阵评估 + 路由 | `using-agile`（本技能，引用 `references/change-matrix.md`） |
 
 **Sprint 规划由 `agile-sprint` 承担**：纯规划器（规划→DoD关闭），不含执行态追踪。关闭后保留作历史，闭环即止。
@@ -50,19 +50,19 @@ version: 4.6.1
 1. **.done.yaml 回填检测（必做，第 1 步）**：扫描 `sprints/*.done.yaml`。存在即视为用户意图"处理回填闭环"，**默认执行，不问"是否先关 Sprint"**：
    - 对应 Sprint 非"已关闭" → 路由 `agile-sprint` 环节 B/C 做 DoD 关闭（含 feedback 读取）
    - Sprint 已关闭 → 跳过关闭，直接进入同步
-   - 路由 `agile-backlog` 阶段 5 同步 Backlog（更新 status；`issue` 转新条目候选、`decision` 停下请用户裁决）
+   - 路由 `agile-backlog` 阶段 4 同步 Backlog（更新状态列；`issue` 转新条目候选、`decision` 停下请用户裁决）
    - 闭环完成 → `.done.yaml` 改后缀 `.done.processed.yaml` 留痕（不删除）
    - **机械步骤（DoD 核对 / 关闭 / 同步 / 改名）自动执行，仅裁决点停下确认**；多个 `.done.yaml` 逐个处理；完成输出结果报告，再回到第 2 步
    - 无 `.done.yaml` → 直接进入第 2 步
 2. 检测 `agile-docs/` 下各文件存在性：
    - `VISION.md` + `ARCHITECTURE.md` + `ADR.md` → 战略层
-   - `PRODUCT-BACKLOG.md` + `PRODUCT-BACKLOG.yaml` → 执行层待办池
+   - `PRODUCT-BACKLOG.md` → 执行层待办池（人读与 Agent 共读）
+   - `PRODUCT-BACKLOG.yaml` / `PRODUCT-BACKLOG.json` → **旧格式接口文件（v4.x 及之前）**：提示迁移——信息核对进阶段表后删除旧文件（见 `references/status-routing.md`）
    - `DOD.md` → 完成定义
    - `sprints/` 下未关闭的 `.md` → 活跃 Sprint（若检测到 >1 个活跃 Sprint，警告并请用户选择关闭/合并其一后再继续，见 `references/status-routing.md`）
-3. **双文件一致性检查**：若 `PRODUCT-BACKLOG.md` 和 `.yaml` 均存在，跑 `node agile-backlog/assets/scripts/check-consistency.mjs`（机械步骤自动跑）校验 id 集合 / 条目数 / 同 id 的 priority / status / adr_refs / point 六项（唯一权威口径见 `agile-backlog/references/backlog-rules.md §七`）。不一致 → 停下报告差异，请用户确认以哪份为准后再继续路由。
-4. 输出三层状态表（见 `references/status-routing.md`）。
-5. **逐层询问**"更新 or 继续下一步"（话术见 reference）。
-6. 按用户选择路由到对应业务技能，**不自己写**。
+3. 输出三层状态表（见 `references/status-routing.md`）。
+4. **逐层询问**"更新 or 继续下一步"（话术见 reference）。
+5. 按用户选择路由到对应业务技能，**不自己写**。
 
 ## 4. 初始化流程（无 agile-docs/ 时）
 
