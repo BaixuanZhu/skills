@@ -6,6 +6,9 @@
 //
 // 用途: 取代"增量手算漂移"——每次改动后必跑,覆盖式统计而非人工加减。
 //
+// 零外部依赖:内置 node:fs + node:path + 自带 lib/yaml-mini.mjs(共用最小 YAML 解析器)。
+// 消费侧 npm 网络不通也能跑(本目录内只 import local 模块)。
+//
 // 用法:
 //   node assets/scripts/inventory.mjs                                  # 自动找 agile-docs/
 //   node assets/scripts/inventory.mjs --md <path> --yaml <path>        # 显式指定
@@ -15,7 +18,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import yaml from 'js-yaml';
+import { yamlParse } from './lib/yaml-mini.mjs';
 
 // ── CLI 参数 ────────────────────────────────────────────────
 const args = process.argv.slice(2);
@@ -41,20 +44,16 @@ if (!existsSync(yamlPath)) {
 }
 
 // ── 解析 markdown 阶段表 ────────────────────────────────────
-// 解析整个 md 文件的所有 backlog 表格行:遇到 | 开头的行视为表格候选,
-// 跳过表头分隔行(|---|),其余 | 行按列名映射到字段。
-// 多张表(「阶段 N」分块)支持:若新一行 cell[0] 匹配已知字段名,视为新表表头重置 header。
 function parseMdTable(text) {
   const lines = text.split(/\r?\n/);
   const rows = [];
   let header = null;
   const SEP = /^\|[\s:|-]+\|$/;
-  // 第一格匹配已知列名前缀 → 视为表头
   const HEADER_FIRST = /^(id|编号|标题|名称|type|类型|repo|仓库|point|点数|priority|优先级|status|状态|关联|adr|来源)/i;
   for (const line of lines) {
     const t = line.trim();
     if (!t.startsWith('|')) continue;
-    if (SEP.test(t)) continue;  // 表头分隔行,不影响 header
+    if (SEP.test(t)) continue;
     const cells = t.split('|').slice(1, -1).map(s => s.trim());
     if (header === null || HEADER_FIRST.test(cells[0])) {
       header = cells;
@@ -67,7 +66,6 @@ function parseMdTable(text) {
   return rows;
 }
 
-// 列名 → 字段映射(兼容「ID/id/编号」等常见命名变体;取首匹配)
 const COL = {
   id: /^(id|编号)$/i,
   title: /^(标题|名称|name|title)$/i,
@@ -90,7 +88,7 @@ function mapCols(row) {
 }
 
 // ── 解析 yaml ───────────────────────────────────────────────
-const yamlData = yaml.load(readFileSync(yamlPath, 'utf8'));
+const yamlData = yamlParse(readFileSync(yamlPath, 'utf8'));
 if (!yamlData || !Array.isArray(yamlData.items)) {
   console.error(`✗ ${yamlPath} 缺 items[] 或格式错误`);
   process.exit(2);
@@ -100,7 +98,6 @@ for (const it of yamlData.items) {
   if (it.id) yamlById.set(it.id, it);
 }
 
-// ── 解析 md + 联合 ────────────────────────────────────
 const mdRows = parseMdTable(readFileSync(mdPath, 'utf8'));
 const items = [];
 const seenMd = new Set();
@@ -124,7 +121,6 @@ for (const r of mdRows) {
   });
 }
 
-// yaml 里有但 md 没收录的条目(异常数据,纳入统计并标记)
 for (const [id, y] of yamlById) {
   if (!seenMd.has(id)) {
     items.push({
@@ -167,7 +163,6 @@ const byPriority = bucket('priority', PRIORITIES);
 const byStatus = bucket('status', STATUSES);
 const byType = bucket('type', TYPES);
 
-// ── 输出 ────────────────────────────────────────────────
 const report = {
   total: { count: totalCount, points: totalPoints },
   active: {

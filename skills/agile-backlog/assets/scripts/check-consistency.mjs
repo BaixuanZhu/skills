@@ -11,6 +11,9 @@
 //
 // 口径同 references/backlog-rules.md §七 一致性校验。
 //
+// 零外部依赖:内置 node:fs + node:path + 自带 lib/yaml-mini.mjs(共用最小 YAML 解析器)。
+// 消费侧 npm 网络不通也能跑。
+//
 // 用法:
 //   node assets/scripts/check-consistency.mjs                    # 报告模式,有差异显示但 exit 0
 //   node assets/scripts/check-consistency.mjs --strict           # 阻塞模式,有差异 exit 1
@@ -21,7 +24,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import yaml from 'js-yaml';
+import { yamlParse } from './lib/yaml-mini.mjs';
 
 // ── CLI 参数 ────────────────────────────────────────────────
 const args = process.argv.slice(2);
@@ -39,7 +42,6 @@ if (!existsSync(mdPath)) { console.error(`✗ 找不到 ${mdPath}`); process.exi
 if (!existsSync(yamlPath)) { console.error(`✗ 找不到 ${yamlPath}`); process.exit(2); }
 
 // ── 解析 markdown 阶段表 ────────────────────────────────────
-// 同 inventory.mjs:遇 |---| 分隔行 continue(不重置);新行 cell[0] 匹配已知字段名则视为新表头。
 function parseMdTable(text) {
   const lines = text.split(/\r?\n/);
   const rows = [];
@@ -81,7 +83,7 @@ function mapCols(row) {
 
 // ── 解析双方 ─────────────────────────────────────────────
 const mdRows = parseMdTable(readFileSync(mdPath, 'utf8'));
-const yamlData = yaml.load(readFileSync(yamlPath, 'utf8'));
+const yamlData = yamlParse(readFileSync(yamlPath, 'utf8'));
 if (!yamlData || !Array.isArray(yamlData.items)) {
   console.error(`✗ ${yamlPath} 缺 items[]`); process.exit(2);
 }
@@ -91,7 +93,6 @@ const mdById = new Map();
 for (const r of mdRows) {
   const m = mapCols(r);
   if (!m.id) continue;
-  // 同一 id 多张表出现时(异常),保留首次;校验逻辑会单独报告
   if (!mdById.has(m.id)) mdById.set(m.id, m);
 }
 
