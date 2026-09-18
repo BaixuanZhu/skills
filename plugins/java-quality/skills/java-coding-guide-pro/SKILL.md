@@ -11,7 +11,7 @@ description: >-
   现代 Java 语法（JDK 8~25，按特性最低版本门控）。
   次级触发信号——代码中出现：SimpleDateFormat、Executors.newFixedThreadPool /
   newCachedThreadPool / newSingleThreadExecutor、new Thread(...)、
-  new BigDecimal(0.1) 小数构造、BeanUtils.copyProperties、catch (Throwable) /
+  new BigDecimal(0.1) 小数构造、BeanUtils.copyProperties、BeanUtil.copyProperties、BeanUtil.toBean、BeanUtil.beanToMap、catch (Throwable) /
   catch (InterruptedException) 空块、MessageDigest（手写 MD5/SHA）、
   log.error("x=" + x) 日志拼接、Optional.get()、subList(...)、
   finally 块内 return / throw、Math.random()、new Random()；
@@ -19,8 +19,8 @@ description: >-
   密码加密 / 哈希存储、金额 / 价格计算、线程池 / 异步任务、日期格式化 / 时区。
   跟随项目既有技术栈（Spring / Hutool / commons-lang3 等），不强加任何库。
   不适用：业务架构设计、框架选型、DDL、纯算法、前端代码。
-version: "3.6.1"
-last_verified: "2026-09-02"
+version: "3.7.0"
+last_verified: "2026-09-18"
 ---
 
 # Java 编码指南
@@ -84,7 +84,7 @@ last_verified: "2026-09-02"
 | HTTP 调用 | Spring 项目跟随 Spring；纯 Java 用 OkHttp3 | `references/04-io-http-json.md` |
 | JSON 序列化 | Jackson `ObjectMapper`（复用单例） | `references/04-io-http-json.md` |
 | 线程池/异步/虚拟线程 | JDK `ThreadPoolExecutor` + `CompletableFuture` | `references/05-concurrency.md` |
-| Bean 拷贝/转 Map | MapStruct；无 processor 退 `BeanUtil` | `references/06-object-mapping.md` |
+| Bean 拷贝/转 Map | MapStruct；无 processor 用显式 setter/构造器；禁止反射拷贝（BeanUtil/BeanUtils.copyProperties、toBean、beanToMap、cloneByStream） | `references/06-object-mapping.md` |
 | MD5/SHA/AES/密码哈希 | `hutool-crypto`（`SecureUtil`/`BCrypt`） | `references/07-crypto.md` |
 | 异常链/断言/日志 | SLF4J 门面 + 占位符；有 Hutool 用 `ExceptionUtil`/`Assert` | `references/08-exception-logging.md` |
 | 随机数/随机字符串/安全凭证 | `ThreadLocalRandom`；有 Hutool 用 `RandomUtil`；凭证类用 `SecureRandom` | `references/08-exception-logging.md` |
@@ -110,7 +110,8 @@ last_verified: "2026-09-02"
 | S | `finally { throw/return }` | 移除 |
 | S | `catch (Throwable/Error)`、空 catch 吞异常 | 缩窄到具体类型分别处理 |
 | S | `Optional.get()` 前无 `isPresent`/`orXxx` | `orElse`/`orElseThrow` |
-| S | `BeanUtils.copyProperties` 未确认源/目标顺序（Spring 与 Apache 参数顺序相反） | MapStruct / `BeanUtil`（顺序固定 source,target） |
+| S | 反射式 Bean 拷贝/映射（`BeanUtils.copyProperties` / `BeanUtil.copyProperties` / `BeanUtil.toBean` / `BeanUtil.beanToMap` / `mapToBean`）—— 运行时反射，字段名/类型错误运行期才暴露，AI 生成尤危 | MapStruct（编译期生成）/ 显式 setter 或构造器 |
+| S | 序列化式深拷贝（`ObjectUtil.cloneByStream`）—— 依赖 Serializable，类型/字段不符运行期才暴露，单测易漏 | 显式拷贝构造器 / MapStruct |
 | S | `subList` 结果当独立列表/分页 | `ListUtil.partition` 或拷贝 `new ArrayList<>(view)` |
 | S | 手拼 JSON 字符串 | Jackson 等既有 JSON 库 |
 | S | `Math.random()`/`Random` 生成"唯一"序号/单号/ID（如 `(int)(Math.random()*100000)` 当 seq） | DB 序列 / Redis `INCR` / 雪花 ID 等单调发号器 |
@@ -140,7 +141,7 @@ last_verified: "2026-09-02"
 | 依赖 | 坐标 | 说明 |
 |---|---|---|
 | BOM | `cn.hutool:hutool-bom:5.8.47`（dependencyManagement 中 `import`） | 版本单一来源，模块不带 version；禁 `hutool-all` |
-| core | `cn.hutool:hutool-core` | StrUtil/CollUtil/DateUtil/BeanUtil/Base64 等 |
+| core | `cn.hutool:hutool-core` | StrUtil/CollUtil/DateUtil/Base64 等 |
 | crypto | `cn.hutool:hutool-crypto` | `SecureUtil`/`DigestUtil`/`BCrypt`/`AES` **全在 crypto**（仅 `Base64` 在 core） |
 
 其他构件参考版本（项目无同类库且确需时才引入）：

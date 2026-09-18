@@ -2,61 +2,68 @@
 
 > **栈适配**：本文推荐构件仅在项目无既有方案时采用；项目已在用其他映射方案则跟随既有栈，但规则精神（源/目标顺序必须确认、拷贝结果需验证）仍然适用。
 
-> **Bean 拷贝默认用 MapStruct**（编译期、类型安全、零运行时依赖）。仅当**无法引入 annotation processor** 或**一次性临时拷贝**时退 `BeanUtil.copyProperties`（`cn.hutool.core.bean`，顺序固定 source→target）。
+> **Bean 拷贝/映射只用两条正路：① MapStruct（编译期生成，类型安全，零运行时依赖）② 显式 setter / 构造器（字段少时）。禁止一切运行时反射/序列化拷贝**——`BeanUtils.copyProperties`(Spring/Apache)、`BeanUtil.copyProperties`、`BeanUtil.toBean`/`mapToBean`、`BeanUtil.beanToMap`、`ObjectUtil.cloneByStream`：反射/序列化按字符串字段名对齐或强转，字段名拼错/类型不符只在运行期暴露（静默 null 或 `ClassCastException`），在 AI 生成代码的场景下编译器与审稿都发现不了，是黑盒。无 annotation processor 时也只用显式 setter/构造器，不退回反射。
 > **对象工具**：`ObjectUtil`（`cn.hutool.core.util`）。
 
 ## 规范速查
 
 | 场景 | ✗ 禁止 | ✓ 推荐 |
 |---|---|---|
-| 属性拷贝（**默认**） | 手写 getter/setter 逐个 | **MapStruct**（编译期生成） |
-| 属性拷贝（**降级**：无 annotation processor / 一次性临时） | `BeanUtils.copyProperties`（Spring/Apache 顺序相反） | `BeanUtil.copyProperties(source, target)` |
-| 拷贝到新对象 | 手写 | `BeanUtil.copyProperties(source, TargetClass.class)` |
-| 拷贝到已有对象（忽略 null） | 手写 | `BeanUtil.copyProperties(source, target, CopyOptions.create().ignoreNullValue())` |
-| 转 Map | 手写 getXxx+put | `BeanUtil.beanToMap(bean, true, true)` |
-| Map 转 Bean | 已废弃 `mapToBean` | `BeanUtil.toBean(map, Cls.class)` |
+| 属性拷贝（**默认**） | 反射拷贝：`BeanUtils.copyProperties`(Spring/Apache)、`BeanUtil.copyProperties`、靠反射自动对齐字段名/类型 | **MapStruct**（编译期生成）/ 字段少时显式 setter 或构造器 |
+| 拷贝到新对象 | `BeanUtil.copyProperties(src, Cls.class)`、`toBean` 等反射 | `new Target(src.getA(), src.getB())` 构造器 / MapStruct |
+| 拷贝到已有对象（忽略 null） | 反射 + `CopyOptions.ignoreNullValue()` | 显式 setter 带 `if (src.getXxx() != null)` / MapStruct |
+| 转 Map | `BeanUtil.beanToMap`（反射读字段） | 显式 `map.put("k", bean.getXxx())` / MapStruct Bean→Map |
+| Map 转 Bean | `BeanUtil.toBean` / `mapToBean`（反射） | 优先免 Map 中转：Jackson `readValue(json, Cls.class)` / `@RequestBody Cls dto`；确需则 MapStruct 从 Map 映射 / 显式构造器 |
 | 相等（防 NPE） | `a.equals(b)` | `ObjectUtil.equal(a, b)` |
 | 默认值 | `obj != null ? obj : def` | `ObjectUtil.defaultIfNull(obj, def)` |
 | 判空 | `obj == null` | `ObjectUtil.isNull(obj)` / `isNotNull` |
-| 深拷贝 | 手搓 Cloneable | `ObjectUtil.cloneByStream(obj)` |
+| 深拷贝 | 手搓 Cloneable / `ObjectUtil.cloneByStream`（序列化强转，类型/字段错运行期才暴露，单测易漏） | 显式拷贝构造器（逐字段 `new`） / MapStruct |
 | toString | 手写/`ToStringBuilder`/`Validate`（commons-lang3） | Lombok `@ToString` / `@Data`（Hutool + Lombok 已覆盖，不引 commons-lang3） |
 
 ## 反例详解（antipattern）
 
-### 1. `BeanUtils.copyProperties` 源/目标顺序写反（最高危）
+### 1. 反射拷贝是黑盒，AI 时代禁止
 ```java
-// ✗ Spring 版：copyProperties(source, target)
-//    Apache commons-beanutils 版：copyProperties(dest, source) —— 顺序完全相反！
-//    混用或记错会静默拷空（字段全 null，不报错）
-BeanUtils.copyProperties(target, source); // 误用 Spring 语义但写反 → 拷空
+// ✗ Spring 版顺序 source,target；Apache commons-beanutils 版顺序完全相反(dest, source)——混用静默拷空
+BeanUtils.copyProperties(target, source); // 误用 Spring 语义但写反 → 字段全 null 不报错
 
-// ✓ 默认 MapStruct（编译期类型安全，字段名/类型不符编译报错）
+// ✗ Hutool BeanUtil.copyProperties 也是反射：字段名拼错/类型不符只在运行期暴露，AI 生成尤危
+BeanUtil.copyProperties(source, target);
+UserDTO dto = BeanUtil.copyProperties(user, UserDTO.class);
+
+// ✓ 默认 MapStruct（编译期类型安全，字段名/类型不符编译即报错）
 @Mapper
 public interface UserMapper {
     UserMapper INSTANCE = Mappers.getMapper(UserMapper.class);
-    @Mapping(target = "amount", source = "amount") // 类型不同需自定义或忽略
     UserDTO toDto(User user);
 }
 // 使用：UserDTO dto = UserMapper.INSTANCE.toDto(user);
 
-// ✓ 简单场景用 Hutool BeanUtil（顺序固定 source, target）
-BeanUtil.copyProperties(source, target);
-UserDTO dto = BeanUtil.copyProperties(user, UserDTO.class);
+// ✓ 字段少时直接显式构造器 / setter（编译期类型安全，一目了然）
+UserDTO dto = new UserDTO(user.getName(), user.getAge());
 ```
 
-### 2. `beanToMap` / `mapToBean` 签名
+### 2. Map ↔ Bean 禁止反射
 ```java
-// ✗ 无单参版本
-Map<String, Object> m = BeanUtil.beanToMap(user); // 编译错误
-
-// ✓ beanToMap 需要 boolean 参数
-Map<String, Object> m = BeanUtil.beanToMap(user, true, true); // ignoreNullValue, ignoreError
-
-// ✗ mapToBean 已 @Deprecated
-User u = BeanUtil.mapToBean(m, User.class);
-
-// ✓ 用 toBean
+// ✗ 反射：字段名靠字符串对齐，拼错/类型错只在运行期暴露（静默 null 或 ClassCastException）
 User u = BeanUtil.toBean(m, User.class);
+Map<String, Object> m = BeanUtil.beanToMap(user); // 仍需 boolean 参数，但本质仍是反射
+
+// ✓ 优先免 Map 中转：JSON 直接反序列化到类型化 DTO
+UserDTO dto = objectMapper.readValue(json, UserDTO.class);
+
+// ✓ 确需 Map→Bean：MapStruct 从 Map 映射（编译期生成，字段映射显式可见）
+@Mapper
+public interface UserMapper {
+    UserMapper INSTANCE = Mappers.getMapper(UserMapper.class);
+    @Mapping(target = "name", source = "customerName") // source 即 map key
+    User toUser(Map<String, Object> map);
+}
+
+// ✓ Bean→Map：显式提取（编译期类型安全）
+Map<String, Object> m = new HashMap<>();
+m.put("name", user.getName());
+m.put("age", user.getAge());
 ```
 
 ### 3. `@ToString` 循环引用
