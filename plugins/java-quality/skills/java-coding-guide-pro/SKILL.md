@@ -8,18 +8,25 @@ description: >-
   best practices / code quality）。
   覆盖：判空与字符串、集合与 Stream、日期时间、文件 IO / HTTP 调用 / JSON 序列化、
   线程池与并发、Bean 拷贝、加密哈希、异常处理与日志、金额与浮点精确运算、
+  静默失效排查（注解自调用 / 包装类型比较 / 不可变集合）、
+  分层职责与代码组织（封装 / 复用 / 常量与配置归属 / 资源托管）、
   现代 Java 语法（JDK 8~25，按特性最低版本门控）。
   次级触发信号——代码中出现：SimpleDateFormat、Executors.newFixedThreadPool /
   newCachedThreadPool / newSingleThreadExecutor、new Thread(...)、
   new BigDecimal(0.1) 小数构造、BeanUtils.copyProperties、BeanUtil.copyProperties、BeanUtil.toBean、BeanUtil.beanToMap、catch (Throwable) /
   catch (InterruptedException) 空块、MessageDigest（手写 MD5/SHA）、
   log.error("x=" + x) 日志拼接、Optional.get()、subList(...)、
-  finally 块内 return / throw、Math.random()、new Random()；
+  finally 块内 return / throw、Math.random()、new Random()、
+  @Transactional / @Async / @Cacheable 自调用或打在 private 方法上、@Autowired 字段注入、
+  @Value 注 static 字段、包装类型（Integer/Long）== 比较、List.of/Map.of 结果被 add、
+  并发 Map 先查后写、Lombok @Data 打在实体上、getXxx() 直接返回内部集合、
+  业务类内堆 static final 常量 / 硬编码 URL 与超时；
   用户任务词出现：生成订单号 / 流水号 / 唯一 ID、生成验证码 / token / 盐、
-  密码加密 / 哈希存储、金额 / 价格计算、线程池 / 异步任务、日期格式化 / 时区。
+  密码加密 / 哈希存储、金额 / 价格计算、线程池 / 异步任务、日期格式化 / 时区、
+  分层 / 职责划分、常量放哪 / 配置外置、代码结构组织 / 复用抽取。
   跟随项目既有技术栈（Spring / Hutool / commons-lang3 等），不强加任何库。
-  不适用：业务架构设计、框架选型、DDL、纯算法、前端代码。
-version: "3.7.0"
+  不适用：业务架构设计（微服务拆分 / 领域建模）、框架选型、DDL、纯算法、前端代码。
+version: "3.8.0"
 last_verified: "2026-09-18"
 ---
 
@@ -92,6 +99,8 @@ last_verified: "2026-09-18"
 | 金额/精确小数 | JDK `BigDecimal` | `references/10-bigdecimal.md` |
 | 命名/OOP 规约/格式/常量与字面量 | 规约条目（无库选型） | `references/11-conventions.md` |
 | 方法嵌套过深/分支膨胀/认知复杂度 | 卫语句 + 提炼语义方法 + 分支分发 | `references/12-complexity.md` |
+| 编译过、单测过但运行不生效（注解自调用、包装类型 `==`、拆箱 NPE、不可变集合被改、`@Data` 打实体） | 按静默失效清单逐条消除 | `references/13-silent-failure.md` |
+| 分层职责/封装/复用/常量与配置归属/资源托管 | 规约条目（无库选型） | `references/14-engineering-structure.md` |
 
 ## 规则表（S/A 分级）
 
@@ -117,6 +126,13 @@ last_verified: "2026-09-18"
 | S | `Math.random()`/`Random` 生成"唯一"序号/单号/ID（如 `(int)(Math.random()*100000)` 当 seq） | DB 序列 / Redis `INCR` / 雪花 ID 等单调发号器 |
 | S | `Random`/`ThreadLocalRandom`/`Math.random()` 生成 token/验证码/密码/盐等安全凭证 | JDK `SecureRandom`（原生即成熟） |
 | S | 违反目标 JDK 版本门控（如 JDK 8 用 `var`/`record`） | 按版本门控降级写法 |
+| S | `@Transactional`/`@Async`/`@Cacheable` 自调用（同类 `this.xxx()`），或注解打在 `private`/`final`/`static` 方法上 —— 不走代理，注解静默失效 | 拆到另一个 Bean / `TransactionTemplate`；注解方法必须 public 且非 final/static |
+| S | 事务方法内 `catch` 吞异常 —— 事务静默不回滚（默认只回滚 `RuntimeException`） | 继续抛出；必须吞则 `setRollbackOnly()`；受检异常配 `rollbackFor` |
+| S | `@Value`/`@Autowired` 注 `static` 字段 —— 恒为 null | 实例字段 + 构造器注入 |
+| S | 包装类型 `==`（`Integer`/`Long` 超 -128~127 缓存即 false）、`map.get(k)` 直赋 `int`（拆箱 NPE） | `Objects.equals` / `intValue()` / `getOrDefault` |
+| S | 并发 Map 两段式（`containsKey`+`put`、`get` 判空再 `put`）—— 非原子，并发丢更新 | `computeIfAbsent` / `putIfAbsent` / `merge` |
+| S | `List.of`/`Map.of`/`Arrays.asList` 结果做 `add`/`put` —— 运行期 `UnsupportedOperationException` | 需可变则 `new ArrayList<>(...)`；返回前确认可变性 |
+| S | 业务方法内 `new` 线程池 / HTTP 客户端 / `ObjectMapper` 等重资源对象（不关闭、不复用） | 应用级单例 Bean + `destroyMethod="shutdown"` |
 | A | `== null \|\| .trim().isEmpty()` 手写判空 | 工具方法（`StrUtil.isBlank` / `StringUtils` / JDK `isBlank`(11+)） |
 | A | `a.equals(b)` 且 a 可能 null | `Objects.equals` / `ObjectUtil.equal` / 常量在前 |
 | A | 仅初始化就 `new ArrayList<>()` 逐个 add；`subList` 手写分块 | `List.of` / `CollUtil.newArrayList`/`partition` |
@@ -130,6 +146,11 @@ last_verified: "2026-09-18"
 | A | 无用 import（未使用/重复/java.lang/同包）残留 | 移除；删掉某类最后一处使用时同步删 import |
 | A | 单方法嵌套 ≥3 层、else-if ≥3 连、布尔混用 ≥3 项（认知复杂度阈值 15） | 卫语句早返回 / 提炼语义方法 / switch、策略 Map 分发（禁无语义拆块） |
 | A | `get`/`find` 类方法返回 null | `Optional<T>` 或空集合 |
+| A | `@Autowired` 字段注入 | 构造器注入 + `final` |
+| A | Controller 写业务规则 / 直连 DAO；Service 直接返回 Entity | 各层只做自己的事；Entity → DTO/VO（见 `06`） |
+| A | 环境相关值（回调 URL / 超时 / 开关 / 阈值）硬编码在业务类 | `@ConfigurationProperties` 按域外置，`@Value` 不撒满业务类 |
+| A | 单个类承担多域（注入依赖 >5 / public 方法 >15 / 类 >500 行） | 按业务能力拆类，各持自己的依赖 |
+| A | 同一逻辑 ≥2 处各写一遍；或反向抽带 flag 的"通用"方法 | 提到领域对象（内聚最高）；概念相同才合并 |
 
 ## C-CHECK 询问（仅高风险能力缺失时触发）
 
@@ -160,7 +181,8 @@ last_verified: "2026-09-18"
 2. **定位并阅读 reference**：查「域 → 默认」路由表，**生成对应域代码前先读「详见」列文件**（含该域完整规则与 antipattern，本文规则表仅是摘要）。
 3. **生成代码遵循规则表**：S 级禁止项不出现；A 级约定用于新代码；审查/修改时 S 级命中既有代码 → 提出改写。
 4. **高风险能力缺失** → 触发 C-CHECK 询问，拒绝则受控降级。
-5. **输出前对 S 级规则逐项自检**（尤其线程池、日期、金额、加密、随机数当序号、异常处理、常量提取与放置）。
+5. **输出前对 S 级规则逐项自检**（尤其线程池、日期、金额、加密、随机数当序号、异常处理、反射拷贝、注解自调用与代理边界、包装类型比较、重资源归属）。
+6. **结构自检（新代码）**：分层是否越界（Controller / Service / DAO）、Entity 是否外泄、依赖是否构造器注入、常量与配置是否放对位置、类职责是否单一——逐项对照 `references/14-engineering-structure.md`。
 
 ## 版本与范围
 

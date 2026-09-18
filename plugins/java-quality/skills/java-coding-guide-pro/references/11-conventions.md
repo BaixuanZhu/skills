@@ -244,15 +244,19 @@ if (user != null && user.getAge() > 18 && user.getStatus() == ACTIVE
     doSomething();
 }
 
-// ✓ 先赋具名变量，条件自解释
-boolean isAdult = user != null && user.getAge() > 18;
-boolean isActive = user != null && user.getStatus() == ACTIVE;
-boolean isAdmin = user != null && user.getRoles().contains(ROLE_ADMIN);
-if (isAdult && isActive && isAdmin) {
+// ✓ 提炼谓词方法：条件移入方法，主流程自解释；可复用、可单测，计分也移出本方法
+if (isEligibleForPromotion(user)) {
     doSomething();
+}
+private boolean isEligibleForPromotion(User user) {
+    return user != null
+        && user.getAge() > 18
+        && user.getStatus() == ACTIVE
+        && user.getRoles().contains(ROLE_ADMIN);
 }
 ```
 > 阈值：超过 3 个逻辑子条件时必须拆（认知复杂度，见 `12-complexity.md`）。
+> 选型：条件**被 ≥2 处复用或表达业务概念**时用谓词方法；一次性条件用命名局部变量即可（详见 `12` 手法 5）。**禁**在方法内把同一判空重复三遍——重复即应提炼（见 `14`）。
 
 ### 18. `switch` 必有 `default`
 ```java

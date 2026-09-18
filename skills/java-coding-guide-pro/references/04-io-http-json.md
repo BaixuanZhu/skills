@@ -64,30 +64,43 @@ List<String> lines = FileUtil.readUtf8Lines(path);
 
 ## HTTP（OkHttp3）规范
 
-> 客户端必须**显式设置连接/读超时**——默认无超时＝无限等待；实例复用单例（连接池）。
+> 客户端必须**显式设置连接/读超时**——默认无超时＝无限等待。
+> 客户端**必须是应用级单例**（连接池挂在其上）：Spring 项目注册为 `@Bean`，业务类构造器注入；**禁每次调用 `new`**（见 `14`）。
 
 ```java
-private final OkHttpClient client = new OkHttpClient.Builder()   // 复用单例（连接池）
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .build();
-
-// GET
-public String get(String url) throws IOException {
-    Request req = new Request.Builder().url(url).build();
-    try (Response resp = client.newCall(req).execute()) { // 必须 try-with-resources
-        if (!resp.isSuccessful()) throw new IOException("Unexpected code " + resp.code());
-        return resp.body().string(); // 大响应改用 byteStream() 流式，避免 OOM
-    }
+// ✓ 客户端注册为应用级单例：连接池随实例，全局共享
+@Bean
+public OkHttpClient okHttpClient() {
+    return new OkHttpClient.Builder()
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build();
 }
+```
 
-// POST JSON
-public String postJson(String url, Object body) throws IOException {
-    String json = MAPPER.writeValueAsString(body);
-    RequestBody rb = RequestBody.create(json, MediaType.parse("application/json; charset=utf-8"));
-    Request req = new Request.Builder().url(url).post(rb).build();
-    try (Response resp = client.newCall(req).execute()) {
-        return resp.body().string();
+```java
+// ✓ 调用方构造器注入该单例（见 14）
+public class PayClient {
+    private final OkHttpClient client;
+    public PayClient(OkHttpClient client) { this.client = client; }
+
+    // GET
+    public String get(String url) throws IOException {
+        Request req = new Request.Builder().url(url).build();
+        try (Response resp = client.newCall(req).execute()) { // 必须 try-with-resources
+            if (!resp.isSuccessful()) throw new IOException("Unexpected code " + resp.code());
+            return resp.body().string(); // 大响应改用 byteStream() 流式，避免 OOM
+        }
+    }
+
+    // POST JSON
+    public String postJson(String url, Object body) throws IOException {
+        String json = MAPPER.writeValueAsString(body);
+        RequestBody rb = RequestBody.create(json, MediaType.parse("application/json; charset=utf-8"));
+        Request req = new Request.Builder().url(url).post(rb).build();
+        try (Response resp = client.newCall(req).execute()) {
+            return resp.body().string();
+        }
     }
 }
 ```
@@ -97,8 +110,11 @@ public String postJson(String url, Object body) throws IOException {
 // ✗ 手搓 HttpURLConnection，样板冗长且易错
 HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
 // ... 一堆 setRequestProperty / getResponseCode / 手读流
+
+// ✗ 每次调用 new 客户端：连接池/GZIP/重试全部失效，且反复新建线程与连接，开销大
+new OkHttpClient().newCall(req).execute();
 ```
-OkHttp3 Builder API 简洁、自带连接池/GZIP/重试；坐标见 SKILL.md「C-CHECK 询问（仅高风险能力缺失时触发）」。
+OkHttp3 Builder API 简洁、自带连接池/GZIP/重试；**连接池只在实例复用时才成立**——单例是前提。坐标见 SKILL.md「C-CHECK 询问（仅高风险能力缺失时触发）」。
 
 ## JSON（Jackson）规范
 

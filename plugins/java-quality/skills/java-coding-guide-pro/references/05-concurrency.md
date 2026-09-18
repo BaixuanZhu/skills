@@ -42,6 +42,8 @@ ThreadPoolExecutor pool = new ThreadPoolExecutor(
 );
 ```
 
+> **线程池必须是应用级单例**：在 `@Configuration` 里注册为 `@Bean(destroyMethod = "shutdown")`，业务类**构造器注入**；**禁在业务方法内 `new`**——每次调用建一个池且永不关闭，线程/内存泄漏（见 `14`）。
+
 **拒绝策略：默认 `CallerRunsPolicy`**（背压——调用线程自己执行，自动降速、不丢任务）。
 
 | 策略 | 行为 | 何时用它替代默认 |
