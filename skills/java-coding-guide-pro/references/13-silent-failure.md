@@ -1,10 +1,10 @@
-# 13 · 静默失效（编译过、单测过、运行不报错）
+# 13 · 静默失效
 
 > **判据**：编译期通过 + 单测通过 + 运行期不抛异常，但**行为不符合预期**。AI 生成代码高发，代码评审也极易漏掉。
 > 本文全部为 **S 级**：新代码禁止；审查/修改既有代码时命中 → 立即向用户提出。
 > 与相邻文件的分工：`11` 管命名与 OOP 规约，`12` 管认知复杂度，`14` 管职责划分与归属——**本文只收「不报错但不生效」**。
 
-## 一、Spring 代理边界（最隐蔽）
+## 一、Spring 代理边界
 
 ### 1. `@Transactional` / `@Async` / `@Cacheable` 自调用失效
 
@@ -36,7 +36,7 @@ public void create(Order o) {
     txTemplate.execute(status -> { doStep1(o); doStep2(o); return null; });
 }
 ```
-> 自注入自身（`@Lazy`）也能绕过，但属 workaround——优先拆 Bean 或用 `TransactionTemplate`。
+> 自注入（`@Lazy`）也能绕过，但属 workaround——优先用上述两种。
 
 ### 2. 事务方法内 `catch` 吞异常 → 不回滚
 
@@ -98,7 +98,7 @@ public class SmsClient {
     public SmsClient(@Value("${sms.url}") String url) { this.url = url; }
 }
 ```
-> 想保留 static 只能靠 `@PostConstruct` 手动搬运，那是 workaround——直接改成实例字段。
+> 想保留 static 只能靠 `@PostConstruct` 搬运，属 workaround——直接改实例字段。
 
 ## 二、类型与拆箱
 
@@ -183,7 +183,7 @@ String[] a = "a,b,,".split(",", -1);    // 长度 4
 
 ## 四、实体与 Lombok
 
-### 10. `@Data` 打在实体 / 关联对象上
+### 10. `@Data` 打在实体 / 领域对象上
 
 ```java
 // ✗ 三个问题同时发生
@@ -207,8 +207,8 @@ public class Order {
     public Order(Long id) { this.id = id; }
 }
 ```
-> `@Data` = `@Getter`+`@Setter`+`@ToString`+`@EqualsAndHashCode`+`@RequiredArgsConstructor`。三个后果：① 全字段 setter **破坏封装**（任意处可改，见 `14`）；② 双向关联 `toString`/`hashCode` **无限递归**；③ `@EqualsAndHashCode` 覆盖全部字段（含可变集合）→ 对象放进 `HashSet` 后改字段就再也找不到。
-> `@Data` 适合 DTO/VO 这类纯数据载体；**实体/领域对象用 `@Getter` + 显式构造**。
+> `@Data` = 全字段 getter/setter + `toString`/`equals`/`hashCode` + 构造器。三个后果：① 全字段 setter **破坏封装**（任意处可改，见 `14`）；② 双向关联 `toString`/`hashCode` **无限递归** → `StackOverflowError`；③ 判等覆盖含可变集合的全部字段 → 对象放进 `HashSet` 后改字段就再也找不到。
+> DTO/VO 这类纯载体适用；**实体/领域对象用 `@Getter` + 显式构造**。
 
 ### 11. 返回值直接暴露内部集合
 
@@ -239,4 +239,4 @@ if (name == other.name) { ... }
     return Objects.equals(id, u.id);
 }
 ```
-> 写成 `equals(User)` 时编译器**静默**生成重载方法（`@Override` 能挡住——所以 `@Override` 必加，见 `11`）。此时 `list.contains(u)`、`map.get(u)`、`Set` 去重全部按引用比较，结果静默错误。
+> 签名写成 `equals(User)` 时编译器**静默**生成重载（`@Override` 能挡住，见 `11`）。此时 `list.contains(u)`、`map.get(u)`、`Set` 去重全部退化为按引用比较。
