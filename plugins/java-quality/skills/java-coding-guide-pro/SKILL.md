@@ -100,7 +100,7 @@ last_verified: "2026-09-18"
 | 命名/OOP 规约/格式/常量与字面量 | 规约条目（无库选型） | `references/11-conventions.md` |
 | 方法嵌套过深/分支膨胀/认知复杂度 | 卫语句 + 提炼语义方法 + 分支分发 | `references/12-complexity.md` |
 | 编译过、单测过但运行不生效（注解自调用、包装类型 `==`、拆箱 NPE、不可变集合被改、`@Data` 打实体） | 按静默失效清单逐条消除 | `references/13-silent-failure.md` |
-| 分层职责/封装/复用/常量与配置归属/资源托管 | 规约条目（无库选型） | `references/14-engineering-structure.md` |
+| 分层职责/封装/复用/类职责判定（上帝类）/常量与配置归属/资源托管 | 规约条目（无库选型） | `references/14-engineering-structure.md` |
 
 ## 规则表（S/A 分级）
 
@@ -149,7 +149,7 @@ last_verified: "2026-09-18"
 | A | `@Autowired` 字段注入 | 构造器注入 + `final` |
 | A | Controller 写业务规则 / 直连 DAO；Service 直接返回 Entity | 各层只做自己的事；Entity → DTO/VO（见 `06`） |
 | A | 环境相关值（回调 URL / 超时 / 开关 / 阈值）硬编码在业务类 | `@ConfigurationProperties` 按域外置，`@Value` 不撒满业务类 |
-| A | 单个类承担多域（注入依赖 >5 / public 方法 >15 / 类 >500 行） | 按业务能力拆类，各持自己的依赖 |
+| A | 上帝类：一个类混杂多个互不相关的业务概念（类名/javadoc 需用「以及」概括、变更原因来自多个业务方） | 按**业务概念**拆类；**注入依赖数 / 行数 / 方法数不作为判据**（见 `14`） |
 | A | 同一逻辑 ≥2 处各写一遍；或反向抽带 flag 的"通用"方法 | 提到领域对象（内聚最高）；概念相同才合并 |
 
 ## C-CHECK 询问（仅高风险能力缺失时触发）

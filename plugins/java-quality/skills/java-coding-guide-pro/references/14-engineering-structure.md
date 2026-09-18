@@ -99,7 +99,7 @@ public class OrderService {
     }
 }
 ```
-> 单构造器时 Spring 自动注入，无需 `@Autowired`。**好处是编译期可见的**：类要什么依赖一眼看全，单测直接 new 传 mock。注入依赖 > 5 个说明类职责过载（见 §四）。
+> 单构造器时 Spring 自动注入，无需 `@Autowired`。**好处是编译期可见的**：类要什么依赖一眼看全，单测直接 new 传 mock。**依赖个数不是职责判据**——复杂业务里一个 Service 注入 6~8 个协作者属正常编排（判据见 §四 9）。
 
 ### 5. 状态私有，变更走有语义的方法
 
@@ -201,33 +201,53 @@ public class OrderService {
 
 ## 四、类与方法的职责
 
-### 9. 类职责单一（God Class 判据）
+### 9. 类职责单一（God Class：从业务逻辑判定，不看数字）
 
-命中 **≥2 条**即应拆分：
+**主判据——业务视角三问，任一答「否」即说明混了多个概念：**
 
-- 类名需要 `And` 才能概括（`OrderAndPayService`）；
-- 注入依赖 > 5 个（说明它在协调多个领域）；
-- public 方法 > 15 个，或类超过约 500 行；
-- 字段能按前缀干净地分成 2 组以上（`orderXxx` / `refundXxx`）；
-- 类的 javadoc 需要用「以及」来罗列职责。
+1. **能否用一句不含「以及」的业务语言说清它是什么？** 「订单服务」可以；「订单和支付服务」不可以。
+2. **它的方法是否服务于两个以上互不相关的业务概念？** 判断单位是**业务概念，不是方法个数**——`createOrder` 与 `cancelOrder` 同属订单域，不算多；`createOrder` 与 `sendSms` 分属两个域。
+3. **变更原因是否来自多个不同业务方？** 运营改活动规则、财务改对账口径、客服改工单流程都落在同一个类上 → 上帝类。（SRP 的原始定义：一个类只应有一个变更原因。）
+
+**辅助信号（出现则看一眼，单独出现不构成判据）：**
+
+- 类名或 javadoc 必须用「And / 以及」才能概括职责；
+- 方法能按业务对象干净地分成两组以上（`orderXxx` / `refundXxx`），且两组之间不共享字段；
+- 类内字段分别维护两个不相关聚合的状态（同时持有 `Order`、`SmsTemplate`、`AuditLog` 的生命周期）。
+
+**明确不作为判据：**
+
+- **注入依赖个数**——复杂业务里一个 Service 正常注入 6~8 个协作者（库存、支付、优惠券、风控、物流），它只负责编排本域流程，仍是单一职责。拿数字卡会把正常代码误判成上帝类。
+- **类行数、public 方法数**——只是「值得看一眼」的温度计，阈值随业务复杂度浮动，不能当门禁。
 
 ```java
-// ✗ 一个类同时承担订单、支付、通知三个领域
+// ✗ 上帝类：五个方法分属五个互不相关的业务域，变更原因来自五个业务方
 @Service
 public class OrderService {
-    public void createOrder(...) { }
-    public void refund(...)      { }
-    public void pay(...)         { }
-    public void sendSms(...)     { }
+    public void createOrder(...) { }    // 订单域
+    public void refund(...)      { }    // 售后域
+    public void pay(...)         { }    // 支付域
+    public void sendSms(...)     { }    // 通知域
+    public void syncToErp(...)   { }    // 外部集成域
 }
 ```
 ```java
-// ✓ 按业务能力拆，各持自己的依赖
-@Service public class OrderService   { }     // 订单
-@Service public class PaymentService { }     // 支付
-@Service public class NotifyService  { }     // 通知（内部再按渠道分）
+// ✓ 依赖多但职责单一：六个协作者全在「创建订单」这一个业务概念内，是编排不是混合
+@Service
+public class OrderCreateService {
+    private final InventoryService    inventory;
+    private final PricingService      pricing;
+    private final CouponService       coupon;
+    private final RiskService         risk;
+    private final OrderRepository     orderRepository;
+    private final OrderEventPublisher publisher;
+
+    public OrderVO create(OrderCreateDTO dto) { ... }   // 只做「创建订单」这一件事
+}
 ```
-> 与 `12` 的分工：`12` 管**方法**的认知复杂度，本文管**类**的职责边界。方法拆得再干净，一个 2000 行的 `Manager` 依旧不可维护。
+> 对比点：前者五个方法分属**五个业务域**；后者六个依赖**同属一个业务概念**。**依赖个数不说明问题，「是否同一业务概念」才说明问题。**
+> 拆法：按**业务概念**拆（订单 / 支付 / 通知），不是按「每组几个方法」平均分。
+> 与 `12` 的分工：`12` 管**方法**的认知复杂度，本文管**类**的职责边界。方法拆得再干净，一个把三个业务域揉在一起的 `Manager` 依旧不可维护。
 
 ### 10. 方法只做一件事（抽象层次一致）
 
