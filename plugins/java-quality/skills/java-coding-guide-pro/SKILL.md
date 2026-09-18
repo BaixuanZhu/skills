@@ -132,6 +132,10 @@ last_verified: "2026-09-18"
 | S | 包装类型 `==`（`Integer`/`Long` 超 -128~127 缓存即 false）、`map.get(k)` 直赋 `int`（拆箱 NPE） | `Objects.equals` / `intValue()` / `getOrDefault` |
 | S | 并发 Map 两段式（`containsKey`+`put`、`get` 判空再 `put`）—— 非原子，并发丢更新 | `computeIfAbsent` / `putIfAbsent` / `merge` |
 | S | `List.of`/`Map.of`/`Arrays.asList` 结果做 `add`/`put` —— 运行期 `UnsupportedOperationException` | 需可变则 `new ArrayList<>(...)`；返回前确认可变性 |
+| S | `split(",")` 不传 limit —— 尾随空串被丢弃，字段数变少、下标错位 | 需全字段（CSV / 定长协议）传 `split(",", -1)` |
+| S | Lombok `@Data` 打在实体 / 领域对象上 —— 全字段 setter 破封装、双向关联 `toString`/`hashCode` 递归 `StackOverflowError`、判等覆盖可变字段 | 实体用 `@Getter` + 显式构造；关联字段 `@ToString.Exclude` / `@EqualsAndHashCode.Exclude` |
+| S | `getXxx()` 直接返回内部集合引用 —— 调用方 `clear()`/`add()` 即改内部状态 | `List.copyOf(...)`（`Collections.unmodifiableList` 只是视图） |
+| S | `equals` 签名写成 `equals(User)` —— 静默降级为**重载**，`contains`/`get`/`Set` 去重全按引用比较 | 参数必须 `Object`，与 `hashCode` 成对重写 |
 | S | 业务方法内 `new` 线程池 / HTTP 客户端 / `ObjectMapper` 等重资源对象（不关闭、不复用） | 应用级单例 Bean + `destroyMethod="shutdown"` |
 | A | `== null \|\| .trim().isEmpty()` 手写判空 | 工具方法（`StrUtil.isBlank` / `StringUtils` / JDK `isBlank`(11+)） |
 | A | `a.equals(b)` 且 a 可能 null | `Objects.equals` / `ObjectUtil.equal` / 常量在前 |
