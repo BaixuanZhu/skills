@@ -1,4 +1,4 @@
-# 04 · 工具落地（栈基线 + 设计→代码映射 + Mock/API 坑）
+# 03 · 工具落地（栈基线 + 设计→代码映射 + Mock/API 坑）
 
 > §1 是第 0 步探测后的**栈基线决策表**——版本差异唯一集中地；§2-§3 是编码期查表。§3 只收录"用错不报错但埋雷"的隐蔽型坑（如测试假绿、污染其他测试、掩盖耦合）——查文档 30 秒可得的即时报错型坑不收录。
 
@@ -208,9 +208,9 @@ class XTest {
 
 ## §4 范围边界
 
-本技能覆盖**开发期测试**：纯单测（`@Mock`+`@InjectMocks`，毫秒级）+ 本地接口测试（`@SpringBootTest(RANDOM_PORT)` 连本地已运行环境，`03`）。以下不在本技能范围：
+本技能覆盖**纯单元测试**（`@Mock`+`@InjectMocks`，毫秒级，零测试基础设施）。以下不在本技能范围：
 
-- 测试自管真实依赖：Testcontainers、`@DataJpaTest`+TC、迁移测试、WireMock 隔离外部调用、稳定期契约切片层（`@WebMvcTest`/`@JsonTest`）、冒烟套件、API 级 E2E —— **→ `java-integration-test` 技能**（明示或确认后激活）。
+- 测试自管真实依赖：Testcontainers、`@DataJpaTest`+TC、迁移测试、WireMock 隔离外部调用、契约切片层（`@WebMvcTest`/`@JsonTest`）、冒烟套件、API 级 E2E —— **→ `java-integration-test` 技能**（明示或确认后激活）。
 - TestNG —— 跟随项目既有；项目无则不主动推荐引入。
 - 性能测试、前端测试。
 

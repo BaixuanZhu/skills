@@ -9,8 +9,7 @@ description: >-
   （@WebMvcTest / @JsonTest / @RestClientTest）。仅当需求明确需要重型 /
   真实环境测试时使用本技能：用户明示（"补集成测试 / 需求冻结 / 准备发版"）
   → 直接开始；仅能推断出需要 → 先询问"是否开始写重型测试"，确认后动手；
-  无信号 → 不写，新功能测试 → java-unit-test（开发期测试：纯单测 + 连本地
-  环境的接口测试）。核心：消灭仿真测试——可断言、可重复、可版本控制，替代
+  无信号 → 不写，新功能测试 → java-unit-test（纯单测）。核心：消灭仿真测试——可断言、可重复、可版本控制，替代
   curl 调接口 + 肉眼判断；断言真实行为的测试默认 Testcontainers 真实容器
   （不用 H2 替代）。分级：契约切片层（无真实依赖）与真实依赖层（容器）；
   业务分支矩阵永远铺纯单测（→ java-unit-test），容器用例每特性 1~3 条；
@@ -20,7 +19,7 @@ description: >-
   测试间数据互相污染、@Transactional 回滚失效、测试基础设施待搭建（生产
   PostgreSQL / MySQL / Redis）、测试用 H2 替代生产数据库、外部 API 真调、
   "返回 200 就是通过了"、跑测试太慢（反复全量 / 全文读输出）。
-  边界：开发期测试（纯单测 + 本地接口测试连本地已运行环境）→
+  边界：纯单测（开发期默认层，零基础设施）→
   java-unit-test；前端 E2E（Selenium / Playwright）/ 性能 / 安全 → 不适用。
 version: "2.0.0"
 last_verified: "2026-08-21"
@@ -36,7 +35,7 @@ last_verified: "2026-08-21"
 |---|---|---|
 | **明示**：用户说"补集成测试 / 需求冻结 / 特性验收了 / 准备发版 / 要 Testcontainers" | 需求明确要重型 / 真实环境测试 | 直接开始（不再追问） |
 | **推断**：特性已稳定 + SQL 密集 + 集成覆盖为零等信号同时出现，但用户没说 | 可能需要，未确认 | **先询问**："是否开始为 X 补重型集成测试？"——确认后动手，拒绝则回到 java-unit-test |
-| **无信号**：开发期常规写码 / 新功能开发 | 不需要 | **不写重型测试**；新功能测试 → java-unit-test（纯单测 + 本地接口测试）；存量重型测试照跑照修，不删不新增 |
+| **无信号**：开发期常规写码 / 新功能开发 | 不需要 | **不写重型测试**；新功能测试 → java-unit-test（纯单测），接口验证用本地手动跑应用 + curl 探索；存量重型测试照跑照修，不删不新增 |
 
 > 重型测试是十秒级/条的重资产，写在还在变动的行为上 = 需求每变一次连带重写——"测试久过开发"的根源。默认永远从轻（开发期测试），重的东西等人开口。
 
@@ -92,7 +91,6 @@ last_verified: "2026-08-21"
 | 场景 | 层 | 工具 | 详见 |
 |---|---|---|---|
 | 单类业务逻辑（含 Service 分支矩阵，调 Repository） | 开发期 | `@Mock`+`@InjectMocks` | → **java-unit-test** |
-| 接口"真实通"验证（连本地环境，Service 不 mock） | 开发期 | `@SpringBootTest(RANDOM_PORT)` + local profile | → **java-unit-test** |
 | Controller 参数校验 / 路由 / 异常处理 / 权限逻辑 | 契约切片 | `@WebMvcTest` + MockMvc | `03` |
 | JSON 序列化 / HTTP 客户端调用逻辑 | 契约切片 | `@JsonTest` / `@RestClientTest` | `03` |
 | Repository SQL / 查询 / 分页 | 真实依赖 | `@DataJpaTest` + Testcontainers | `03`+`04` |
@@ -177,5 +175,5 @@ last_verified: "2026-08-21"
 - Spring Boot 2.7.x / 3.x / 4.x 均适用；3.1+ 新增 `@ServiceConnection`（Testcontainers 自动连接），3.0 及以下用 `@DynamicPropertySource`。
 - **Boot 4 测试工具链变化**：① `TestRestTemplate` 废弃——拆到独立模块 `org.springframework.boot:spring-boot-resttestclient`（test scope），升级 Boot 4 后原注入直接失败；新测试用 `RestTestClient` + `@AutoConfigureRestTestClient`（迁移对照见 `references/02`）。② Testcontainers 跳到 2.x——模块加 `testcontainers-` 前缀（旧名 2.x 下 404）、容器类移独立包且无泛型（对照表见 `references/04`）。③ `@MockBean` / `@SpyBean` **已移除**（编译错误）→ 换 `@MockitoBean` / `@MockitoSpyBean`（Boot 3.4+ 可用；不能声明在 `@Configuration` 类里，见 `references/02`）。④ `@SpringBootTest` 不再自动配置 MockMvc——必须显式 `@AutoConfigureMockMvc`。
 - JUnit 版本不手选——由 `spring-boot-starter-test` 传递：Boot ≤3.x = JUnit 5，Boot 4 = JUnit 6。JUnit 4 遗留项目：用 `@RunWith(SpringRunner.class)`，断言用 `org.junit.Assert`，生命周期注解为 `@Before`/`@After`；其余写法与本技能示例一致。
-- **与 `java-unit-test` 的边界（依赖轴）**：开发期测试连"内存或本地已运行环境"（纯单测 + `@SpringBootTest(RANDOM_PORT)` + local profile 的本地接口测试），测试代码不自管基础设施 → java-unit-test；测试**自管**真实依赖（Testcontainers、迁移、真实事务传播、E2E、WireMock 隔离、契约切片 `@WebMvcTest`/`@JsonTest`）→ 本技能，明示或确认后激活。本地接口测试在功能稳定后可换 Testcontainers 数据源升格为 CI 级用例（同套用例，换数据源）。Context 内替换 Bean 的注解分界：纯单测 `@Mock`，Spring 测试内 `@MockitoBean`（→ 本技能）。
+- **与 `java-unit-test` 的边界（依赖轴）**：开发期测试 = 纯单测（`@Mock`+`@InjectMocks`，毫秒级，零基础设施）→ java-unit-test；开发期接口验证用本地手动跑应用 + curl 探索（curl 是调试工具，结果不是测试，激活后落成本技能用例）。测试**自管**真实依赖（Testcontainers、迁移、真实事务传播、E2E、WireMock 隔离、契约切片 `@WebMvcTest`/`@JsonTest`）→ 本技能，明示或确认后激活。Context 内替换 Bean 的注解分界：纯单测 `@Mock`，Spring 测试内 `@MockitoBean`（→ 本技能）。
 - **不适用**：前端 E2E（Selenium / Playwright / Cypress）、性能测试（JMeter / Gatling）、安全测试。

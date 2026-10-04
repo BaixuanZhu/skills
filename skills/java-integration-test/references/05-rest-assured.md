@@ -1,6 +1,6 @@
 # 05 · REST Assured（版本事实与选型）
 
-> REST Assured 是 curl 的正式替代——流式 DSL 写可断言、可重复、可版本控制的 API 测试（given/when/then 语法 agent 均熟，本文只留版本事实与选型判据）。属本技能（重型测试，激活后）工具；开发期本地接口测试也常用它连 `RANDOM_PORT`（→ java-unit-test `03`）。
+> REST Assured 是 curl 的正式替代——流式 DSL 写可断言、可重复、可版本控制的 API 测试（given/when/then 语法 agent 均熟，本文只留版本事实与选型判据）。属本技能（重型测试，激活后）工具。
 
 ## 依赖与版本分流（事实——易错处）
 
