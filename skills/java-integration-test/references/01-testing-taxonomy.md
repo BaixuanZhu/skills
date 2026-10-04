@@ -32,7 +32,7 @@
 
 ```
 先过激活协议：明示 / 确认激活了吗？
-├─ 否 → 纯单测（→ java-unit-test）+ 本地手动跑应用探索，本技能不介入
+├─ 否 → 纯单测（→ java-unit-test）+ 项目既有工具手动调接口（curl / Postman / Apifox），本技能不介入
 └─ 是 → 你要测什么？
    ├─ 单个类的方法逻辑（Service / Util / 计算，含分支矩阵）
    │  → 仍是纯单测 → java-unit-test
