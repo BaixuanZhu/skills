@@ -19,10 +19,9 @@
 <dependency><groupId>org.mockito</groupId><artifactId>mockito-core</artifactId><scope>test</scope></dependency>
 <!-- 断言默认 JUnit 原生，集合内容断言/字段分组断言（同一逻辑组）时才升级 AssertJ（触发条件见 SKILL.md"断言库策略"）：
 <dependency><groupId>org.assertj</groupId><artifactId>assertj-core</artifactId><scope>test</scope></dependency> -->
-<!-- ArchUnit 仅"架构守护询问"（见 SKILL.md）触发时引入 -->
 ```
 
-**坐标不硬编码会过时的具体版本数字**：版本跟随项目既有；新项目取当前最新稳定（agent 生成坐标时现场填该数字，不是 XML 里省略 `<version>` 标签）；Spring Boot 项目的依赖由 parent BOM 管理（上方 `spring-boot-starter-test` 坐标无版本即因此）。下面写法以 JUnit 5（Jupiter）为主；项目已有 TestNG → 跟随既有（栈中立，见 SKILL 铁律 3）。
+**坐标不硬编码会过时的具体版本数字**：版本跟随项目既有；新项目取当前最新稳定（agent 生成坐标时现场填该数字，不是 XML 里省略 `<version>` 标签）；Spring Boot 项目的依赖由 parent BOM 管理（上方 `spring-boot-starter-test` 坐标无版本即因此）。下面写法以 JUnit 5（Jupiter）为主；项目已有 TestNG → 跟随既有（栈中立）。
 
 ### JUnit 4 差异表（探测到 `junit:junit` / `@RunWith` 时使用）
 
@@ -198,17 +197,19 @@ class XTest {
 
 这是好事（逼桩值有用），但**调试式补的 stub 忘删**会让测试红。排查：确认桩值是否真被消费；确需"可能不用"的桩用 `lenient().when(...)` 显式标注（仅在必要时，别滥用）。
 
-### `@MockBean` vs `@Mock`（关键区分）
+### Spring 内替换 Bean 注解 vs `@Mock`（关键区分）
 
-| | `@Mock` | `@MockBean` |
+| | `@Mock` | `@MockBean` / `@MockitoBean` |
 |---|---|---|
 | 范围 | 纯单元测试 | Spring 切片/集成测试 |
 | 开销 | 毫秒，不起容器 | **启动/重建 Spring Context** |
 | 用于 | 本技能的主战场 | `@WebMvcTest`/`@DataJpaTest` 等（→ java-integration-test） |
 
+> Boot 4 已移除 `@MockBean`（编译错误）→ 切片/集成测试内一律 `@MockitoBean`；本表两注解同义。
+
 ## §4 范围边界
 
-本技能覆盖**纯单元测试**（`@Mock`+`@InjectMocks`，毫秒级，零测试基础设施）。以下不在本技能范围：
+本技能覆盖**纯单元测试**（`@Mock`+`@InjectMocks`，毫秒级，零基础设施）。以下不在本技能范围：
 
 - 测试自管真实依赖：Testcontainers、`@DataJpaTest`+TC、迁移测试、WireMock 隔离外部调用、契约切片层（`@WebMvcTest`/`@JsonTest`）、冒烟套件、API 级 E2E —— **→ `java-integration-test` 技能**（明示或确认后激活）。
 - TestNG —— 跟随项目既有；项目无则不主动推荐引入。

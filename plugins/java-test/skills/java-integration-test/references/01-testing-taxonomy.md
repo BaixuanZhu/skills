@@ -78,6 +78,6 @@ given().contentType(ContentType.JSON)
 | 激活 | 全周期默认 | 明示或确认后 |
 | 速度 | 毫秒 | 秒（切片）/ 十秒+（容器） |
 | Mock 方式 | `@Mock`（Mockito 原生） | `@MockitoBean`（Spring Context 内替换 Bean） |
-| 典型场景 | Service 决策表分支矩阵；本地起服务打真 HTTP | jsonb 查询 / 迁移可重放 / E2E / WireMock 隔离外部调用 |
+| 典型场景 | Service 决策表分支矩阵；开发期手动验证接口（不写测试） | jsonb 查询 / 迁移可重放 / E2E / WireMock 隔离外部调用 |
 
 > **`@MockitoBean` 分界线**：纯单测用 `@Mock`（不起容器）→ java-unit-test；切片 / 集成测试中替换 Bean 用 `@MockitoBean`（在 Spring Context 内）→ 本技能。`@MockitoBean` 用于纯单测会启动整个 Context，是 java-unit-test 的 S 级反模式。
