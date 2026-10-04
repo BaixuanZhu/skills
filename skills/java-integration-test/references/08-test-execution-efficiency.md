@@ -99,7 +99,15 @@ mvn test -B -ntp -q -Dlogging.level.root=WARN -Dspring.main.banner-mode=off
 
 > 条件评估报告（CONDITIONS EVALUATION REPORT）只在 `--debug` 时才打印——跑测试别加 `--debug`。
 
-## 3. 迭代策略：全量 → 单测 → 报告
+## 3. 运行调度与迭代策略
+
+**分层跑法**（测试重量与运行时机匹配——慢测试不进内环）：
+
+| 时机 | 跑什么 | 典型命令 |
+|---|---|---|
+| 内环（每次改动后） | 改动类的测试（T1 为主） | `mvn test -Dtest=OrderServiceTest` |
+| 提交前 | 全量 T1 | `mvn test` |
+| CI / 发布门禁 | 全量 T1 + T2 + T3（含 Testcontainers） | `mvn test` / `mvn verify` |
 
 ```
 首次：mvn test -q                                      # 验证整体
@@ -109,6 +117,7 @@ mvn test -B -ntp -q -Dlogging.level.root=WARN -Dspring.main.banner-mode=off
 ```
 
 - `mvn clean` 触发全量重编译——日常迭代用 `mvn test`（增量），仅在有编译残留问题时才 `clean`。
+- 开发期 T2/T3 存量照跑照修、不新增（阶段闸门见 SKILL.md）；发布门禁核对稳定期集成层补齐状态。
 
 ## 4. 测试超时兜底
 

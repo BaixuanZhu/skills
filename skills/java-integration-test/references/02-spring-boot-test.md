@@ -22,7 +22,7 @@ class MyIntegrationTest {
 
 | 模式 | HTTP？ | MockMvc？ | `@Transactional` 回滚？ | 适用场景 |
 |---|---|---|---|---|
-| `MOCK`（默认） | 否（Mock Servlet） | ✓ 自动配置 | ✓ 有效 | Service 跨层协作；不需要真实 HTTP 的集成测试 |
+| `MOCK`（默认） | 否（Mock Servlet） | ✓ 自动配置 | ✓ 有效 | 跨层真实协作 / 事务传播验证（T3，触 DB 配 Testcontainers）；不需要真实 HTTP 的集成测试 |
 | `RANDOM_PORT` | ✓ 真实（随机端口） | ✗ | **✗ 失效** | 完整 HTTP API 测试（含过滤器 / 序列化）；REST Assured / WebTestClient |
 | `DEFINED_PORT` | ✓ 真实（固定端口） | ✗ | **✗ 失效** | 需要固定端口（外部工具对接）——一般不用，端口冲突风险 |
 | `NONE` | 否 | ✗ | ✓ 有效 | 只启动 Context，不做 Web 测试（批处理 / 定时任务） |

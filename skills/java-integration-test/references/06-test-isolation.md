@@ -146,7 +146,7 @@ class StatefulBeanTest { }
 
 | 策略 | 适用模式 | 速度 | 干净度 | 适合 |
 |---|---|---|---|---|
-| `@Transactional` 回滚 | MOCK | 零开销 | ✓ | 跨层 Service 测试 |
+| `@Transactional` 回滚 | MOCK | 零开销 | ✓ | Service 集成测试（T3，MOCK 模式） |
 | `@Sql(AFTER)` | RANDOM_PORT | 快 | ✓ | HTTP API 测试 |
 | `TRUNCATE` in `@AfterEach` | RANDOM_PORT + Testcontainers | 快 | ✓ | E2E 多表测试 |
 | Flyway `clean` + `migrate` | RANDOM_PORT | 慢 | ✓✓ | 需验证迁移脚本（不常用） |

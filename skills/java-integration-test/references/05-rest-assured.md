@@ -1,6 +1,6 @@
 # 05 · REST Assured API 断言
 
-> REST Assured 是 curl 的正式替代——用流式 DSL 写可断言、可重复、可版本控制的 API 测试。given/when/then 三段式语法自然表达请求构造 → 发送 → 断言。
+> REST Assured 是 curl 的正式替代——用流式 DSL 写可断言、可重复、可版本控制的 API 测试。given/when/then 三段式语法自然表达请求构造 → 发送 → 断言。属稳定期工具（`RestAssuredMockMvc` 配 T2 切片可用；`RestAssured` + `RANDOM_PORT` 属 T3）——阶段闸门见 SKILL.md。
 
 ## 依赖
 
