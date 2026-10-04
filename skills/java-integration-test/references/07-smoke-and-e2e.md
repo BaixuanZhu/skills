@@ -1,6 +1,6 @@
 # 07 · 冒烟测试与 API 级 E2E
 
-> 冒烟测试验证"服务能启动 + 核心端点活着"；API 级 E2E 验证完整业务流程（多接口串联）。两者都不是 curl——而是有断言的自动化测试。冒烟与 E2E 属 T3 层——稳定期 / 发布准备才写（阶段闸门见 SKILL.md）；数量锚点见下文「E2E 测试数量控制」。示例注解 `@MockitoBean` 需 Boot 3.4+（≤3.3 写作 `@MockBean`，4.0 已移除旧注解——版本口径见 `02`）。
+> 冒烟测试验证"服务能启动 + 核心端点活着"；API 级 E2E 验证完整业务流程（多接口串联）。两者都不是 curl——而是有断言的自动化测试。冒烟与 E2E 属本技能真实依赖层——激活协议通过后才写（见 SKILL.md）；数量锚点见下文「E2E 测试数量控制」。示例注解 `@MockitoBean` 需 Boot 3.4+（≤3.3 写作 `@MockBean`，4.0 已移除旧注解——版本口径见 `02`）。
 
 ## 冒烟测试
 
@@ -114,9 +114,9 @@ E2E（End-to-End）验证**完整业务流程**——从用户操作的第一个
 | 数据 | 单个操作 | 多个操作有前后依赖 |
 | 典型 | 创建订单 | 注册→登录→浏览→下单→支付→查询订单 |
 
-### 完整示例：电商下单流程
+### E2E 骨架（多步串联模式）
 
-> 以下示例展示 E2E 多步串联模式——端点路径、请求体结构、响应字段跟随项目实际定义，不要直接复制。
+> 端点路径、请求体、响应字段跟随项目实际定义。串联语法（extract 复用 token / spec）见 `05`「多步串联」。
 
 ```java
 @SpringBootTest(webEnvironment = RANDOM_PORT)
@@ -127,92 +127,25 @@ class OrderFlowE2ETest {
     @Container @ServiceConnection
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.11-alpine");
 
-    RequestSpecification spec;
-
-    @BeforeEach
-    void setup() {
-        RestAssured.port = port;
-        spec = new RequestSpecBuilder()
-            .setContentType(ContentType.JSON)
-            .build();
-    }
-
     @AfterEach
     void cleanup() {
         // E2E 后清理所有表——RANDOM_PORT 下 @Transactional 无效
-        new JdbcTemplate(dataSource).execute(
-            "TRUNCATE TABLE users, products, orders, order_items CASCADE");
+        new JdbcTemplate(dataSource).execute("TRUNCATE TABLE users, products, orders CASCADE");
     }
 
     @Test
-    @Sql(scripts = "/sql/insert-products.sql")  // 预置商品数据
+    @Sql(scripts = "/sql/insert-products.sql")   // 预置数据用 @Sql(BEFORE)，不在测试中通过 API 创建
     void should_complete_full_order_flow() {
-        // ① 注册
-        String token =
-            given().spec(spec)
-                .body(Map.of("username", "e2e-user", "password", "Pass123!"))
-            .when()
-                .post("/api/auth/register")
-            .then().statusCode(201)
-                .extract().path("data.token");
-
-        RequestSpecification authSpec = new RequestSpecBuilder()
-            .addHeader("Authorization", "Bearer " + token)
-            .setContentType(ContentType.JSON)
-            .build();
-
-        // ② 浏览商品
-        given().spec(authSpec)
-        .when()
-            .get("/api/products")
-        .then().statusCode(200)
-            .body("data.size()", greaterThan(0));
-
-        // ③ 创建订单
-        Integer orderId =
-            given().spec(authSpec)
-                .body(Map.of("productId", 1, "qty", 2, "address", "南宁市"))
-            .when()
-                .post("/api/orders")
-            .then().statusCode(201)
-                .body("data.status", equalTo("CREATED"))
-                .body("data.totalAmount", equalTo(199.00f))
-                .extract().path("data.id");
-
-        // ④ 支付
-        given().spec(authSpec)
-            .body(Map.of("paymentMethod", "ALIPAY"))
-        .when()
-            .post("/api/orders/{id}/pay", orderId)
-        .then().statusCode(200)
-            .body("data.status", equalTo("PAID"));
-
-        // ⑤ 查询验证最终状态
-        given().spec(authSpec)
-        .when()
-            .get("/api/orders/{id}", orderId)
-        .then().statusCode(200)
-            .body("data.status", equalTo("PAID"))
-            .body("data.paidAt", notNullValue())
-            .body("data.items.size()", equalTo(1))
-            .body("data.items[0].qty", equalTo(2));
+        // ① 注册/登录 → extract token → 构建 authSpec（写法见 05）
+        // ② 核心链路逐步断言：下单 → 201 + status / totalAmount 字段值
+        // ③ 支付 → 200 + status=PAID
+        // ④ 查询终态 → 断言最终状态 + 关键字段（paidAt / items）
+        // 每步都有 statusCode + body 字段断言，不是"调一下就算过"
     }
 
     @Test
-    @Sql(scripts = "/sql/insert-products.sql")
     void should_reject_order_when_out_of_stock() {
-        // ① 注册 + 登录
-        String token = registerAndGetToken("e2e-user-2");
-
-        // ② 下单超出库存
-        given()
-            .header("Authorization", "Bearer " + token)
-            .body(Map.of("productId", 1, "qty", 999999))
-        .when()
-            .post("/api/orders")
-        .then()
-            .statusCode(409)  // 或 400，取决于业务设计
-            .body("msg", containsString("库存不足"));
+        // 异常流程：超库存下单 → 409/400 + 错误信息断言
     }
 }
 ```
