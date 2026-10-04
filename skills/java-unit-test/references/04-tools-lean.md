@@ -1,4 +1,4 @@
-# 06 · 工具落地（栈基线 + 设计→代码映射 + Mock/API 坑）
+# 04 · 工具落地（栈基线 + 设计→代码映射 + Mock/API 坑）
 
 > §1 是第 0 步探测后的**栈基线决策表**——版本差异唯一集中地；§2-§3 是编码期查表。§3 只收录"用错不报错但埋雷"的隐蔽型坑（如测试假绿、污染其他测试、掩盖耦合）——查文档 30 秒可得的即时报错型坑不收录。
 
@@ -29,7 +29,7 @@
 | 概念 | JUnit 5（默认） | JUnit 4（跟随） |
 |---|---|---|
 | 测试注解 | `@Test`（org.junit.jupiter） | `@Test`（org.junit，**勿混用**） |
-| 前置 | `@BeforeEach` | `@Before` |
+| 前置 | `BeforeEach` | `@Before` |
 | 断言 | `Assertions.assertEquals` | `Assert.assertEquals` |
 | 异常断言 | `assertThrows(...)` | `@Test(expected=...)` 或 `try/catch fail()` |
 | 参数化 | `@ParameterizedTest` | `@RunWith(Parameterized.class)` |
@@ -39,14 +39,14 @@
 
 ## §2 设计用例 → 测试代码：映射表
 
-| 用例设计形态（01-05） | 落地代码 | 关键点 |
+| 用例设计形态（01-02） | 落地代码 | 关键点 |
 |---|---|---|
 | 正向用例（有效等价类） | `assertEquals(expected, actual)` | 一个用例一个断言焦点 |
 | 反向/异常用例（无效等价类） | `assertThrows(XxxException.class, () -> ...)` | 验异常**类型 + 消息**，不止类型 |
 | 同方法多输入（等价类代表/边界） | `@ParameterizedTest` + `@CsvSource`/`@MethodSource` | 用例即数据，设计意图显式化 |
-| 决策表每列（03） | 一个 `@Test`，或并入 `@ParameterizedTest` | 列=用例，不要塞进单个测试 |
-| 状态机合法迁移（04） | `assertEquals(终态, obj.getState())` | 通过业务方法触发，不直接 setStatus |
-| 状态机非法迁移（04） | `assertThrows(IllegalStateException.class, obj::op)` | 这是状态机测试的核心 |
+| 决策表每列 | 一个 `@Test`，或并入 `@ParameterizedTest` | 列=用例，不要塞进单个测试 |
+| 状态机合法迁移 | `assertEquals(终态, obj.getState())` | 通过业务方法触发，不直接 setStatus |
+| 状态机非法迁移 | `assertThrows(IllegalStateException.class, obj::op)` | 这是状态机测试的核心 |
 | 需固定外部依赖 | Mock（见 §3） | 只 mock 外部依赖，不 mock 被测对象 |
 
 ## §3 Mock 边界与 Mockito API 坑（最易错处）
@@ -161,8 +161,6 @@ class OrderService {
 
 ### Mockito stubbing / verify 隐蔽坑（用错不报错但埋雷）
 
-以下三个坑都"查文档未必意识到严重性、用错了测试照样过"，是技能固化的价值点：
-
 **① 对 `spy` 用 `when().thenReturn()` 会先触发真实方法**
 
 ```java
@@ -206,13 +204,13 @@ class XTest {
 |---|---|---|
 | 范围 | 纯单元测试 | Spring 切片/集成测试 |
 | 开销 | 毫秒，不起容器 | **启动/重建 Spring Context** |
-| 用于 | 本技能的主战场 | `@WebMvcTest`/`@DataJpaTest` 等 |
+| 用于 | 本技能的主战场 | `@WebMvcTest`/`@DataJpaTest` 等（→ java-integration-test） |
 
 ## §4 范围边界
 
-本技能只覆盖**纯单元测试**（`@Mock`+`@InjectMocks`，毫秒级，不起容器）。以下不在本技能范围：
+本技能覆盖**开发期测试**：纯单测（`@Mock`+`@InjectMocks`，毫秒级）+ 本地接口测试（`@SpringBootTest(RANDOM_PORT)` 连本地已运行环境，`03`）。以下不在本技能范围：
 
-- 集成测试 / `@SpringBootTest` 全量上下文 / 切片测试（`@WebMvcTest`/`@DataJpaTest`）/ Testcontainers / REST Assured / WireMock / 冒烟测试 / API 级 E2E —— **→ `java-integration-test` 技能**。这些场景里 `@MockBean` 才适用。
+- 测试自管真实依赖：Testcontainers、`@DataJpaTest`+TC、迁移测试、WireMock 隔离外部调用、稳定期契约切片层（`@WebMvcTest`/`@JsonTest`）、冒烟套件、API 级 E2E —— **→ `java-integration-test` 技能**（明示或确认后激活）。
 - TestNG —— 跟随项目既有；项目无则不主动推荐引入。
 - 性能测试、前端测试。
 

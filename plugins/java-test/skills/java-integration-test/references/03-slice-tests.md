@@ -1,6 +1,6 @@
 # 03 · 切片测试
 
-> 切片测试只加载某一层（Web / JPA / JSON），不起全量 Context——秒级启动，定位精准。当不需要跨层协作时，切片优于全量 `@SpringBootTest`。切片属 T2/T3 层（`@WebMvcTest` / `@JsonTest` / `@RestClientTest` = T2；`@DataJpaTest` + Testcontainers = T3）——开发期不写，阶段闸门与分级准入见 SKILL.md 与 `01`。示例注解 `@MockitoBean` 需 Boot 3.4+（≤3.3 写作 `@MockBean`，4.0 已移除旧注解——版本口径见 `02`）。
+> 切片测试只加载某一层（Web / JPA / JSON），不起全量 Context——秒级启动，定位精准。当不需要跨层协作时，切片优于全量 `@SpringBootTest`。切片属本技能分级中的契约切片层（`@WebMvcTest` / `@JsonTest` / `@RestClientTest`）；`@DataJpaTest` + Testcontainers 属真实依赖层——激活协议与分级准入见 SKILL.md 与 `01`。示例注解 `@MockitoBean` 需 Boot 3.4+（≤3.3 写作 `@MockBean`，4.0 已移除旧注解——版本口径见 `02`）。
 
 ## 切片 vs 全量：何时用什么
 
