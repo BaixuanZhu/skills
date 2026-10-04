@@ -32,7 +32,7 @@
 
 ```
 先过激活协议：明示 / 确认激活了吗？
-├─ 否 → 纯单测（→ java-unit-test）+ 项目既有工具手动调接口（curl / Postman / Apifox），本技能不介入
+├─ 否 → 纯单测 → java-unit-test，本技能不介入
 └─ 是 → 你要测什么？
    ├─ 单个类的方法逻辑（Service / Util / 计算，含分支矩阵）
    │  → 仍是纯单测 → java-unit-test
@@ -68,7 +68,7 @@ given().contentType(ContentType.JSON)
     .body("data.totalAmount", equalTo(new BigDecimal("199.00")));
 ```
 
-**手动接口工具的合理用途**（curl / Postman / Apifox——跟随项目既有，技能不规定用哪个）：调试与探索（开发期验证接口能不能通、排查问题时看实际响应、文档展示调用示例）——开发期"接口通不通"的验证主场。**但手动调接口的结果不是测试**——探索过的行为，激活后落成本技能的有断言用例（开发期只写纯单测）。
+**但 curl 的结果不是测试**——探索过的行为，激活后落成本技能的有断言用例（开发期只写纯单测）。
 
 ## 与 java-unit-test 的边界（依赖轴）
 
