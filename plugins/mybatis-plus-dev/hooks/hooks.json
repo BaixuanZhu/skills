@@ -1,5 +1,5 @@
 {
-  "description": "构建失败症状索引：Maven/Gradle 命令跑完后读日志，命中 MyBatis-Plus 已知失败特征时注入一行排查指针。只在真的引入 MP 的项目上激活，不阻断任何操作。",
+  "description": "构建失败症状索引：Maven/Gradle 命令跑完后读日志，命中 MyBatis-Plus 已知失败特征时注入一行排查指针。只在真的引入 MP 的项目上激活，不阻断任何操作。需要本机有 node（没有则 hook 报非阻塞错误，功能不受影响）。",
   "hooks": {
     "PostToolUse": [
       {

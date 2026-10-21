@@ -27,6 +27,11 @@ const STALE_MS = 10 * 60 * 1000;      // 日志超过 10 分钟视为陈旧，�
 const GATE_TTL_MS = 60 * 60 * 1000;   // 「项目无 MP」的否定结论缓存 1 小时
 const MAX_SCAN = 512 * 1024;          // 探测依赖时最多读 512KB 构建文件
 
+// fail-open 兜底：这个脚本随插件分发到别人的机器上，任何未预期异常都不能变成
+// 用户每次构建后看到一条 hook error。宁可沉默，不可打扰。
+process.on('uncaughtException', () => process.exit(0));
+process.on('unhandledRejection', () => process.exit(0));
+
 // ── 症状表 ────────────────────────────────────────────────────────────────
 // 分两层：
 //   框架层 —— MyBatis / MP 自己抛的，跨数据库一致，已真机验证（真实 Maven 构建 + 真实堆栈）

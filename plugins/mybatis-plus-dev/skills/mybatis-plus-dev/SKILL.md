@@ -126,7 +126,7 @@ displayName: MyBatis-Plus 开发助手
 
 种子文件只写两样东西：**项目事实**（版本、DbType、配置类位置、逻辑删除字段名）与**有知识但不会主动做的流程**（新增 Mapper 时必须同名同参）。模型本来就会的 MP 用法一律不写。
 
-**触发**：依赖含 `mybatis-plus-*`，且项目无 `.claude/rules/mybatis-plus.md`，或该文件首行注释 `<!-- seeded: mybatis-plus-dev@x.y.z -->` 的版本低于本技能 → **提议**播种，一句话说明收益，等用户确认。不要未经同意就写项目文件。
+**触发**：依赖含 `mybatis-plus-*`，且项目无 `.claude/rules/mybatis-plus.md`，或该文件首行注释 `<!-- seeded: mybatis-plus-dev@x.y.z -->` 的版本低于本技能 → **提议**播种，一句话说明收益，等用户确认。不要未经同意就写项目文件。**2.x 时代的旧种子首行是 `> 版本：v1`，同样算落后**（旧种子没有 `paths`，不会按需加载，等于白占上下文）。
 
 **落点只有一个**：`.claude/rules/mybatis-plus.md`。Claude Code 原生递归加载 `.claude/rules/*.md`，**不需要在 `CLAUDE.md` 里 `@import`**，所以**不碰 `CLAUDE.md`**——改它既污染用户文件，又没有任何收益。
 
