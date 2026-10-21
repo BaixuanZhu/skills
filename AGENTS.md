@@ -30,6 +30,7 @@
 
 - **装 hook**：`npm install`（`postinstall` 自动装到 `.git/hooks/pre-commit`）。换机器 / 新 clone 后跑一次。
 - **手动跑同步**（不 commit）：`node scripts/sync-plugins.mjs`
+- **references 交叉引用校验**：`node scripts/check-refs.mjs skills/<name>/references`（严格，悬空即退出 1）；不带参数扫全仓只报告（各 skill 标题风格不统一，全量难免残留噪音，别拿来当门禁）。`-v` 打印每处引用的实际标题——删减章节后重编号会复用旧编号，此时 §N 依然"可达"但指向已换，纯可达性检查抓不到这种语义错位。
 - **新增 / 删除技能**：hook 不自动建 / 删 `plugins/` 结构。需手动①在 `skills/<name>/` 建内容 → ②在 `plugins/<name>/` 建合规包（`.claude-plugin/plugin.json` + `.codex-plugin/plugin.json` + `skills/<name>/` 嵌套）→ ③在**两份** `marketplace.json`（`.claude-plugin/` 与 `.agents/plugins/`）的 `plugins[]` 各追加条目。之后同步自动。归入既有 group 的技能只需在 `plugin-map.json` 的 `groups.<group>.skills[]` 加名字，无需另建 plugin。
 - **group 映射**（`scripts/plugin-map.json`）：声明多个 skill 合并到 1 个 plugin。现有 3 个 group：`agile`（using-agile / agile-strategic / agile-backlog / agile-sprint）、`java-test`（java-unit-test / java-integration-test）、`java-quality`（java-coding-guide-pro / java-coding-quality）。sync hook 据此把组内各 skill 同步到 `plugins/<group>/skills/<skill名>/`；group 插件版本取组内 skill 版本的 max（`"version": "max"`），**组内容有变化但 max 未超过当前插件版本时（低版本成员更新），hook 自动 bump patch**——否则插件市场版本号不动、已装用户收不到更新提示。不在 group 里的 skill 走默认 1:1（`plugins/<name>/skills/<name>/`）。
 - **marketplace.json 的 `description`/`category`/`keywords`/`source` 独立维护**（hook 不动）——因为 SKILL.md 的 `description` 是长触发器文本，与 marketplace 的一句话简述不是同一内容。
