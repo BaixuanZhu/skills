@@ -7,7 +7,7 @@
 两个内容目录是核心，其余是配套：
 
 - `skills/<name>/` —— **技能内容唯一编辑源**（npx skills / SkillHub / ZCode-npx 扫描这里）。每个含 `SKILL.md`（YAML frontmatter：`name`/`description`/`version`/`slug`/`displayName`，敏捷族另有 `dependencies`）+ `references/`（编号 `NN-topic.md`，1~14 个）+ 个别有 `assets/`（如 `java-coding-quality` 含规则集）。sync hook 自动同步整个 `assets/` 子树到 `plugins/`。
-- `plugins/<name>/` —— **skills/ 的镜像**（Claude Code / ZCode / Codex 插件规范要求 manifest + `skills/<name>/` 嵌套，故与扁平的 `skills/` 分开存放）。每个含 `.claude-plugin/plugin.json`（Claude Code / ZCode 读）+ `.codex-plugin/plugin.json`（Codex 读）。支持「多 skill 合并入 1 个 plugin」（agile / java-test / java-quality 三个 group，见下文「group 映射」）。**不要手改这里**——pre-commit hook 从 `skills/` 自动同步。
+- `plugins/<name>/` —— **skills/ 的镜像**（Claude Code / ZCode / Codex 插件规范要求 manifest + `skills/<name>/` 嵌套，故与扁平的 `skills/` 分开存放）。每个含 `.claude-plugin/plugin.json`（Claude Code / ZCode 读）+ `.codex-plugin/plugin.json`（Codex 读）。支持「多 skill 合并入 1 个 plugin」（agile / java-test / java-quality 三个 group，见下文「group 映射」）。**除 `hooks/`、`scripts/` 外不要手改这里**——pre-commit hook 从 `skills/` 自动同步。
 - `.claude-plugin/marketplace.json` —— Claude Code / ZCode 插件市场清单，`plugins[]` 每条 `source` 指 `./plugins/<name>`。
 - `.agents/plugins/marketplace.json` —— Codex 插件市场清单，`plugins[]` 每条 `source` 是对象（`{"source":"local","path":"./plugins/<name>"}` + `policy` + `category`），与 Claude 的字符串 `source` 不同。
 - `eval/<skill-name>/` —— 达尔文评估产物（`eval/` 下游于 `skills/`，技能不从 eval 导入）。
@@ -33,6 +33,7 @@
 - **新增 / 删除技能**：hook 不自动建 / 删 `plugins/` 结构。需手动①在 `skills/<name>/` 建内容 → ②在 `plugins/<name>/` 建合规包（`.claude-plugin/plugin.json` + `.codex-plugin/plugin.json` + `skills/<name>/` 嵌套）→ ③在**两份** `marketplace.json`（`.claude-plugin/` 与 `.agents/plugins/`）的 `plugins[]` 各追加条目。之后同步自动。归入既有 group 的技能只需在 `plugin-map.json` 的 `groups.<group>.skills[]` 加名字，无需另建 plugin。
 - **group 映射**（`scripts/plugin-map.json`）：声明多个 skill 合并到 1 个 plugin。现有 3 个 group：`agile`（using-agile / agile-strategic / agile-backlog / agile-sprint）、`java-test`（java-unit-test / java-integration-test）、`java-quality`（java-coding-guide-pro / java-coding-quality）。sync hook 据此把组内各 skill 同步到 `plugins/<group>/skills/<skill名>/`；group 插件版本取组内 skill 版本的 max（`"version": "max"`），**组内容有变化但 max 未超过当前插件版本时（低版本成员更新），hook 自动 bump patch**——否则插件市场版本号不动、已装用户收不到更新提示。不在 group 里的 skill 走默认 1:1（`plugins/<name>/skills/<name>/`）。
 - **marketplace.json 的 `description`/`category`/`keywords`/`source` 独立维护**（hook 不动）——因为 SKILL.md 的 `description` 是长触发器文本，与 marketplace 的一句话简述不是同一内容。
+- **例外：插件级 `hooks/` 与 `scripts/` 不镜像、不清理**（如 `plugins/mybatis-plus-dev/hooks/hooks.json` + `scripts/symptom-watch.mjs`）。sync 只镜像 `plugins/<name>/skills/<skill>/` 子树，`rmSync` 范围也限于该路径，所以这两个目录**既不会被误删，也不会被同步**——改它们要直接改 `plugins/` 侧，那是仓库里唯一的单副本资产。钩子用 exec form（`"command": "node"` + `"args": ["${CLAUDE_PLUGIN_ROOT}/scripts/x.mjs"]`，不过 shell，路径无需引号），`${CLAUDE_PLUGIN_ROOT}` 由 Claude Code 注入。
 
 ### 新增 plugin / marketplace 条目的字段要求
 

@@ -20,7 +20,7 @@ mybatis-plus:
 | `Invalid bound statement (not found)` | Mapper 未扫描 / 方法无对应 XML | 检查 `@MapperScan` 包路径、XML `namespace` |
 | `BindingException: Parameter 'xxx' not found` | 多参未 `@Param` | Mapper 方法参数加 `@Param("x")` |
 | 分页 `total=0` / 返回全量 | 未配分页插件或未引 jsqlparser | 见 `02-config.md` §1、`06-page.md` §2 |
-| 更新后某字段没变 | null 不更新 | 见 `04-crud.md` §4、`03-entity.md` §4 |
+| 更新后某字段没变 | null 不更新 | 见 `04-crud.md` §2、`03-entity.md` §2 |
 | 逻辑删除后仍能查到 | `@TableLogic`/全局未生效 | 检查字段名与配置是否一致 |
 | 乐观锁永远成功 | 未注册插件 | 见 `02-config.md` §3 |
 | 字段值全为 null | 列名/属性名映射错 | 检查驼峰配置与 `@TableField` |

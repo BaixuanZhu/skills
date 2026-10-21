@@ -26,61 +26,12 @@
 ```
 > JDK8 项目改用 `mybatis-plus-jsqlparser-4.9`（同版本号）。不引 jsqlparser，`PaginationInnerInterceptor` 无法工作（静默失效，无报错）。
 
+> 3.4 时代的 `PaginationInterceptor` 已废弃，3.5.x 一律用 `MybatisPlusInterceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.XXX))`。老项目升级时若仍见 `PaginationInterceptor`，是没改完。
+
 ## 2. 最小配置
 
-```java
-@SpringBootApplication
-@MapperScan("com.example.mapper")   // 扫描 Mapper 接口所在包
-public class Application {
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
-    }
-}
-```
 
 数据源照常配 `spring.datasource.*`（url / username / password / driver-class-name）。MP 自动接手，无需额外 `SqlSessionFactoryBean`。
 
-## 3. 实体与 Mapper
-
-```java
-@TableName("user")
-public class User {
-    @TableId
-    private Long id;
-    private String name;
-    private Integer age;
-    // getter / setter 必须有
-}
-
-public interface UserMapper extends BaseMapper<User> {
-    // 无需写任何方法，CRUD 已具备
-}
-```
-
-## 4. 基础 CRUD 跑通
-
-**方式一：Service 层继承（推荐）**
-```java
-public interface IUserService extends IService<User> {}
-
-@Service
-public class UserService extends ServiceImpl<UserMapper, User> implements IUserService {
-    public List<User> listAdults() {
-        return this.lambdaQuery().ge(User::getAge, 18).list();
-    }
-}
-```
-
-**方式二：直接注入 Mapper**
-```java
-@Autowired
-private UserMapper userMapper;
-
-List<User> all = userMapper.selectList(null);   // null = 无过滤条件
-User u = userMapper.selectById(1L);
-userMapper.insert(new User().setName("Tom").setAge(20));
-userMapper.updateById(new User().setId(1L).setAge(21));
-userMapper.deleteById(1L);
-```
 
 > 进阶配置（分页插件、逻辑删除、自动填充、乐观锁）见 `02-config.md`；实体字段映射、主键策略、null 处理见 `03-entity.md`。

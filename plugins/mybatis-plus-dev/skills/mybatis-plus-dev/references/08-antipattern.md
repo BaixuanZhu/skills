@@ -9,7 +9,7 @@
 
 ## 2. null 字段不更新
 - ❌ `userMapper.updateById(new User().setId(1L).setAge(null))` 想清空 age，结果 age 不变。
-- ✅ 用 `UpdateWrapper.set(User::getAge, null)`（见 `04-crud.md` §4）。
+- ✅ 用 `UpdateWrapper.set(User::getAge, null)`（见 `04-crud.md` §2）。
 - 为什么：默认字段策略 `NOT_NULL`，null 不参与 UPDATE。
 
 ## 3. selectObjs 误用
@@ -34,16 +34,16 @@
 
 ## 7. 乐观锁不生效
 - ❌ 用了 `@Version` 但没注册 `OptimisticLockerInnerInterceptor`；或在自定义 update 中遗漏版本字段。
-- ✅ 注册插件 + 走 `updateById` / `update` / `saveOrUpdate`（见 `02-config.md` §3、`03-entity.md` §5）。
+- ✅ 注册插件 + 走 `updateById` / `update` / `saveOrUpdate`（见 `02-config.md` §3、`03-entity.md` §3）。
 - 为什么：乐观锁由插件在 UPDATE 时自动追加 `where version=?` 并 `+1`，缺插件即普通更新。
 
 ## 8. Wrapper 复用叠加条件
 - ❌ 同一 `Wrapper` 实例多次 `selectList`，第二次条件翻倍。
-- ✅ 每次查询 `new` 一个新 Wrapper（见 `05-wrapper.md` §8）。
+- ✅ 每次查询 `new` 一个新 Wrapper（见 `05-wrapper.md` §5）。
 
 ## 9. 用 eq(field, null) 查空值
 - ❌ `w.eq(User::getDeleted, null)` 想查未删除，结果生成 `deleted = NULL`，匹配 0 行（既非忽略也非查到 null 行）。
-- ✅ `w.isNull(User::getDeleted)`；条件性跳过用三参重载 `w.eq(val != null, User::getXxx, val)`（见 `05-wrapper.md` §7）。
+- ✅ `w.isNull(User::getDeleted)`；条件性跳过用三参重载 `w.eq(val != null, User::getXxx, val)`（见 `05-wrapper.md` §4）。
 
 ## 10. 联表分页硬堆 Wrapper
 - ❌ 用 `QueryWrapper` 拼 join + 手写分页。
@@ -68,16 +68,16 @@
 
 ## 15. last 覆盖分页 / 排序
 - ❌ `wrapper.last("limit 1")` 后又依赖 `Page` 分页。
-- ✅ `last` 直接拼 SQL 末尾，会覆盖 MP 生成的分页 / 排序；非必要不用（见 `05-wrapper.md` §6）。
+- ✅ `last` 直接拼 SQL 末尾，会覆盖 MP 生成的分页 / 排序；非必要不用（见 `05-wrapper.md` §3）。
 
 ## 16. 枚举映射失效
 - ❌ 数据库存 `1`/`2`，枚举没标 `@EnumValue` 也没实现 `IEnum`，查出来是 `null`；或前端收到 `"MALE"` 而非 `1`。
-- ✅ 枚举值字段标 `@EnumValue` + JSON 序列化字段标 `@JsonValue`（见 `03-entity.md` §7）。
+- ✅ 枚举值字段标 `@EnumValue` + JSON 序列化字段标 `@JsonValue`（见 `03-entity.md` §5）。
 - 为什么：MP 默认用 `MybatisEnumTypeHandler` 按 `@EnumValue`/`IEnum` 属性映射；未标注则按枚举名称（`MALE`/`FEMALE`）匹配，与数据库的 `1`/`2` 对不上。Jackson 默认序列化枚举名，需 `@JsonValue` 指定输出值。
 
 ## 17. XML 中枚举 typeHandler 漏声明
 - ❌ 自定义 XML 查询中，枚举字段只在 resultMap 声明了 typeHandler，查询条件 `#{gender}` 没声明。
-- ✅ 枚举字段在 XML 的**每个位置**（resultMap、条件 `#{}`、插入 `#{}`）都要写 `typeHandler=MybatisEnumTypeHandler`（见 `10-xml.md` §5.4）。
+- ✅ 枚举字段在 XML 的**每个位置**（resultMap、条件 `#{}`、插入 `#{}`）都要写 `typeHandler=MybatisEnumTypeHandler`（见 `10-xml.md` §4.1）。
 - 为什么：XML 不继承实体注解，typeHandler 必须逐处显式声明。
 
 ## 18. @Transactional 未指定 rollbackFor

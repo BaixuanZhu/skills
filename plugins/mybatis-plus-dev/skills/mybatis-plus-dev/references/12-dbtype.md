@@ -54,4 +54,4 @@ interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.POSTGRE_SQ
 - ❌ **Oracle/PG 用 `IdType.AUTO`**：无自增列支持，插入失败。✅ `INPUT`+`@KeySequence` 或 `ASSIGN_ID`。
 - ❌ **引用符写死反引号**：XML/注解里写 `` `col` `` 在 Oracle/PG 报标识符错。✅ 按库改用 `"col"`。
 - ❌ **`apply` 写 MySQL 函数**：`w.apply("create_time >= NOW()")` 在 Oracle 报 `NOW` 无效。✅ 用与 DbType 匹配的函数（`SYSDATE` / `NOW()`），或优先用 Wrapper 标准 API 避免手写函数。
-- ❌ **`InsertBatchSomeColumn` 当通用批量**：其多值语法主要适配 MySQL；Oracle/SQL Server 应走 `BATCH` executor（见 `04-crud.md §3`）。
+- ❌ **`InsertBatchSomeColumn` 当通用批量**：其多值语法主要适配 MySQL；Oracle/SQL Server 应走 `BATCH` executor（见 `04-crud.md §1`）。

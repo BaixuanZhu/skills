@@ -38,57 +38,7 @@ w.apply("ROW_NUMBER() OVER (PARTITION BY dept_id ORDER BY id) = 1")
 
 用 `apply()` / `last()` 拼函数片段是反模式：注入风险 + 跨库不可移植 + 语义不可读（见 `08-antipattern.md` #25）。
 
-## 2. LambdaUpdateWrapper（更新侧方法引用）
-
-更新场景同样用方法引用。`LambdaUpdateWrapper` 收 `SFunction`（getter 引用），与查询侧一致：
-
-```java
-// 置 null（强约束 #4 的方法引用版，等价 UpdateWrapper.set("age", null)）
-userMapper.update(null, new LambdaUpdateWrapper<User>()
-    .eq(User::getId, 1L)
-    .set(User::getAge, null));
-
-// 批量更新：set + inc + 条件
-new LambdaUpdateWrapper<User>()
-    .set(User::getStatus, 1)            // SET status = 1
-    .setSql("version = version + 1")    // 原生片段（无方法引用对应时用 setSql，仍走占位防注入）
-    .between(User::getAge, 18, 30);     // WHERE age BETWEEN 18 AND 30
-```
-
-- `set(SFunction, Object)`：方法引用置值，编译期检查字段。
-- `setSql(String)`：拼接原生 SQL 片段（如 `version = version + 1` 这类引用列自身的表达式），**无外部输入时用**；含外部输入走 `{0}` 占位 + `SqlInjectionUtils.check`。
-- 字符串版 `UpdateWrapper.set("age", null)` 仅在动态列名（运行时才知道列）时用，否则一律 `LambdaUpdateWrapper`。
-
-## 3. 常用条件
-
-```java
-LambdaQueryWrapper<User> w = new LambdaQueryWrapper<>();
-w.eq(User::getName, "Tom")          // =
- .ne(User::getStatus, 0)            // !=
- .gt(User::getAge, 18)              // >
- .ge(...) .lt(...) .le(...)         // >= / < / <=
- .like(User::getName, "张")         // LIKE %张%
- .likeLeft(...) .likeRight(...)
- .in(User::getId, Arrays.asList(1, 2, 3))
- .between(User::getAge, 18, 30)
- .isNull(User::getDeleted)          // IS NULL
- .isNotNull(...)
- .groupBy(...) .having(...)
- .orderByDesc(User::getCreateTime);
-```
-
-## 4. 字段投影 select
-
-```java
-// 只查部分字段
-mapper.selectList(
-    new LambdaQueryWrapper<User>().select(User::getId, User::getName).eq(User::getAge, 18));
-
-// 排除字段
-.select(User.class, info -> !info.getColumn().equals("age"))
-```
-
-## 5. apply 与 SQL 注入防护（重点）
+## 2. apply 与 SQL 注入防护（重点）
 
 ```java
 // ❌ 危险：字符串拼接，可被注入
@@ -102,11 +52,11 @@ w.apply("date_format(create_time,'%Y-%m-%d') = {0}", inputDate);
 ```
 > `SqlInjectionUtils.check(String)` 返回 boolean（true=疑似注入），**自身不抛异常、不返回安全化后的值**——必须由调用方 `if (check(x)) throw` 拦截，裸调用 `check(x);` 会被编译/告警忽略返回值，校验形同虚设。拦截后用 `{0}` 占位符传原值（PreparedStatement 参数化）。任何把外部输入拼进 SQL 片段的地方都照此处理。
 
-## 6. last 慎用
+## 3. last 慎用
 
 `last("limit 1")` 直接拼接在 SQL 末尾，会**覆盖** MP 自己生成的分页 / 排序，且同样有注入风险。非必要不用。
 
-## 7. 空值语义（重点）
+## 4. 空值语义（重点）
 
 - **`eq / ge / like ...` 传 `null` 不会忽略条件**：默认 `condition=true`，生成 `col = NULL`，而 `NULL = NULL` 在 SQL 中为 unknown → **匹配 0 行**（不是"忽略返回全部"，也不是"查到 null 行"）。
 - 想条件性跳过：用三参重载 `eq(name != null, User::getName, name)`（`condition=false` 时该条件不加入 SQL）。
@@ -126,7 +76,7 @@ w.isNull(User::getName);
 
 > 此前版本曾误记「eq 传 null 自动被忽略」——经实跑核实不成立。
 
-## 8. Wrapper 不可复用
+## 5. Wrapper 不可复用
 
 同一 `Wrapper` 实例多次 `selectList` 会**叠加**条件。每次查询 `new` 一个新的。
 

@@ -1,0 +1,18 @@
+{
+  "description": "构建失败症状索引：Maven/Gradle 命令跑完后读日志，命中 MyBatis-Plus 已知失败特征时注入一行排查指针。只在真的引入 MP 的项目上激活，不阻断任何操作。",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/symptom-watch.mjs"],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

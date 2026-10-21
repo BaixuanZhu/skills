@@ -4,27 +4,14 @@
 
 ## 1. 逻辑删除 / 自动填充 / 乐观锁
 
-- 逻辑删除：全局 `logic-delete-field` 或 `@TableLogic`（`02-config.md` §2 / `03-entity.md` §6）
-- 自动填充：`MetaObjectHandler` + `@TableField(fill=...)`（`02-config.md` §4 / `03-entity.md` §3）
-- 乐观锁：`@Version` + `OptimisticLockerInnerInterceptor`（`02-config.md` §3 / `03-entity.md` §5）
+- 逻辑删除：全局 `logic-delete-field` 或 `@TableLogic`（`02-config.md` §2 / `03-entity.md` §4）
+- 自动填充：`MetaObjectHandler` + `@TableField(fill=...)`（`02-config.md` §4）
+- 乐观锁：`@Version` + `OptimisticLockerInnerInterceptor`（`02-config.md` §3 / `03-entity.md` §3）
 
 ## 2. 多租户 TenantLineInnerInterceptor
 
 自动在每张表的 SQL 上追加 `tenant_id = ?` 条件，实现行级租户隔离。
 
-```java
-interceptor.addInnerInterceptor(new TenantLineInnerInterceptor(
-    new TenantLineHandler() {
-        @Override public Expression getTenantId() {
-            // 租户ID必须非 null，从登录上下文/ThreadLocal 取，勿硬编码
-            return new LongValue(TenantContext.getTenantId());
-        }
-        @Override public String getTenantIdColumn() { return "tenant_id"; }
-        @Override public boolean ignoreTable(String tableName) {
-            return "sys_config".equals(tableName); // 公共表跳过租户条件
-        }
-    }));
-```
 
 - **在插件链中先于分页添加**（顺序见 §5 / 强约束 #10）。
 - **租户 ID 来源**：从请求上下文取（如 `TenantContext` / `LoginUser` 持有的 tenantId），由登录拦截器写入 `ThreadLocal`；`getTenantId()` 返回 **null 会拼出 `tenant_id = null` 导致所有数据查空**，务必保证非空。
@@ -50,12 +37,6 @@ interceptor.addInnerInterceptor(new DynamicTableNameInnerInterceptor(
 按当前用户的数据范围（部门/角色）自动追加行级过滤条件（如 `dept_id IN (...)`）。
 
 ```java
-import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.LongValue;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.expression.operators.relational.InExpression;
-import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
 
 interceptor.addInnerInterceptor(new DataPermissionInterceptor(new MultiDataPermissionHandler() {
     @Override
