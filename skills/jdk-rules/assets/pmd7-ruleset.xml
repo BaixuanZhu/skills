@@ -17,9 +17,12 @@
     <rule ref="category/java/errorprone.xml/EmptyCatchBlock">
         <priority>1</priority>
     </rule>
-    <!-- catch 泛型异常/Throwable（AvoidCatchingThrowable 已废弃，用本规则；7.x 位于 design 分类） -->
+    <!-- catch 泛型异常/Throwable（AvoidCatchingThrowable 已废弃，用本规则；7.x 位于 design 分类）
+         降级为 3：框架层与工具类的 catch (Exception) 多为有意的统一兜底（日志 + 降级），
+         PMD 无法区分「故意兜底」与「偷懒宽捕获」。实测两个真实项目上该规则占 P≤2 的 74%，
+         作为阻断项等于逼用户跳过门禁（注意：XML 注释内不能出现连续两个减号）。 -->
     <rule ref="category/java/design.xml/AvoidCatchingGenericException">
-        <priority>2</priority>
+        <priority>3</priority>
     </rule>
     <!-- finally 中 return，会吞掉 try 块异常 -->
     <rule ref="category/java/errorprone.xml/ReturnFromFinallyBlock">
@@ -109,9 +112,11 @@
     <rule ref="category/java/bestpractices.xml/ArrayIsStoredDirectly">
         <priority>3</priority>
     </rule>
-    <!-- 方法返回 null 而非空集合，调用方须额外判空（NPE 高频根因） -->
+    <!-- 方法返回 null 而非空集合，调用方须额外判空（NPE 高频根因）
+         降级为 3：返回 null 与返回空集合是 API 契约选择，不是缺陷；项目内统一约定即可。
+         实测两个真实项目上占 P≤2 的 14%，与上一条合计 88%。 -->
     <rule ref="category/java/errorprone.xml/ReturnEmptyCollectionRatherThanNull">
-        <priority>2</priority>
+        <priority>3</priority>
     </rule>
 
     <!-- ============ 六、控制语句 ============ -->
@@ -310,9 +315,9 @@ public void insert(User u) { }          // public 非 final 非 static
     <!-- 强制：@Transactional 缺 rollbackFor，受检异常默认不回滚 -->
     <rule name="TransactionalMissingRollbackFor"
           language="java"
-          message="@Transactional 未指定 rollbackFor，受检异常（IOException/SQLException 等）默认提交不回滚（最隐蔽的事故源）。须显式 @Transactional(rollbackFor = Exception.class)"
+          message="@Transactional 未指定 rollbackFor，受检异常（IOException/SQLException 等）默认提交不回滚；须显式 @Transactional(rollbackFor = Exception.class)"
           class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
-        <priority>2</priority>
+        <priority>1</priority>
         <properties>
             <property name="xpath">
                 <value><![CDATA[

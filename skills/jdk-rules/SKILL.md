@@ -24,7 +24,7 @@ last_verified: "2026-10-22"
 ## 三条铁律
 
 1. **先确认版本，再写语法**：目标 JDK 不明时读 `pom.xml` / `build.gradle`，禁止凭印象使用 `List.of` / `var` / `record`。
-2. **标准库优先**：JDK 一行能写完的，不写循环和 if；动笔前对照「手写 → 标准库」表。
+2. **标准库优先**：JDK 一行能写完的，不写循环和 if；动笔前对照「手写 → 标准库」表。这条只约束写法，不豁免判空——外部输入与公开方法的判空照做（见 `references/01-null-and-optional.md`「要不要判空」）。
 3. **不引库，只推荐**：不给任何第三方库的 API 用法；项目缺能力时按下表推荐一次，用户拒绝就用 JDK 原生。
 
 ## 第 0 步：确认目标 JDK
@@ -93,16 +93,31 @@ last_verified: "2026-10-22"
 
 ## 静态检查（PMD）
 
-门禁挂在项目自己的 **git pre-commit** 上，任何来源的提交都生效，不依赖编辑器或 AI 工具。priority ≤ 2 的违规让 `pmd:check` 退出码为 1，`git commit` 中止并在终端列出「类名:行 规则 消息」——本技能不解析报告，阈值与打印在 pom 里配置。
+门禁挂在项目自己的 **git pre-commit** 上，任何来源的提交都生效，不依赖编辑器或 AI 工具。priority 达到阻断阈值的违规让 `pmd:check` 退出码为 1，`git commit` 中止并在终端列出「类名:行 规则 消息」——本技能不解析报告，阈值与打印在 pom 里配置。
 
+- 模板默认 `failurePriority=1`，只拦 Blocker：空 catch、资源未关闭、`Executors` 建线程池、`@Transactional` 缺 `rollbackFor`。这四类在真实项目里数量可控（965 文件的 JDK 8 项目实测 8 条、5235 文件的 JDK 17 项目 20 条），且全是真问题。
+- 设为 `2` 会同时拦 Critical（非穷尽 `switch`、`PreserveStackTrace`、字面量比较等），实测两个项目分别升到 18 / 40 条，需先治理存量。
 - 跳过：`git commit --no-verify`，或 `JAVA_STANDARD_GATE=off git commit ...`。
 - 写代码时不必主动跑 PMD，被拦按输出修。
 
 **初始化**（项目首次且要提交 Java 时做，需用户同意）：复制 `assets/` 三个文件到 `.qualitygate/`（`pre-commit` 放 `hooks/` 并 `chmod +x`）；补 `compileSourceRoots`（Glob 列 `**/src/main/java/`，每个源码根一行，单模块用模板默认行）；`maven.compiler.release` 填第 0 步版本；`.gitignore` 只加 `.qualitygate/target/`。
 
-**装 hook**：仓库没有 `.husky/`、`.git/hooks/pre-commit` 也不存在（或只有 `.sample`）→ `git config core.hooksPath .qualitygate/hooks`；已有 pre-commit → 在其末尾追加 `sh .qualitygate/hooks/pre-commit || exit 1`，不要动 `core.hooksPath`（会让原有 hook 全部失效）。装完暂存一个含违规的 `.java` 真跑一次 `git commit` 验证被拦。
+**装 hook**：仓库没有 `.husky/`、`.git/hooks/pre-commit` 也不存在（或只有 `.sample`）→ `git config core.hooksPath .qualitygate/hooks`；已有 pre-commit → 在其末尾追加 `sh .qualitygate/hooks/pre-commit || exit 1`，不要动 `core.hooksPath`（会让原有 hook 全部失效）。
 
-**存量先摸清**：初始化时先 `mvn -f .qualitygate/pmd-pom.xml pmd:pmd -q`，读 `.qualitygate/target/pmd.xml` 统计 priority 1/2 的条数：0 条直接启用；≤5 条先修或把 `failurePriority` 设为 1（只拦 Blocker）；大量则先不装 hook、只手动跑，清到阈值内再装。
+**这条配置不入库**：`core.hooksPath` 写在 `.git/config`，克隆不下来。**初始化完成后必须明确告诉用户：团队每个成员（含新克隆）都要各自执行一次这条命令**，否则只有你本机有门禁。这一句不能省——hook 文件在仓库里，开关在本地，最容易出现的状态就是「以为全组都在拦」。
+
+**入库前确认执行位**：`git ls-files -s .qualitygate/hooks/pre-commit` 必须是 `100755`。Windows 上 `core.filemode=false`，`chmod +x` 不会进索引，提交后同事检出得到的是非可执行文件，git 直接跳过该 hook，门禁静默失效。修法：`git update-index --chmod=+x .qualitygate/hooks/pre-commit`。
+
+**验证要真跑**：暂存一个含违规的 `.java`，真执行 `git commit`，确认退出码非 0 且终端打出 `PMD Failure: 类名:行 Rule:... Priority:1`，再确认 `git log` 里没有这次提交。只看配置文件对不对不算验证——漏列源码根、执行位丢失、阈值写成 `failOnViolation=false` 都会让门禁静默放行。
+
+**存量先摸清**：初始化时先 `mvn -f .qualitygate/pmd-pom.xml pmd:pmd -q`，读 `.qualitygate/target/pmd.xml` 统计 priority 1 的条数：0 条直接启用；15 条以内连修复一起做，修完再装；更多则先不装 hook、只手动跑，清到阈值内再装。
+
+**两个会静默失效的配置**：
+
+- `compileSourceRoots` 只接受相对 `${project.basedir}` 的路径。写绝对路径（`I:/proj/x/src/main/java`）不报错，但 PMD 扫 0 个文件，报告为空——把绝对路径当成相对路径拼接后自然找不到。初始化后确认报告里有 `<file>` 节点，别只看 BUILD SUCCESS。
+- 往 `pmd7-ruleset.xml` 加注释时不能出现连续两个减号（如命令行参数写法），XML 注释到此终止，规则集整份加载失败。改完用 `python -c "import xml.etree.ElementTree as ET; ET.parse('pmd7-ruleset.xml')"` 过一遍。
+
+**第三方源码副本会被一起扫**：有些项目把框架类复制进 `src/main/java` 打补丁（实测见到 `org/springframework`、`liquibase`、`org/flowable` 三类）。这些代码不归团队维护，报出来的违规改不了。初始化时若发现此类目录，在 pom 里加 `<excludes><exclude>**/org/springframework/**</exclude></excludes>`，或直接不管——它们多是 Critical，默认阈值 1 不拦。
 
 `pmd:pmd` 恒 exit 0（报告照常生成），只有 `pmd:check` 用退出码表达结果：全量体检用前者，门禁用后者。
 

@@ -40,9 +40,11 @@
                     <targetJdk>${maven.compiler.release}</targetJdk>
                     <format>xml</format>
 
-                    <!-- 阻断阈值：1 只拦 Blocker，2 拦 Blocker+Critical。
-                         3 以上是 warning，全拦等于不可用（mall 实测 p3 有 950 条）。 -->
-                    <failurePriority>2</failurePriority>
+                    <!-- 阻断阈值：1 只拦 Blocker，2 同时拦 Critical。
+                         默认 1。2 需要先治理存量：实测 965 文件的 JDK8 项目 P<=2 有 18 条、
+                         5235 文件的 JDK17 项目有 40 条，直接启用会让首次提交全红。
+                         3 及以上是 warning，全拦不可用（p3 通常数百条）。 -->
+                    <failurePriority>1</failurePriority>
                     <!-- 有违规就让 pmd:check 退出码为 1，git hook 据此中止提交 -->
                     <failOnViolation>true</failOnViolation>
                     <!-- 失败时把每条违规打到控制台（类名:行 规则 消息），不用读 XML -->
