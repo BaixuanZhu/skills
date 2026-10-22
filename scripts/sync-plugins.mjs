@@ -32,7 +32,7 @@ const PLUGIN_MAP = join(__dirname, 'plugin-map.json');
 // 反向索引: skillName → { group, versionStrategy }
 // 不在映射里的 skill 走默认 1:1 逻辑（plugins/<name>/skills/<name>/）。
 function loadPluginMap() {
-  if (!existsSync(PLUGIN_MAP)) return { skillToGroup: new Map(), groups: {} };
+  if (!existsSync(PLUGIN_MAP)) return { skillToGroup: new Map(), groups: {}, aliases: {} };
   const raw = JSON.parse(readFileSync(PLUGIN_MAP, 'utf8'));
   const skillToGroup = new Map();
   const groups = raw.groups || {};
@@ -41,10 +41,12 @@ function loadPluginMap() {
       skillToGroup.set(skillName, { group: groupName, versionStrategy: g.version || 'max' });
     }
   }
-  return { skillToGroup, groups };
+  // aliases: 单技能插件但插件名与技能名不同（如 jdk-rules → java-standard）。
+  // 与 group 的区别：仍走 1:1 分支，版本严格取 SKILL.md、不自动 bump patch。
+  return { skillToGroup, groups, aliases: raw.aliases || {} };
 }
 
-const { skillToGroup, groups: PLUGIN_GROUPS } = loadPluginMap();
+const { skillToGroup, groups: PLUGIN_GROUPS, aliases: SKILL_ALIAS } = loadPluginMap();
 
 // 版本聚合:max 策略 = 取组内所有 skill 版本的最大值;
 // 组内容有变化但聚合版本 ≤ 插件当前版本时(低版本成员更新,max 不动),bump patch 保证插件版本反映内容变化,
@@ -142,9 +144,10 @@ function sync() {
       continue;
     }
 
-    // 判断 skill 归属:在 plugin-map.json 的 group 里 → plugin 名取 group 名;否则 1:1
+    // 判断 skill 归属:在 plugin-map.json 的 group 里 → plugin 名取 group 名;
+    // 在 aliases 里 → 取别名插件名(仍走 1:1);否则同名 1:1
     const mapping = skillToGroup.get(name);
-    const pluginName = mapping ? mapping.group : name;
+    const pluginName = mapping ? mapping.group : (SKILL_ALIAS[name] || name);
 
     const pluginDir = join(PLUGINS_DIR, pluginName);
     const pluginJsonPath = join(pluginDir, '.claude-plugin', 'plugin.json');
@@ -180,8 +183,9 @@ function sync() {
       syncManifestVersion(join(pluginDir, '.codex-plugin', 'plugin.json'), fm.version, `${name} .codex-plugin/plugin.json`, report);
 
       // ③ 1:1 两份 marketplace.json version 同步(只改对应条目的 version)
-      setMarketplaceVersion(marketplaceByName, name, fm.version, `${name} .claude-plugin/marketplace.json`, report);
-      setMarketplaceVersion(agentsByName, name, fm.version, `${name} .agents/plugins/marketplace.json`, report);
+      // 条目名用 pluginName 而非 name:alias 场景(如 jdk-rules → java-standard)下条目以插件名登记
+      setMarketplaceVersion(marketplaceByName, pluginName, fm.version, `${pluginName} .claude-plugin/marketplace.json`, report);
+      setMarketplaceVersion(agentsByName, pluginName, fm.version, `${pluginName} .agents/plugins/marketplace.json`, report);
     }
   }
 

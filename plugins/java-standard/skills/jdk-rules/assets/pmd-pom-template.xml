@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  质量门禁包装工程模板。初始化步骤见 jdk-rules 技能「静态检查」一节：
+  1. 复制到 <项目根>/.qualitygate/pmd-pom.xml
+  2. 复制 assets/pmd7-ruleset.xml 到 <项目根>/.qualitygate/pmd7-ruleset.xml
+  3. 复制 assets/pre-commit 到 <项目根>/.qualitygate/hooks/pre-commit 并 chmod +x
+  4. maven.compiler.release 改成项目实际 JDK 版本
+  5. compileSourceRoots 按项目模块逐个补齐
+  6. .gitignore 只追加 .qualitygate/target/（pom、规则集、hook 要入库）
+
+  安装 git hook：git config core.hooksPath .qualitygate/hooks
+  全量体检：mvn -f .qualitygate/pmd-pom.xml pmd:pmd -q  →  读 .qualitygate/target/pmd.xml
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>local.qualitygate</groupId>
+    <artifactId>qualitygate-pmd</artifactId>
+    <version>1.0.0</version>
+    <!-- 必须是 jar：pom 打包时 PMD 插件跳过源码扫描 -->
+    <packaging>jar</packaging>
+
+    <properties>
+        <!-- 等于项目实际版本；低于代码语法版本会报 ParseException -->
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <version>3.27.0</version>
+                <configuration>
+                    <rulesets>
+                        <ruleset>${project.basedir}/pmd7-ruleset.xml</ruleset>
+                    </rulesets>
+                    <targetJdk>${maven.compiler.release}</targetJdk>
+                    <format>xml</format>
+
+                    <!-- 阻断阈值：1 只拦 Blocker，2 拦 Blocker+Critical。
+                         3 以上是 warning，全拦等于不可用（mall 实测 p3 有 950 条）。 -->
+                    <failurePriority>2</failurePriority>
+                    <!-- 有违规就让 pmd:check 退出码为 1，git hook 据此中止提交 -->
+                    <failOnViolation>true</failOnViolation>
+                    <!-- 失败时把每条违规打到控制台（类名:行 规则 消息），不用读 XML -->
+                    <printFailingErrors>true</printFailingErrors>
+                    <!-- false：解析失败时中止并打印 ParseException，避免静默漏检 -->
+                    <skipPmdError>false</skipPmdError>
+
+                    <!-- 每个源码根一行，路径相对本 pom 所在目录。
+                         参数名必须是 compileSourceRoots：写成 sourceDirectories
+                         不报错，但会静默扫 0 个文件。单模块保留下面一行即可。 -->
+                    <compileSourceRoots>
+                        <compileSourceRoot>${project.basedir}/../src/main/java</compileSourceRoot>
+                        <!-- 多模块逐个补齐，例如：
+                        <compileSourceRoot>${project.basedir}/../mall-admin/src/main/java</compileSourceRoot>
+                        <compileSourceRoot>${project.basedir}/../mall-portal/src/main/java</compileSourceRoot>
+                        -->
+                    </compileSourceRoots>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

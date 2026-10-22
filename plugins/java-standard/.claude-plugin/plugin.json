@@ -1,0 +1,9 @@
+{
+  "name": "java-standard",
+  "version": "1.0.0",
+  "description": "JDK 标准库编码规范，附 git pre-commit 门禁。只覆盖两类问题：JDK 已有现成写法却手写、API 与目标 JDK 版本不匹配；不含第三方库用法与工程分层。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com"
+  }
+}

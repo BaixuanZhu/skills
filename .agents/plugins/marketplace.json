@@ -121,6 +121,24 @@
       },
       "category": "Productivity",
       "version": "5.0.0"
+    },
+    {
+      "name": "java-standard",
+      "version": "1.0.0",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/java-standard",
+      "description": "JDK 标准库编码规范，附 git pre-commit 门禁：只解决「该用标准库却手写」和「API 与目标 JDK 版本不匹配」，不绑第三方库、不含工程分层。",
+      "category": "engineering",
+      "keywords": [
+        "java",
+        "jdk",
+        "jdk-rules",
+        "coding-standards",
+        "pmd"
+      ]
     }
   ]
 }
