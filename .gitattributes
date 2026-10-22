@@ -1,0 +1,6 @@
+# 门禁脚本必须全平台保持 LF：CRLF 会让 shebang 变成 #!/bin/sh\r，
+# Linux/macOS 上 git exec 直接失败，hook 静默消失。
+skills/jdk-rules/assets/pre-commit    text eol=lf
+skills/jdk-rules/assets/install-hook  text eol=lf
+plugins/java-standard/skills/jdk-rules/assets/pre-commit    text eol=lf
+plugins/java-standard/skills/jdk-rules/assets/install-hook  text eol=lf

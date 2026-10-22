@@ -1,0 +1,84 @@
+#!/bin/sh
+# 装配 PMD 提交门禁。幂等：可重复执行，不会重复追加，不覆盖别人的 hook。
+# 用法：sh .qualitygate/install-hook
+# 前提：.qualitygate/ 下已有 pmd-pom.xml、pmd7-ruleset.xml、hooks/pre-commit
+set -eu
+
+MARK='.qualitygate/hooks/pre-commit'
+
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
+    echo "错误：当前目录不在 git 仓库内" >&2
+    exit 1
+}
+cd "$ROOT"
+
+[ -f "$MARK" ] || {
+    echo "错误：缺少 $MARK" >&2
+    echo "先把技能的 assets 四个文件复制到 .qualitygate/（pre-commit 放 hooks/ 下）" >&2
+    exit 1
+}
+[ -f .qualitygate/pmd-pom.xml ] || {
+    echo "错误：缺少 .qualitygate/pmd-pom.xml" >&2
+    exit 1
+}
+
+chmod +x "$MARK"
+# Windows 上 core.filemode=false，chmod 不进索引；不显式标记，Linux/macOS 检出后 git 会跳过 hook
+git update-index --chmod=+x "$MARK" 2>/dev/null || true
+# 本脚本也是同事要执行的入口，同样需要执行位
+SELF='.qualitygate/install-hook'
+if [ -f "$SELF" ]; then
+    chmod +x "$SELF"
+    git update-index --chmod=+x "$SELF" 2>/dev/null || true
+fi
+
+CALL="sh $MARK || exit 1"
+GIT_DIR=$(git rev-parse --git-dir)
+HOOKS_PATH=$(git config core.hooksPath 2>/dev/null || true)
+
+if [ -n "$HOOKS_PATH" ] && [ "$HOOKS_PATH" != ".qualitygate/hooks" ]; then
+    # hooksPath 已被 husky 等占用：追加到它维护的 pre-commit，不动开关（否则原有 hook 全失效）
+    if [ -f .husky/pre-commit ]; then
+        TARGET=.husky/pre-commit
+    else
+        TARGET="$HOOKS_PATH/pre-commit"
+        mkdir -p "$HOOKS_PATH"
+        [ -f "$TARGET" ] || printf '#!/bin/sh\n' > "$TARGET"
+        chmod +x "$TARGET"
+    fi
+elif [ -f "$GIT_DIR/hooks/pre-commit" ]; then
+    # 默认 hook 目录里已有别人的 pre-commit：追加，同样不动 hooksPath
+    TARGET="$GIT_DIR/hooks/pre-commit"
+else
+    TARGET=''
+fi
+
+if [ -z "$TARGET" ]; then
+    git config core.hooksPath .qualitygate/hooks
+    MODE='core.hooksPath = .qualitygate/hooks'
+elif grep -qF "$MARK" "$TARGET" 2>/dev/null; then
+    MODE="已存在，跳过（$TARGET）"
+else
+    printf '\n# PMD 提交门禁（jdk-rules）\n%s\n' "$CALL" >> "$TARGET"
+    MODE="追加到 $TARGET"
+fi
+
+# 自检：打印 git 实际会执行的 hook，避免「以为装了」
+EFFECTIVE=$(git rev-parse --git-path hooks)/pre-commit
+echo "门禁装配完成：$MODE"
+echo "  实际生效：$EFFECTIVE"
+[ -f "$EFFECTIVE" ] || {
+    echo "  警告：该路径下没有 pre-commit，门禁不会触发" >&2
+    exit 1
+}
+
+INDEX_MODE=$(git ls-files -s "$MARK" 2>/dev/null | cut -d' ' -f1)
+if [ "$INDEX_MODE" != "100755" ]; then
+    echo "  提示：$MARK 在索引里不是 100755（当前 ${INDEX_MODE:-未跟踪}），Linux/macOS 检出后 git 会跳过它。git add -A 后重跑本脚本"
+fi
+
+case "$MODE" in
+    *".husky/"*) ;;  # husky 在 npm install 时自动装配，不需要人工执行
+    *) echo "  注意：git 侧的 hook 配置不入版本库，团队成员克隆后需各自执行一次 sh .qualitygate/install-hook" ;;
+esac
+exit 0

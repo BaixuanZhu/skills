@@ -2,9 +2,8 @@
 # jdk-rules 门禁：提交前跑 PMD 7，priority 达到阻断阈值的违规会中止本次提交。
 # 违规明细由 pmd:check 直接打到控制台（类名:行 规则 消息），本脚本不做任何报告解析。
 #
-# 安装：git config core.hooksPath .qualitygate/hooks
+# 装配：sh .qualitygate/install-hook（幂等，自动处理已有 hook 的情况）
 # 跳过：git commit --no-verify，或 JAVA_STANDARD_GATE=off git commit ...
-# 仓库已有其他 hook 时不要用 core.hooksPath，改为在本脚本外由原 hook 追加一行调用。
 
 [ "$JAVA_STANDARD_GATE" = "off" ] && exit 0
 
