@@ -2,7 +2,7 @@
 paths:
   - "**/*.java"
 ---
-<!-- seeded: jdk-rules@1.1.0 -->
+<!-- seeded: jdk-rules@⟨版本⟩ -->
 
 # Java 编码基线
 

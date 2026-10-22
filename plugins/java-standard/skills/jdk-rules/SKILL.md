@@ -159,7 +159,7 @@ last_verified: "2026-10-22"
 
 **触发**：项目无 `.claude/rules/jdk-rules.md`，或首行 `<!-- seeded: jdk-rules@x.y.z -->` 低于本技能版本 → 提议播种，一句话说明收益，等用户确认，不擅自写项目文件。
 
-**落点**：`.claude/rules/jdk-rules.md`，模板 `assets/seed-template.md`，`paths` 固定 `"**/*.java"`。Claude Code 原生递归加载 `.claude/rules/*.md`，不需要 `@import`，不碰 `CLAUDE.md`。已有文件无 `<!-- seeded:` 标记说明是用户自己写的，只补缺失事实、保留原文。
+**落点**：`.claude/rules/jdk-rules.md`，模板 `assets/seed-template.md`，`paths` 固定 `"**/*.java"`；模板里的 `⟨版本⟩` 填本技能 frontmatter 的 `version`。Claude Code 原生递归加载 `.claude/rules/*.md`，不需要 `@import`，不碰 `CLAUDE.md`。已有文件无 `<!-- seeded:` 标记说明是用户自己写的，只补缺失事实、保留原文。
 
 **写什么**：目标 JDK 一条事实 + 门禁装配、被拦怎么修两条流程 + 6 条最高频写法对照。**S 级陷阱清单不写**——A/B 实测模型本就全部避开，写进种子只是常驻上下文的噪音。
 

@@ -39,6 +39,8 @@
 - **钩子挂点按作用域选，不按方便选**：要求「任何来源的提交都生效」的门禁 → 装到项目自己的 git pre-commit（`core.hooksPath` 或往已有 hook 追加一行），模板放插件 `assets/`、由技能引导初始化一次；只关心 AI 行为的提示 → Claude Code 的 PreToolUse / PostToolUse。**PreToolUse 看不见 IDE、终端、`gh` 发起的提交**，用它做质量门禁等于只拦一半。
 - **门禁不写解析脚本**：阈值、打印明细、是否失败都先用构建工具的现成参数（maven-pmd-plugin 的 `failurePriority` / `printFailingErrors` / `failOnViolation`），退出码原样交给 git。脚本一旦开始解析构建报告，就是第二份实现，跟着上游格式变而腐坏。
 - **症状索引钩子（PostToolUse）只在前述条件同时成立时才做**：① 报错文案里**不含**排查方向，必须靠领域知识补（如 `BindingException` 不说「接口与 XML 的 id 要同名同参」）；② 匹配的 token 是**框架/数据库给的英文异常名**，不随 locale 变化。反例：javac 诊断是本地化的（中文 `找不到符号` / 英文 `cannot find symbol`），且 `records are not supported in -source 11` 这类已直接说明原因——这类写进技能文档的判据表，比随插件分发一个要维护两套 token 的脚本更稳。
+- **注入点按内容性质选**：静态事实与约定 → `.claude/rules/` 带 `paths`（只对相关文件生效，落盘可 review、可团队共享、不依赖运行时）；需要现算才有的动态状态（当前分支、CI 状态、存量违规数）→ SessionStart；强制阻断 → 项目 git hook 或 PreToolUse。**静态内容不要用 SessionStart**：官方文档明确说静态上下文用 CLAUDE.md 即可、不必跑脚本，而且 SessionStart 只在 Claude Code 内有效、每次会话启动都要等它跑完。
+- **种子/模板里不写会腐坏的状态值**，只写指令。写成「`.qualitygate/pmd-pom.xml` 不存在就先装配」而不是「门禁未安装」——后者在装完之后变成假话，前者永远成立。版本标记同理，模板用占位符 `⟨版本⟩`，播种时从 SKILL.md frontmatter 取，避免模板里的数字随技能升级漂移。
 
 ### 新增 plugin / marketplace 条目的字段要求
 
