@@ -13,7 +13,7 @@ description: >-
   Arrays.asList(基本类型数组)、getter 直接返回内部集合。
   不适用：第三方库选型与 API 用法、Spring 分层与工程组织、测试框架、
   Sonar/Checkstyle 等其他门禁工具。
-version: "1.0.0"
+version: "1.1.0"
 last_verified: "2026-10-22"
 ---
 
@@ -142,6 +142,16 @@ last_verified: "2026-10-22"
 
 只给坐标加一句理由，**不给 API 示例**。用户拒绝就用 JDK 原生受控降级，不追问第二次。
 
+## 项目播种
+
+`.claude/rules/` 是比本技能更早生效的注入点：带 `paths` 的规则在 Read/Write/Edit 触及匹配文件时自动加载，不依赖 skill 是否被匹配到。种子只承担本技能做不到的一件事——**在写代码之前就把「门禁装没装」和「目标 JDK」摆到眼前**。
+
+**触发**：项目无 `.claude/rules/jdk-rules.md`，或首行 `<!-- seeded: jdk-rules@x.y.z -->` 低于本技能版本 → 提议播种，一句话说明收益，等用户确认，不擅自写项目文件。
+
+**落点**：`.claude/rules/jdk-rules.md`，模板 `assets/seed-template.md`，`paths` 固定 `"**/*.java"`。Claude Code 原生递归加载 `.claude/rules/*.md`，不需要 `@import`，不碰 `CLAUDE.md`。已有文件无 `<!-- seeded:` 标记说明是用户自己写的，只补缺失事实、保留原文。
+
+**写什么**：目标 JDK 一条事实 + 门禁装配、被拦怎么修两条流程 + 6 条最高频写法对照。**S 级陷阱清单不写**——A/B 实测模型本就全部避开，写进种子只是常驻上下文的噪音。
+
 ## 决策路由
 
 | 场景 | 读 |
@@ -156,7 +166,7 @@ last_verified: "2026-10-22"
 
 ## 使用流程
 
-1. 确认目标 JDK（读 pom，均读不到时问一次）。
+1. 确认目标 JDK（读 pom，均读不到时问一次）。项目没有种子时按「项目播种」提议。
 2. 按决策路由读对应 reference，写作前完成阅读。
 3. 写代码时对照「手写 → 标准库」与 S 级清单。
 4. commit 由项目 pre-commit 把关：被拦按输出修后重新提交；`ParseException` 报给用户，不调 `maven.compiler.release` 掩盖。
