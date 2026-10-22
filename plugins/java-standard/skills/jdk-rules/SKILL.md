@@ -13,7 +13,7 @@ description: >-
   Arrays.asList(基本类型数组)、getter 直接返回内部集合。
   不适用：第三方库选型与 API 用法、Spring 分层与工程组织、测试框架、
   Sonar/Checkstyle 等其他门禁工具。
-version: "1.1.0"
+version: "1.1.1"
 last_verified: "2026-10-22"
 ---
 
@@ -126,7 +126,18 @@ last_verified: "2026-10-22"
 
 `pmd:pmd` 恒 exit 0（报告照常生成），只有 `pmd:check` 用退出码表达结果：全量体检用前者，门禁用后者。
 
-**ParseException 必须报给用户**：形如 `ParseException ... at line 10, column 12: Record declarations are a feature of Java 16`，说明代码用了项目不支持的语法——改代码，禁止调高 `maven.compiler.release` 掩盖（调高只会让项目编译不过）。
+**版本错配的报错不都说得清楚**（实测：目标版本低于写法时）：
+
+| 写法 | 目标版本 | 报错 | 能看出是版本问题吗 |
+|---|---|---|---|
+| `record`、文本块 | ≤ 11 | `records are not supported in -source 11` | 能，明确说了版本 |
+| PMD 侧 | — | `Record declarations are a feature of Java 16` | 能 |
+| `var` | 8 | `cannot find symbol`，`symbol: class var` | **不能**，像漏了声明 |
+| `List.of` / `Map.of` / `isBlank` | 8 | `cannot find symbol`，`symbol: method of(...)`，`location: interface List` | **不能**，像方法名写错 |
+
+判据：报错是 `cannot find symbol`（中文环境为「找不到符号」，Maven 在中文 Windows 上输出 GBK）且 `symbol` 是 `class var`、或 `method` 名属于 JDK 9+ API 时，先怀疑版本再改代码——不要顺着报错去补 import 或改方法名，那会把版本问题改成一堆无用代码。
+
+处理一律是把语法降到目标版本。禁止调高 `maven.compiler.release` / `source` 掩盖：那只会让项目在真实构建环境编译不过。同类 `ParseException` 报给用户一同说明。
 
 ## 库探测（只推荐，不教用法）
 
@@ -169,5 +180,5 @@ last_verified: "2026-10-22"
 1. 确认目标 JDK（读 pom，均读不到时问一次）。项目没有种子时按「项目播种」提议。
 2. 按决策路由读对应 reference，写作前完成阅读。
 3. 写代码时对照「手写 → 标准库」与 S 级清单。
-4. commit 由项目 pre-commit 把关：被拦按输出修后重新提交；`ParseException` 报给用户，不调 `maven.compiler.release` 掩盖。
+4. commit 由项目 pre-commit 把关：被拦按输出修后重新提交；版本错配按上表判据改代码，不调 `maven.compiler.release` 掩盖。
 5. 缺能力时才查库探测表，推荐一次。

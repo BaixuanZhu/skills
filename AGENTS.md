@@ -38,6 +38,7 @@
 - **例外：插件级 `hooks/` 与 `scripts/` 不镜像、不清理**（现有 `plugins/mybatis-plus-dev/` 的 PostToolUse 症状提示）。sync 只镜像 `plugins/<name>/skills/<skill>/` 子树，`rmSync` 范围也限于该路径，所以这两个目录**既不会被误删，也不会被同步**——改它们要直接改 `plugins/` 侧，那是仓库里唯一的单副本资产。钩子用 exec form（`"command": "node"` + `"args": ["${CLAUDE_PLUGIN_ROOT}/scripts/x.mjs"]`，不过 shell，路径无需引号），`${CLAUDE_PLUGIN_ROOT}` 由 Claude Code 注入。
 - **钩子挂点按作用域选，不按方便选**：要求「任何来源的提交都生效」的门禁 → 装到项目自己的 git pre-commit（`core.hooksPath` 或往已有 hook 追加一行），模板放插件 `assets/`、由技能引导初始化一次；只关心 AI 行为的提示 → Claude Code 的 PreToolUse / PostToolUse。**PreToolUse 看不见 IDE、终端、`gh` 发起的提交**，用它做质量门禁等于只拦一半。
 - **门禁不写解析脚本**：阈值、打印明细、是否失败都先用构建工具的现成参数（maven-pmd-plugin 的 `failurePriority` / `printFailingErrors` / `failOnViolation`），退出码原样交给 git。脚本一旦开始解析构建报告，就是第二份实现，跟着上游格式变而腐坏。
+- **症状索引钩子（PostToolUse）只在前述条件同时成立时才做**：① 报错文案里**不含**排查方向，必须靠领域知识补（如 `BindingException` 不说「接口与 XML 的 id 要同名同参」）；② 匹配的 token 是**框架/数据库给的英文异常名**，不随 locale 变化。反例：javac 诊断是本地化的（中文 `找不到符号` / 英文 `cannot find symbol`），且 `records are not supported in -source 11` 这类已直接说明原因——这类写进技能文档的判据表，比随插件分发一个要维护两套 token 的脚本更稳。
 
 ### 新增 plugin / marketplace 条目的字段要求
 
