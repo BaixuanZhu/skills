@@ -124,13 +124,13 @@
     },
     {
       "name": "java-standard",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "author": {
         "name": "BaixuanZhu",
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
       "source": "./plugins/java-standard",
-      "description": "JDK 标准库编码规范，附 git pre-commit 门禁：只解决「该用标准库却手写」和「API 与目标 JDK 版本不匹配」，不绑第三方库、不含工程分层。",
+      "description": "JDK 标准库编码规范：只解决「该用标准库却手写」「API 与目标 JDK 版本不匹配」，并统一方法边界语义（空结果 / null 参数 / 重复 key / 非法参数）。不绑第三方库、不含工程分层。",
       "category": "engineering",
       "keywords": [
         "java",

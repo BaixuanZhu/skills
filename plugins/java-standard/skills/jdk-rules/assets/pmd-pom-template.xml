@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  质量门禁包装工程模板。初始化步骤见 jdk-rules 技能「静态检查」一节：
+  PMD 门禁包装工程模板。用法见 jdk-rules 技能「静态检查」一节：
   1. 复制到 <项目根>/.qualitygate/pmd-pom.xml
   2. 复制 assets/pmd7-ruleset.xml 到 <项目根>/.qualitygate/pmd7-ruleset.xml
-  3. 复制 assets/pre-commit 到 <项目根>/.qualitygate/hooks/pre-commit 并 chmod +x
-  4. maven.compiler.release 改成项目实际 JDK 版本
-  5. compileSourceRoots 按项目模块逐个补齐
-  6. .gitignore 只追加 .qualitygate/target/（pom、规则集、hook 要入库）
+  3. maven.compiler.release 改成项目实际 JDK 版本
+  4. compileSourceRoots 按项目模块逐个补齐
+  5. .gitignore 只追加 .qualitygate/target/（pom 与规则集要入库）
 
-  安装 git hook：git config core.hooksPath .qualitygate/hooks
-  全量体检：mvn -f .qualitygate/pmd-pom.xml pmd:pmd -q  →  读 .qualitygate/target/pmd.xml
+  门禁：mvn -f .qualitygate/pmd-pom.xml pmd:check -B   接 CI，不装 git hook
+  体检：mvn -f .qualitygate/pmd-pom.xml pmd:pmd -q     读 .qualitygate/target/pmd.xml
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

@@ -5,26 +5,29 @@ displayName: JDK 编码规则
 description: >-
   JDK 标准库编码规范，不含第三方库 API 用法与工程分层。
   编写、修改、审查 Java 代码时使用，也用于确认某个 API 在目标 JDK 版本上是否可用。
-  覆盖范围：判空与 Optional、集合与 Map 增改、字符串、数值精度与日期时间、
-  Stream 与 Collectors、异常与资源管理、API 版本门控；附带 git pre-commit 门禁（PMD）的装配与说明。
+  覆盖范围：边界语义（空结果 / null 参数 / 重复 key / 非法参数 / 静态或实例）、
+  判空与 Optional、集合与 Map 增改、字符串、数值精度与日期时间、
+  Stream 与 Collectors、异常与资源管理、API 版本门控；附带 PMD 规则集与 CI 门禁配置。
   触发信号：containsKey 后紧跟 get、map.get 判空再 put、手写 if 求 max/min/abs、
   new ArrayList 后连续 add、new BigDecimal(double)、BigDecimal 用 equals 比较、
   裸 divide、split 不传 limit、Optional.get() 无检查、Collectors.toMap 无 merge、
-  Arrays.asList(基本类型数组)、getter 直接返回内部集合。
+  Arrays.asList(基本类型数组)、getter 直接返回内部集合、put 与 putIfAbsent 混用。
+  用户任务词出现：分页 / 列表查询 / 按某字段索引成 Map / 批量导入去重 /
+  求和平均等聚合统计 / 方法该返回 null 还是空集合。
   不适用：第三方库选型与 API 用法、Spring 分层与工程组织、测试框架、
   Sonar/Checkstyle 等其他门禁工具。
-version: "1.1.1"
+version: "1.2.0"
 last_verified: "2026-10-22"
 ---
 
 # JDK 编码规则
 
-只覆盖两件事：**JDK 已有现成写法时不要手写**、**目标 JDK 版本决定能用什么**。
+只覆盖三件事：**JDK 已有现成写法时不要手写**、**目标 JDK 版本决定能用什么**、**需求没说明时边界怎么定**。
 
 ## 四条铁律
 
-1. **门禁先行**：项目没有 `.qualitygate/pmd-pom.xml` 时，先按「静态检查」一节装好门禁再写代码，装完真跑一次 `git commit` 验证被拦。装不上就明说没装，不许当成已启用。
-2. **先确认版本，再写语法**：目标 JDK 不明时读 `pom.xml` / `build.gradle`，禁止凭印象使用 `List.of` / `var` / `record`。
+1. **先确认版本，再写语法**：目标 JDK 不明时读 `pom.xml` / `build.gradle`，禁止凭印象使用 `List.of` / `var` / `record`。
+2. **契约先行**：写方法前先定返回契约——无结果返回什么、null 参数怎么办、重复 key 留谁。需求没说明的按「边界语义」默认表，不临时决定。
 3. **标准库优先**：JDK 一行能写完的，不写循环和 if；动笔前对照「手写 → 标准库」表。这条只约束写法，不豁免判空——外部输入与公开方法的判空照做（见 `references/01-null-and-optional.md`「要不要判空」）。
 4. **不引库，只推荐**：不给任何第三方库的 API 用法；项目缺能力时按下表推荐一次，用户拒绝就用 JDK 原生。
 
@@ -54,6 +57,19 @@ last_verified: "2026-10-22"
 
 > 非 LTS 版本按版本号比较，不另设档位；preview / incubator 一律不用。同一意图在各版本的写法对照见 `references/07-jdk-version-matrix.md`。
 
+## 边界语义（需求未指定时）
+
+写方法前先定契约，不要临时决定。完整规则、示例与反例见 `references/08-boundary-semantics.md`。
+
+| 分歧点 | 默认 |
+|---|---|
+| 无结果 | 单条 → `Optional`；列表 → 空集合；聚合值 → `Optional` 或抛异常。**不返回 null，不用 0 代替「无数据」** |
+| 必填参数为 null | `Objects.requireNonNull`，不编默认值——`threshold == null` 当 0 会让判断几乎恒为真 |
+| 集合中的 null 元素 | 跳过，不参与计算 |
+| 重复 key | `putIfAbsent` 保留首条；要覆盖用 `put` 并在注释写明原因 |
+| 非法参数 | 展示层容错（`pageNo<1` 纠正为 1），领域层 fail fast（状态码不认识就抛） |
+| 静态还是实例 | 纯函数 `static`；依赖注入用实例。同一个类不混用 |
+
 ## 手写 → 标准库
 
 | 手写 | 换成 |
@@ -75,14 +91,17 @@ last_verified: "2026-10-22"
 
 ## S 级：语法合法但运行期出错
 
-以下 PMD 实测全部查不出（0/8 命中），必须自查。
+编译通过、单测常漏，必须自查。下表多数 PMD 查不出；`EmptyCatchBlock`、`ReturnFromFinallyBlock` 两类门禁能拦，其余靠自查。
 
 | 陷阱 | 正确做法 |
 |---|---|
+| `Integer` / `Long` 用 `==` 比较 —— 只有 -128~127 走缓存，超出范围恒 false | `Objects.equals(a, b)` / `intValue()` 后比 |
+| `int v = map.get(k)` —— 值不存在时拆箱 NPE | `map.getOrDefault(k, 0)`，且默认值语义要成立 |
 | `bd1.equals(bd2)` —— 受 scale 影响，`1.0` 与 `1.00` 为 false | `bd1.compareTo(bd2) == 0` |
 | 裸 `bd.divide(bd2)` —— 非整除抛 `ArithmeticException` | 给 scale + `RoundingMode` |
 | `split(",")` 不传 limit —— 尾随空串被丢弃，下标错位 | 需全字段用 `split(",", -1)` |
 | `Optional.get()` 无检查 | `orElse` / `orElseThrow` |
+| 并发 Map 两段式（`containsKey` + `put`、`get` 判空再 `put`）—— 非原子，并发丢更新 | `computeIfAbsent` / `merge` / `putIfAbsent` |
 | `Collectors.toMap(k, v)` 无 merge —— 重复 key 抛 `IllegalStateException` | 第三参 `(a, b) -> a`，或改用 `groupingBy` |
 | `subList` 结果当独立列表 | `new ArrayList<>(sub)` / `List.copyOf(sub)` |
 | `Arrays.asList(基本类型数组)` —— 得到 `List<int[]>`，只有一个元素 | `Arrays.stream(arr).boxed().toList()` |
@@ -91,40 +110,24 @@ last_verified: "2026-10-22"
 | `getXxx()` 直接返回内部集合引用 | `List.copyOf(...)` |
 | `new BigDecimal(0.1)` 用 double 构造 | `new BigDecimal("0.1")` / `BigDecimal.valueOf(0.1)` |
 | `catch (InterruptedException e) {}` 空吞且不恢复中断 | 加 `Thread.currentThread().interrupt()` |
+| `finally` 内 `return` / `throw` —— 覆盖 try 的返回值与异常 | 移出 finally；资源用 try-with-resources |
 
 ## 静态检查（PMD）
 
-门禁挂在项目自己的 **git pre-commit** 上，任何来源的提交都生效，不依赖编辑器或 AI 工具。priority 达到阻断阈值的违规让 `pmd:check` 退出码为 1，`git commit` 中止并在终端列出「类名:行 规则 消息」——本技能不解析报告，阈值与打印在 pom 里配置。
+项目有 `.qualitygate/pmd-pom.xml` 就跑 `mvn -f .qualitygate/pmd-pom.xml pmd:check -B`：priority 达到 `failurePriority` 的违规让退出码为 1，并在终端打出「类名:行 规则 消息」。本技能不解析报告，阈值与打印在 pom 里配置。写代码时不必主动跑，被拦按输出修。
 
-- 模板默认 `failurePriority=1`，只拦 Blocker：空 catch、资源未关闭、`Executors` 建线程池、`@Transactional` 缺 `rollbackFor`。这四类在真实项目里数量可控（965 文件的 JDK 8 项目实测 8 条、5235 文件的 JDK 17 项目 20 条），且全是真问题。
-- 设为 `2` 会同时拦 Critical（非穷尽 `switch`、`PreserveStackTrace`、字面量比较等），实测两个项目分别升到 18 / 40 条，需先治理存量。
-- 跳过：`git commit --no-verify`，或 `JAVA_STANDARD_GATE=off git commit ...`。
-- 写代码时不必主动跑 PMD，被拦按输出修。
+**门禁接 CI，不装 git hook**：模板默认 `failurePriority=1`，只拦空 catch、资源未关闭、`Executors` 建池、`@Transactional` 缺 `rollbackFor`——实测 965 文件与 5235 文件的两个真实项目各只有 8 / 20 条。`git commit --no-verify` 能绕过的钩子不算强制，CI 上跑同一条 `pmd:check` 才是不可绕过的。
 
-**初始化**（项目首次且要提交 Java 时做，需用户同意）：
+项目没有 `.qualitygate/` 且要治理存量时：复制 `assets/pmd-pom-template.xml` → `.qualitygate/pmd-pom.xml`、`assets/pmd7-ruleset.xml` → `.qualitygate/`，补 `compileSourceRoots` 与 `maven.compiler.release`，目录入库供 CI 与团队共用（`.gitignore` 只加 `.qualitygate/target/`）。
 
-1. 复制 `assets/` 四个文件：`pmd-pom-template.xml` → `.qualitygate/pmd-pom.xml`；`pmd7-ruleset.xml` → `.qualitygate/`；`pre-commit` → `.qualitygate/hooks/`；`install-hook` → `.qualitygate/`。
-2. 补 `compileSourceRoots`：Glob 列 `**/src/main/java/`（排除 `target/`），每个源码根一行 `${project.basedir}/../<模块>/src/main/java`；单模块保留模板默认行。
-3. `maven.compiler.release` 填第 0 步确认的版本。
-4. `.gitignore` 只加 `.qualitygate/target/`——pom、规则集、两个 sh 都要入库，团队共用同一份口径。
-5. `git add -A` 后执行 `sh .qualitygate/install-hook`——先 add，索引里才有执行位可改。幂等，可重复执行：自动区分「已有 husky」「已有手写 pre-commit」「两者都没有」三种情况，不覆盖别人的 hook，并打印 git **实际会执行**的 hook 路径。
-6. 真跑一次 `git commit` 验证（见下）。
+**先摸存量再定阈值**：`pmd:pmd` 恒 exit 0（报告照常生成），读 `.qualitygate/target/pmd.xml` 统计 priority 1 的条数——0 条直接接 CI；15 条以内连修复一起做；更多先只手动跑，清到阈值内再接。设 `2` 会同时拦 Critical，实测两个项目分别升到 18 / 40 条，需先治理。
 
-脚本输出的提示要照做，两条都是静默失效的来源：索引里执行位是 `100644`（Windows `core.filemode=false`，`chmod` 不进索引，同事检出后 git 跳过 hook）；`core.hooksPath` 写在 `.git/config` 不入库，**必须明确告诉用户团队每人在克隆后各执行一次 `sh .qualitygate/install-hook`**。最容易出现的状态是「以为全组都在拦」。
+**两个会静默失效的配置**：
 
-**验证要真跑**：暂存一个含违规的 `.java`，真执行 `git commit`，确认退出码非 0 且终端打出 `PMD Failure: 类名:行 Rule:... Priority:1`，再确认 `git log` 里没有这次提交。只看配置文件对不对不算验证——漏列源码根、执行位丢失、`failOnViolation=false` 都会让门禁静默放行。
-
-**存量先摸清**：初始化时先 `mvn -f .qualitygate/pmd-pom.xml pmd:pmd -q`，读 `.qualitygate/target/pmd.xml` 统计 priority 1 的条数：0 条直接启用；15 条以内连修复一起做，修完再装；更多则先不装 hook、只手动跑，清到阈值内再装。
-
-**三个会静默失效的配置**：
-
-- `compileSourceRoots` 只接受相对 `${project.basedir}` 的路径。写绝对路径（`I:/proj/x/src/main/java`）不报错，但 PMD 扫 0 个文件，报告为空——把绝对路径当成相对路径拼接后自然找不到。初始化后确认报告里有 `<file>` 节点，别只看 BUILD SUCCESS。
+- `compileSourceRoots` 只接受相对 `${project.basedir}` 的路径。写绝对路径（`I:/proj/x/src/main/java`）不报错，但 PMD 扫 0 个文件、报告为空。初始化后确认报告里有 `<file>` 节点，别只看 BUILD SUCCESS。
 - 往 `pmd7-ruleset.xml` 加注释时不能出现连续两个减号（如命令行参数写法），XML 注释到此终止，规则集整份加载失败。改完用 `python -c "import xml.etree.ElementTree as ET; ET.parse('pmd7-ruleset.xml')"` 过一遍。
-- 脚本行尾必须是 LF。`core.autocrlf=true` 的机器会把 `.qualitygate/hooks/pre-commit` 检出成 CRLF，shebang 变成 `#!/bin/sh\r`，Linux/macOS 上 git exec 直接失败，门禁**静默消失**（Windows 上看不出来）。在项目 `.gitattributes` 加 `/.qualitygate/hooks/pre-commit text eol=lf` 与 `/.qualitygate/install-hook text eol=lf`。
 
-**第三方源码副本会被一起扫**：有些项目把框架类复制进 `src/main/java` 打补丁（实测见到 `org/springframework`、`liquibase`、`org/flowable` 三类）。这些代码不归团队维护，报出来的违规改不了。初始化时若发现此类目录，在 pom 里加 `<excludes><exclude>**/org/springframework/**</exclude></excludes>`，或直接不管——它们多是 Critical，默认阈值 1 不拦。
-
-`pmd:pmd` 恒 exit 0（报告照常生成），只有 `pmd:check` 用退出码表达结果：全量体检用前者，门禁用后者。
+**第三方源码副本会被一起扫**：有些项目把框架类复制进 `src/main/java` 打补丁（实测见到 `org/springframework`、`liquibase`、`org/flowable` 三类）。这些代码不归团队维护，在 pom 里加 `<excludes><exclude>**/org/springframework/**</exclude></excludes>`，或直接不管——它们多是 Critical，阈值 1 不拦。
 
 **版本错配的报错不都说得清楚**（实测：目标版本低于写法时）：
 
@@ -161,12 +164,13 @@ last_verified: "2026-10-22"
 
 **落点**：`.claude/rules/jdk-rules.md`，模板 `assets/seed-template.md`，`paths` 固定 `"**/*.java"`；模板里的 `⟨版本⟩` 填本技能 frontmatter 的 `version`。Claude Code 原生递归加载 `.claude/rules/*.md`，不需要 `@import`，不碰 `CLAUDE.md`。已有文件无 `<!-- seeded:` 标记说明是用户自己写的，只补缺失事实、保留原文。
 
-**写什么**：目标 JDK 一条事实 + 门禁装配、被拦怎么修两条流程 + 6 条最高频写法对照。**S 级陷阱清单不写**——A/B 实测模型本就全部避开，写进种子只是常驻上下文的噪音。
+**写什么**：目标 JDK 一条事实 + 边界语义五项默认 + 门禁怎么跑 + 6 条最高频写法对照。**S 级陷阱清单不写**——实测模型本就全部避开，写进种子只是常驻上下文的噪音。
 
 ## 决策路由
 
 | 场景 | 读 |
 |---|---|
+| **空结果 / null 参数 / 重复 key / 非法参数 / 静态或实例** | `references/08-boundary-semantics.md` |
 | 判空、`Optional`、null 约定 | `references/01-null-and-optional.md` |
 | 集合选型、`Map` 增改、比较器、不可变 | `references/02-collections.md` |
 | 字符串、格式化、`join` / `split` | `references/03-string.md` |
@@ -178,7 +182,8 @@ last_verified: "2026-10-22"
 ## 使用流程
 
 1. 确认目标 JDK（读 pom，均读不到时问一次）。项目没有种子时按「项目播种」提议。
-2. 按决策路由读对应 reference，写作前完成阅读。
-3. 写代码时对照「手写 → 标准库」与 S 级清单。
-4. commit 由项目 pre-commit 把关：被拦按输出修后重新提交；版本错配按上表判据改代码，不调 `maven.compiler.release` 掩盖。
-5. 缺能力时才查库探测表，推荐一次。
+2. **定契约**：查「边界语义」默认表，先确定返回约定（无结果返回什么、null 参数怎么办、重复 key 留谁），再动手。
+3. 按决策路由读对应 reference，写作前完成阅读。
+4. 写代码时对照「手写 → 标准库」与 S 级清单。
+5. 项目有 PMD 门禁就按失败输出修；版本错配按上表判据改代码，不调 `maven.compiler.release` 掩盖。
+6. 缺能力时才查库探测表，推荐一次。

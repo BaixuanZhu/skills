@@ -1,7 +1,7 @@
 {
   "name": "java-standard",
-  "version": "1.1.1",
-  "description": "JDK 标准库编码规范，附 git pre-commit 门禁。只覆盖两类问题：JDK 已有现成写法却手写、API 与目标 JDK 版本不匹配；不含第三方库用法与工程分层。",
+  "version": "1.2.0",
+  "description": "JDK 标准库编码规范。覆盖：JDK 已有现成写法却手写、API 与目标 JDK 版本不匹配、方法边界语义（空结果 / null 参数 / 重复 key / 非法参数）。不含第三方库用法与工程分层。",
   "author": {
     "name": "BaixuanZhu",
     "email": "66127517+BaixuanZhu@users.noreply.github.com",
@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "Java 规范",
     "shortDescription": "JDK 编码规则与版本门控",
-    "longDescription": "只讲 JDK 标准库怎么用、目标版本能用什么：手写循环与判断换成现成 API、Optional 与集合的正确用法、BigDecimal 与日期时间陷阱、API 到最低 JDK 版本的对照表；附带 PMD 7 规则集与 git pre-commit 门禁——暂存区含 .java 时自动扫描，Blocker/Critical 违规中止提交并在终端列出明细，不依赖编辑器或 AI 工具。不含第三方库 API 用法，缺库时只给坐标推荐。",
+    "longDescription": "只讲 JDK 标准库怎么用、目标版本能用什么：先定方法返回契约（无结果返回什么、null 参数怎么办、重复 key 留谁）；手写循环与判断换成现成 API、Optional 与集合的正确用法、BigDecimal 与日期时间陷阱、API 到最低 JDK 版本的对照表；附带 PMD 7 规则集与 CI 门禁配置。不含第三方库 API 用法，缺库时只给坐标推荐。",
     "developerName": "BaixuanZhu",
     "category": "Engineering",
     "capabilities": [

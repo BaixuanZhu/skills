@@ -14,9 +14,19 @@ paths:
 
 ## 流程
 
-- 首次提交 Java 前确认门禁：`.qualitygate/pmd-pom.xml` 不存在就先装配，装不上要明说没装
-- 提交被 PMD 拦 → 按输出修代码；不用 `--no-verify`、不改规则集、不改 `.gitignore` 绕过
+- 写方法前先定返回契约：无结果返回什么、null 参数怎么办、重复 key 留谁；需求没说明按下方边界基线
+- 合并前跑 PMD：项目有 `.qualitygate/pmd-pom.xml` 就 `mvn -f .qualitygate/pmd-pom.xml pmd:check -B`，有违规按输出修代码，不改规则集
 - 新 API 不确定版本 → 查技能 `jdk-rules` 的 `references/07-jdk-version-matrix.md`
+
+## 边界基线
+
+| 分歧点 | 默认 |
+|---|---|
+| 无结果 | 单条 `Optional`；列表空集合；不用 null、不用 0 代替无数据 |
+| 必填参数为 null | `Objects.requireNonNull`，不编默认值 |
+| 集合中的 null 元素 | 跳过 |
+| 重复 key | `putIfAbsent` 保留首条 |
+| 非法参数 | 展示层容错，领域层 fail fast |
 
 ## 写法基线
 

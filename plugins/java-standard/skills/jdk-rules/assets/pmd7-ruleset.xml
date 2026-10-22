@@ -6,8 +6,8 @@
 
     <description>
         自研 Java 质量规则集。
-        由 PMD 7 内置规则（调参映射，41 条）+ XPath 自定义规则（5 条，含 3 条 Spring 框架层反模式）组成。
-        纯注释规约（ali-comment）与需复杂数据流的规则不收录（后者由 SpotBugs 层覆盖）。
+        由 PMD 7 内置规则（调参映射，38 条）+ XPath 自定义规则（5 条，含 3 条 Spring 框架层反模式）组成。合计 43 条。
+        纯注释规约（ali-comment）与需复杂数据流的规则不收录——后者属字节码级检查（SpotBugs 等）范围，本规则集只做源码级。
         priority 语义：1=Blocker(bug/事故) 2=Critical(高风险) 3=Major(规范) 4/5=Minor(风格)。
     </description>
 
@@ -165,7 +165,7 @@
         <priority>3</priority>
     </rule>
 
-    <!-- ============ 九、安全（FindSecBugs 之外的源码级补充） ============ -->
+    <!-- ============ 九、安全（源码级可判定的部分） ============ -->
 
     <!-- 硬编码 IP -->
     <rule ref="category/java/bestpractices.xml/AvoidUsingHardCodedIP">
