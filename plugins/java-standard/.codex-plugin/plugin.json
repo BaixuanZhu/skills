@@ -1,7 +1,7 @@
 {
   "name": "java-standard",
-  "version": "2.5.1",
-  "description": "Java 编码契约：把需求不写的边界决策（无结果 / null 参数 / 集合里的 null / 重复 key / 结果顺序与可变性 / 非法参数）落成 .claude/rules/java-contract.md，动手前先读、写完编译验证；另附按失效模式追问的存量审查清单。不含第三方库用法与工程分层。",
+  "version": "2.6.0",
+  "description": "Java 编码契约：把需求不写的边界决策（无结果 / null 参数 / 集合里的 null / 重复 key / 结果顺序与可变性 / 非法参数 / 静态还是实例 / 重复到达）落成 .claude/rules/java-contract.md，动手前先读、写完编译验证；另附按失效模式追问的存量审查清单。不含第三方库用法与工程分层。",
   "author": {
     "name": "BaixuanZhu",
     "email": "66127517+BaixuanZhu@users.noreply.github.com",
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "Java 编码契约",
     "shortDescription": "把行为边界决策落成项目契约",
-    "longDescription": "不教 JDK 怎么写（模型本来就会），只做三件事：把需求文档不写、几个实现会给出几种答案的边界决策（无结果返回什么、null 参数怎么办、集合里的 null 怎么处理、重复 key 留谁、返回集合的顺序与可变性、非法参数容错还是拒绝、静态还是实例）落成 .claude/rules/java-contract.md；动手前主动读一次——它不会自动进上下文，读不到时按默认值写并声明来源；写完即编译。另附一份按失效后果排的存量审查清单（同一份数据是否在两处各算一遍 / 状态是否还有第二份副本 / 信任边界是否被绕过 / 什么会随运行时间累积 / 返回契约与调用方是否一致 / 并发与顺序），用于审已有代码，不按 API 分类扫表。不含第三方库 API 用法与工程分层。",
+    "longDescription": "不教 JDK 怎么写（模型本来就会），只做三件事：把需求文档不写、几个实现会给出几种答案的边界决策（无结果返回什么、null 参数怎么办、集合里的 null 怎么处理、重复 key 留谁、返回集合的顺序与可变性、非法参数容错还是拒绝、静态还是实例、重复到达时返回什么、终态收到成功通知怎么处理）落成 .claude/rules/java-contract.md；动手前主动读一次——它不会自动进上下文，读不到时按默认值写并声明来源；写完即编译。另附一份按失效后果排的存量审查清单（同一份数据是否在两处各算一遍 / 状态是否还有第二份副本 / 信任边界是否被绕过 / 什么会随运行时间累积 / 返回契约与调用方是否一致 / 并发与顺序），用于审已有代码，不按 API 分类扫表。不含第三方库 API 用法与工程分层。",
     "developerName": "BaixuanZhu",
     "category": "Engineering",
     "capabilities": [

@@ -27,6 +27,7 @@ paths:
 | 返回集合的形态 | 对外返回的 `Map` 保插入顺序，字典序用 `TreeMap`；默认不可变，`Map.copyOf` 不保序（用 `unmodifiableMap(new LinkedHashMap<>(x))`），8 用 `unmodifiableList(new ArrayList<>(x))` | |
 | 非法参数 | 展示层容错（`pageNo < 1` 纠正为 1），领域层 fail fast；参数违规抛 `IllegalArgumentException`，业务规则用项目已有业务异常 | |
 | 静态还是实例 | 纯函数 `static`，依赖注入用实例，同一个类不混用 | |
+| 重复到达 | 重复请求返回上次结果、不重复执行、不抛异常；已终态又收到成功通知：不复活、不加权益，落可查询的待处理记录并返回成功 | |
 
 ## 流程
 

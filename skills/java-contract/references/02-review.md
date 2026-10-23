@@ -98,6 +98,7 @@ Quartz 对不存在的 key 静默 no-op：暂停、删除、立即执行全部�
 | `list.size() != ids.size()` 判「全部存在」 | ids 里有重复时（`?ids=1,1`）明明存在也报错；ids 为空直接失败 |
 | `update` 的影响行数被丢弃，`updateWhen*` 干脆返回 `void` | 状态 CAS 命中 0 行照常提交：钱已动、单据没动；只重复回调/并发时出现 |
 | `selectOne` 假定唯一，业务唯一键（`bizId + bizType`）没建唯一索引 | 出现第二条时抛 `TooManyResultsException`，把整条同步链路打死 |
+| 终态（CLOSED / REFUNDED）收到成功通知时抛异常，或只打一行日志 | 渠道当失败继续重投，外层事务还可能回滚已成功的处理；日志滚掉后这笔钱在库里没有落点，对账对不上 |
 | 丢弃 `boolean` 返回值 | 下载失败返回 0 字节还带 200，日志干净，前端表现为图片裂开 |
 | `@Async` 里 `catch` 只 `log.error(msg)`，不传 `ex` | 无堆栈；状态列永远停在 RUNNING，监控把执行完的任务算成执行中 |
 
