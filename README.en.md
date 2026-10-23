@@ -2,7 +2,7 @@
 
 **English** | [中文](./README.md)
 
-An Agent Skills suite for the **Chinese Java / Spring ecosystem**. Covers coding standards, quality gates, coding contracts, unit & integration testing, mainstream framework development (Sa-Token / MyBatis-Plus), and agile workflows — making AI coding assistants sharper on Chinese-team Java projects.
+An Agent Skills suite for the **Chinese Java / Spring ecosystem**. Covers coding contracts, unit & integration testing, mainstream framework development (Sa-Token / MyBatis-Plus), and agile workflows — making AI coding assistants sharper on Chinese-team Java projects.
 
 > **Note:** Skill content is written in **Chinese** (rules, references, examples). The skill descriptions that trigger an agent are also Chinese. If you work on Chinese Java codebases, this is intentional; if your stack is English-only, be aware the skills will inject Chinese context.
 
@@ -16,8 +16,8 @@ Each skill is a standalone plugin you install individually:
 
 ```
 /plugin marketplace add BaixuanZhu/skills
-/plugin install java-quality           # install by PLUGIN name; one plugin may bundle several skills
-/plugin install java-standard
+/plugin install java-standard         # install by PLUGIN name; one plugin may bundle several skills
+/plugin install java-test
 ```
 
 > Plugin names are in the table below. Repeat `/plugin install <plugin-name>` for each.
@@ -36,8 +36,7 @@ npx skills add BaixuanZhu/skills
 
 | Plugin | Bundled skills | Purpose | Use when |
 |------|----------------|---------|----------|
-| **java-quality** | `java-coding-guide-pro`<br>`java-coding-quality` | Coding standards "how to write it right" (JDK 8–25, Alibaba handbook, SonarQube) + PMD7 / SpotBugs gate "how to catch it" | Writing / modifying / reviewing any Java·Spring code; pre-commit scanning |
-| **java-standard** | `java-contract` | Reads the pom to pin the target JDK, records boundary decisions into `.claude/rules/java-contract.md`, auto-injected on `.java` edits | Setting ground rules for a new project; verifying an API exists on the target JDK |
+| **java-standard** | `java-contract` | Reads the pom to pin the target JDK, records boundary decisions (eight items) into `.claude/rules/java-contract.md` — read it before coding (it is not auto-injected), compile right after writing; plus a seven-group review checklist for legacy code | Setting ground rules for a new project; deciding null vs empty collection; reviewing legacy code |
 | **java-test** | `java-unit-test`<br>`java-integration-test` | Unit-test standards alignment (`@Mock`, millisecond-scale) + integration tests (Testcontainers with real dependencies, replacing curl-based simulation) | Writing / reviewing / backfilling tests; adding an integration layer once features stabilize |
 | **sa-token-dev** | `sa-token-dev` | Sa-Token auth framework dev assistant | Login/auth, roles & permissions, SSO, JWT, session management |
 | **mybatis-plus-dev** | `mybatis-plus-dev` | MyBatis-Plus ORM enhancement dev assistant + project seeding | CRUD, pagination, Mapper/Service layers, transactions, logical delete |
@@ -45,7 +44,7 @@ npx skills add BaixuanZhu/skills
 
 ### Recommended layering
 
-- **Base** (near-essential): `java-quality` + `java-standard` + `java-test`
+- **Base** (near-essential): `java-standard` + `java-test`
 - **Framework boost** (match your stack): `sa-token-dev` / `mybatis-plus-dev`
 - **Agile flow** (teams): `agile` (the `using-agile` entry routes to the other three)
 

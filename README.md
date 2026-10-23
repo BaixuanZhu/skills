@@ -2,7 +2,7 @@
 
 [English](./README.en.md) | **中文**
 
-面向**中文 Java / Spring 生态**的 Agent Skills 套装。覆盖编码规范、质量门禁、编码契约、单元与集成测试、主流框架（Sa-Token / MyBatis-Plus）开发、敏捷流程——让 AI 编码助手在中文 Java 项目里表现得更专业。
+面向**中文 Java / Spring 生态**的 Agent Skills 套装。覆盖编码契约、单元与集成测试、主流框架（Sa-Token / MyBatis-Plus）开发、敏捷流程——让 AI 编码助手在中文 Java 项目里表现得更专业。
 
 ## 安装
 
@@ -14,8 +14,8 @@
 
 ```
 /plugin marketplace add BaixuanZhu/skills
-/plugin install java-quality           # 按「插件名」安装，一个插件可能含多个技能
-/plugin install java-standard
+/plugin install java-standard         # 按「插件名」安装，一个插件可能含多个技能
+/plugin install java-test
 ```
 
 > 插件名见下方「包含的插件」表格。装多个就重复 `/plugin install <插件名>`。
@@ -34,7 +34,6 @@ npx skills add BaixuanZhu/skills
 
 | 插件 | 包含技能 | 用途 | 适用场景 |
 |------|----------|------|----------|
-| **java-quality** | `java-coding-guide-pro`<br>`java-coding-quality` | 编码规范「怎么写对」（JDK 8~25、阿里手册、SonarQube）+ PMD7 / SpotBugs 门禁「怎么查」 | 编写 / 修改 / 审查任何 Java·Spring 代码；提交前扫描 |
 | **java-standard** | `java-contract` | 读 pom 定目标 JDK，把边界决策（八项）落成 `.claude/rules/java-contract.md`——用前主动读一次（不会自动注入），写完编译验证；附按失效模式追问的存量审查七组 | 新项目立规矩、定某个方法返回 null 还是空集合、审存量代码 |
 | **java-test** | `java-unit-test`<br>`java-integration-test` | 单元测试规范对齐（`@Mock` 毫秒级）+ 集成测试（Testcontainers 真实依赖，替代 curl 仿真） | 编写 / 评审 / 补全测试；功能稳定后补集成层 |
 | **sa-token-dev** | `sa-token-dev` | Sa-Token 权限认证框架开发助手 | 登录鉴权、权限角色、SSO、JWT、会话管理 |
@@ -43,7 +42,7 @@ npx skills add BaixuanZhu/skills
 
 ### 分层建议
 
-- **通用底座**（几乎必装）：`java-quality` + `java-standard` + `java-test`
+- **通用底座**（几乎必装）：`java-standard` + `java-test`
 - **框架增强**（按技术栈选）：`sa-token-dev` / `mybatis-plus-dev`
 - **敏捷流程**（团队选装）：`agile`（入口 `using-agile` 自动路由到其余三个）
 

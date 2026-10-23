@@ -5,19 +5,6 @@
   },
   "plugins": [
     {
-      "name": "java-quality",
-      "source": {
-        "source": "local",
-        "path": "./plugins/java-quality"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Engineering",
-      "version": "3.8.1"
-    },
-    {
       "name": "java-test",
       "source": {
         "source": "local",
@@ -77,14 +64,13 @@
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
       "source": "./plugins/java-standard",
-      "description": "Java 编码契约：读 pom 定目标 JDK，把边界决策（空结果 / null 参数 / 重复 key / 非法参数 / 静态或实例）落成 .claude/rules/java-contract.md，之后每次改 .java 自动注入；写完即编译验证。附可选 PMD 门禁与静默陷阱审查清单。不绑第三方库、不含工程分层。",
+      "description": "Java 编码契约：把需求不写的边界决策（无结果 / null 参数 / 集合里的 null / 重复 key / 结果顺序与可变性 / 非法参数 / 静态还是实例 / 重复到达）落成 .claude/rules/java-contract.md，用前主动读一次（不会自动注入），写完编译验证；另附按失效模式追问的存量审查七组。不绑第三方库、不含工程分层。",
       "category": "engineering",
       "keywords": [
         "java",
         "jdk",
         "java-contract",
-        "coding-standards",
-        "pmd"
+        "coding-contract"
       ]
     }
   ]
