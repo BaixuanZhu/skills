@@ -13,7 +13,7 @@ description: >-
   cannot find symbol 且 symbol 是 var 或 JDK 9+ 方法名、
   split 不传 limit、BigDecimal 用 equals 比较、Collectors.toMap 无 merge、catch 块有语句但无处理。
   不适用：第三方库 API 用法与选型、Spring 分层与工程组织、测试框架、前端代码。
-version: "2.2.0"
+version: "2.3.0"
 last_verified: "2026-10-23"
 ---
 
@@ -25,8 +25,9 @@ last_verified: "2026-10-23"
 
 ## 三条原则
 
-1. **契约先落盘**。第一次在项目里写 Java 时，把七项边界决策写进 `.claude/rules/java-contract.md`。
-   之后每次触碰 `.java` 该文件自动注入，跨会话、跨并行 agent 拿到同一套答案。不落盘的决策等于没定。
+1. **契约先落盘，用前先读**。第一次在项目里写 Java 时，把七项边界决策写进 `.claude/rules/java-contract.md`；
+   之后每次动 `.java` 前先读它。它**不会自动进上下文**——实测里一个被要求不浏览其他文件的 agent
+   虽然有这份契约，仍按自己的判断把该保留的记录丢了。不落盘的决策等于没定，落了盘没人读同样等于没定。
 2. **版本从 pom 来**。读 `maven.compiler.release` / `<source>` / `sourceCompatibility` / `java.toolchain`，
    四者都读不到才问一次。禁止凭印象用 `List.of` / `var` / `record`。
 3. **写完即编译**。一个类写完就 `mvn -q compile`（Gradle：`./gradlew compileJava`）。版本不匹配在这一步
@@ -39,7 +40,7 @@ last_verified: "2026-10-23"
 | 读什么 | 得到什么 |
 |---|---|
 | `pom.xml` / `build.gradle` | 目标 JDK；`<modules>` 说明是否多模块 |
-| `.claude/rules/java-contract.md` | 已有契约。存在就遵守，不重新提议 |
+| `.claude/rules/java-contract.md` | 已有契约。**读到才生效**，读到就遵守、不重新提议 |
 | 同包下 2~3 个同类方法 | 既有惯例：返回 `Optional` 还是裸值、抛异常还是错误码 |
 
 **项目惯例与下表默认冲突时，惯例优先。** 契约的作用是消除分歧，不是推行新风格。
@@ -71,6 +72,11 @@ last_verified: "2026-10-23"
 **落盘**：模板 `assets/contract-template.md` → `.claude/rules/java-contract.md`，`paths` 固定
 `"**/*.java"`，首行标记 `<!-- seeded: java-contract@⟨版本⟩ -->`，`⟨版本⟩` 填本文件 frontmatter 的 `version`。
 文件已存在且无该标记，说明是用户自己写的——只补缺失事实，不改原文。
+
+**加一道保险**：把最通用的四五条同步写进类的 javadoc（集合参数 `null` 与空等价、集合里 `null` 元素跳过、
+无列表结果返回空集合、返回集合不可变）。实测这四项写在 javadoc 里就能让没读到契约文件的实现者做对；
+细粒度规则（字段无值按用途三分、先剔除再切页）留契约文件——那部分写在 javadoc 里会喧宾夺主，
+而它恰恰是必须读到契约才做得对的一条。
 
 ## 版本门控
 
@@ -136,7 +142,7 @@ preview / incubator 一律不用。
 
 ## 使用流程
 
-1. 读项目（pom、契约文件、同类方法），确认目标 JDK。
+1. 读项目：pom 确认目标 JDK；`.claude/rules/java-contract.md` 有就先读（它决定契约）；同包 2~3 个同类方法看惯例。
 2. 无契约文件时按「契约七项」提议落盘，等用户确认。
 3. 用四问定位本次方法落在哪几项，定下返回契约，再动手。
 4. 写代码；目标版本不确定时查 `references/02-version-matrix.md`。
