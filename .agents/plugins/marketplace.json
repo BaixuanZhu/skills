@@ -5,20 +5,6 @@
   },
   "plugins": [
     {
-      "name": "repo-init",
-      "source": {
-        "source": "local",
-        "path": "./plugins/repo-init"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Engineering",
-      "version": "1.4.0",
-      "description": "生成或增量更新跨工具通用的 AGENTS.md 项目简报（Claude Code/Cursor/Codex 等 60+ 工具自动读取），不覆盖手写内容；兼容既有 CLAUDE.md，迁移后降为 @AGENTS.md 一行引用。"
-    },
-    {
       "name": "java-quality",
       "source": {
         "source": "local",
@@ -29,7 +15,7 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Engineering",
-      "version": "3.8.0"
+      "version": "3.8.1"
     },
     {
       "name": "java-test",
@@ -69,45 +55,6 @@
       },
       "category": "Engineering",
       "version": "3.0.0"
-    },
-    {
-      "name": "spring-boot-dev",
-      "source": {
-        "source": "local",
-        "path": "./plugins/spring-boot-dev"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Engineering",
-      "version": "1.0.2"
-    },
-    {
-      "name": "spring-boot-init",
-      "source": {
-        "source": "local",
-        "path": "./plugins/spring-boot-init"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Engineering",
-      "version": "1.5.1"
-    },
-    {
-      "name": "redis-dev",
-      "source": {
-        "source": "local",
-        "path": "./plugins/redis-dev"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Engineering",
-      "version": "1.1.3"
     },
     {
       "name": "agile",

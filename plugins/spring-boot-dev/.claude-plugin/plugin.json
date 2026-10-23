@@ -1,9 +1,0 @@
-{
-  "name": "spring-boot-dev",
-  "version": "1.0.2",
-  "description": "Spring Boot 框架层开发助手——三层架构写法与注解隐性陷阱（事务失效、异步线程池、循环依赖等）。写 Controller/Service/配置时使用。",
-  "author": {
-    "name": "BaixuanZhu",
-    "email": "66127517+BaixuanZhu@users.noreply.github.com"
-  }
-}

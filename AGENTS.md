@@ -119,5 +119,4 @@
 ## 改动敏感区前，先读
 
 - `PUBLISH.local.md`（本地，gitignored）—— 线上版本、平台 ID、发布流程。**版本号调整或发布前必读。**
-- `skills/repo-init/SKILL.md` + `references/03-antipatterns.md` —— 若编辑*本* `AGENTS.md`（antipatterns 文件列举了此处要避免的错误）。
 - `eval/README.md` —— 跑或提交达尔文评估前。

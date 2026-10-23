@@ -74,7 +74,7 @@
 | `TransactionalMissingRollbackFor` | 2 | 方法上 `@Transactional` 注解的 `AnnotationMemberList` 无 `rollbackFor`/`rollbackForClassName`（受检异常默认提交不回滚） | `@Transactional public void upload() throws IOException` |
 | `AvoidDeprecatedListenableFuture` | 3 | `ClassType` 匹配 `org.springframework.util.concurrent.ListenableFuture`（Spring 6 / SpringBoot 3.x 已 `@Deprecated`） | `public ListenableFuture<String> sendAsync()` |
 
-> **Spring 规则的取舍**：只收**单点 AST 可判、零误报**的（修饰符 / 注解参数 / 类型引用）；自调用失效、`@Async` 默认线程池、循环依赖等需跨方法/跨文件语义的陷阱**不收**（高误报损害门禁可信度，参考已移除的 `AvoidManualThreadCreation` 先例）。这些语义级陷阱由 **spring-boot-dev** 技能的 `references/12-pitfalls.md` 存量审查 checklist 覆盖（agent 用 ripgrep + 语言理解定位，非硬门禁）。
+> **Spring 规则的取舍**：只收**单点 AST 可判、零误报**的（修饰符 / 注解参数 / 类型引用）；自调用失效、`@Async` 默认线程池、循环依赖等需跨方法/跨文件语义的陷阱**不收**（高误报损害门禁可信度，参考已移除的 `AvoidManualThreadCreation` 先例）。这些语义级陷阱由 **java-coding-guide-pro** 技能的 `references/13-silent-failure.md` 存量审查清单覆盖（agent 用 ripgrep + 语言理解定位，非硬门禁）。
 
 **踩坑记录**（维护时避免重蹈）：
 - `AvoidBooleanIsPrefixField` 最初用 `pmd-java:typeIs('java.lang.Boolean')` 作用在 `FieldDeclaration` 上**不生效**——字段声明节点的类型需靠结构化子节点 `ClassType[@SimpleName='Boolean']` / `PrimitiveType[@Kind='boolean']` 匹配。

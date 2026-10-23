@@ -2,7 +2,7 @@
 
 [English](./README.en.md) | **中文**
 
-面向**中文 Java / Spring 生态**的 Agent Skills 套装。覆盖编码规范、质量门禁、单元测试、主流框架（Sa-Token / MyBatis-Plus）开发、敏捷流程、项目初始化——让 AI 编码助手在中文 Java 项目里表现得更专业。
+面向**中文 Java / Spring 生态**的 Agent Skills 套装。覆盖编码规范、质量门禁、编码契约、单元与集成测试、主流框架（Sa-Token / MyBatis-Plus）开发、敏捷流程——让 AI 编码助手在中文 Java 项目里表现得更专业。
 
 ## 安装
 
@@ -14,11 +14,11 @@
 
 ```
 /plugin marketplace add BaixuanZhu/skills
-/plugin install repo-init              # 只装你需要的，按技能名
-/plugin install java-coding-guide-pro
+/plugin install java-quality           # 按「插件名」安装，一个插件可能含多个技能
+/plugin install java-standard
 ```
 
-> 技能名见下方「包含的技能」表格。装多个就重复 `/plugin install <技能名>`。
+> 插件名见下方「包含的插件」表格。装多个就重复 `/plugin install <插件名>`。
 
 ### 方式二：npx skills（其他 Agent 通用）
 
@@ -30,26 +30,22 @@ npx skills add BaixuanZhu/skills
 
 > **两者区别**：Claude Code plugin 是托管只读包，更新随插件走；`npx skills` 给你的是可编辑文件副本，更灵活但需自己跟进更新。
 
-## 包含的技能
+## 包含的插件
 
-| 技能 | 用途 | 适用场景 |
-|------|------|----------|
-| **repo-init** | 生成/更新跨工具通用的 `AGENTS.md` 项目简报 | 新项目冷启动、让任意 AI 工具快速理解项目 |
-| **java-coding-guide-pro** | Java 编码规范与避坑（JDK 8~25、阿里手册、SonarQube） | 编写 / 修改 / 审查任何 Java/Spring 代码 |
-| **java-coding-quality** | Java 代码质量与安全门禁（PMD7 + SpotBugs/FindSecBugs） | 提交前检查、代码审查、安全扫描 |
-| **java-unit-test** | Java 单元测试规范对齐（设计方法 + 工程默认值） | 编写 / 评审 / 补全单元测试 |
-| **sa-token-dev** | Sa-Token 权限认证框架开发助手 | 登录鉴权、权限角色、SSO、JWT、会话管理 |
-| **mybatis-plus-dev** | MyBatis-Plus ORM 增强框架开发助手 | CRUD、分页查询、Mapper/Service 层、事务、逻辑删除 |
-| **using-agile** | 敏捷管理入口（路由 + 状态检测） | 进入含 `agile-docs/` 的项目、开始敏捷流程 |
-| **agile-strategic** | 敏捷战略层（愿景 + 架构 C4 + ADR） | 写愿景、技术选型、架构决策记录 |
-| **agile-backlog** | 敏捷产品待办（双文件 Backlog） | 拆任务、排优先级、迭代规划输入 |
-| **agile-sprint** | Sprint 全周期规划器 | 开 Sprint、规划迭代、关闭 Sprint |
+| 插件 | 包含技能 | 用途 | 适用场景 |
+|------|----------|------|----------|
+| **java-quality** | `java-coding-guide-pro`<br>`java-coding-quality` | 编码规范「怎么写对」（JDK 8~25、阿里手册、SonarQube）+ PMD7 / SpotBugs 门禁「怎么查」 | 编写 / 修改 / 审查任何 Java·Spring 代码；提交前扫描 |
+| **java-standard** | `java-contract` | 读 pom 定目标 JDK，把边界决策落成 `.claude/rules/java-contract.md`，改 `.java` 时自动注入 | 新项目立规矩、确认 API 在目标 JDK 是否可用 |
+| **java-test** | `java-unit-test`<br>`java-integration-test` | 单元测试规范对齐（`@Mock` 毫秒级）+ 集成测试（Testcontainers 真实依赖，替代 curl 仿真） | 编写 / 评审 / 补全测试；功能稳定后补集成层 |
+| **sa-token-dev** | `sa-token-dev` | Sa-Token 权限认证框架开发助手 | 登录鉴权、权限角色、SSO、JWT、会话管理 |
+| **mybatis-plus-dev** | `mybatis-plus-dev` | MyBatis-Plus ORM 增强框架开发助手 + 项目播种机制 | CRUD、分页查询、Mapper/Service 层、事务、逻辑删除 |
+| **agile** | `using-agile`<br>`agile-strategic`<br>`agile-backlog`<br>`agile-sprint` | 敏捷套件（4 技能合一）：入口路由 → 愿景/架构 C4/ADR → 产品待办 → Sprint 规划 | 从零做项目规划、迭代管理、写架构决策记录 |
 
 ### 分层建议
 
-- **通用底座**（几乎必装）：`repo-init` + `java-coding-guide-pro` + `java-coding-quality` + `java-unit-test`
+- **通用底座**（几乎必装）：`java-quality` + `java-standard` + `java-test`
 - **框架增强**（按技术栈选）：`sa-token-dev` / `mybatis-plus-dev`
-- **敏捷流程**（团队选装）：`using-agile`（入口）→ `agile-strategic` / `agile-backlog` / `agile-sprint`
+- **敏捷流程**（团队选装）：`agile`（入口 `using-agile` 自动路由到其余三个）
 
 ## 维护
 
