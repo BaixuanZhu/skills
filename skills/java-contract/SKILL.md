@@ -5,21 +5,22 @@ displayName: Java 编码契约
 description: >-
   为项目建立并执行 Java 编码契约：读 pom 定目标 JDK，把需求没说明的边界决策（空结果 / null 参数 /
   重复 key / 非法参数 / 静态还是实例）落成 .claude/rules/java-contract.md，写完即编译验证，
-  审查时按静默陷阱清单逐条对照。
+  审存量代码时按静默陷阱清单对照。
   在编写、修改、审查 Java 代码时使用；也用于确认某个 API 在目标 JDK 上是否可用、
-  决定方法该返回 null 还是空集合、为项目配置 CI 静态检查。
+  决定方法该返回 null 还是空集合、空集合聚合该返回 0 还是 Optional、为项目配置 CI 静态检查。
   触发信号：新写工具类或 Service 方法、containsKey 后紧跟 get、map.get 判空再 put、
   put 与 putIfAbsent 混用、分页参数校验、cannot find symbol 且 symbol 是 var 或 JDK 9+ 方法名、
   split 不传 limit、BigDecimal 用 equals 比较、Collectors.toMap 无 merge、catch 块有语句但无处理。
   不适用：第三方库 API 用法与选型、Spring 分层与工程组织、测试框架、前端代码。
-version: "2.0.0"
+version: "2.1.0"
 last_verified: "2026-10-23"
 ---
 
 # Java 编码契约
 
-模型对 JDK 写法的判断已经够准（实测语法陷阱 3/3、7/7 全部避开），真正的分歧在**需求文档不写、
-几个实现会给几种答案**的地方。本技能只做三件事：把这些决策定下来并落成项目文件、把版本约束住、写完验证。
+模型对 JDK 写法的判断已经够准（实测语法陷阱 3/3、7/7 全部避开），API 字典类内容不必再写。真正的分歧在
+**需求文档不写、几个实现会给几种答案**的地方。本技能只做三件事：把这些决策定下来并落成项目文件、
+把版本约束住、写完验证。
 
 ## 三条原则
 
@@ -55,7 +56,15 @@ last_verified: "2026-10-23"
 | 非法参数 | 展示层容错（`pageNo < 1` 纠正为 1），领域层 fail fast（状态码不认识就抛） |
 | 静态还是实例 | 纯函数 `static`；依赖注入用实例；同一个类不混用 |
 
-每项的判断依据与反例见 `references/01-contract.md`。
+**怎么定位到哪一项**：对每个新增的 public 方法问四句，答「是」的才受契约约束——
+
+1. 入参为空时，结果是「没有」还是「就是 0」？→ 第一节（无结果）
+2. 哪个参数为 `null` 时方法无意义？→ 第二节（null 参数）
+3. 有没有从外部数据构造 `Map`？→ 第四节（重复 key）
+4. 有分页、条数、状态码这类外部数值或枚举参数吗？→ 第五节（非法参数）
+
+四句都不成立（纯计算、无集合入参）就不必套模板。第六项（静态还是实例）不看单个方法，建类时定一次、
+类内统一。每项的识别判据、两项冲突时听谁，见 `references/01-contract.md`。
 
 **落盘**：模板 `assets/contract-template.md` → `.claude/rules/java-contract.md`，`paths` 固定
 `"**/*.java"`，首行标记 `<!-- seeded: java-contract@⟨版本⟩ -->`，`⟨版本⟩` 填本文件 frontmatter 的 `version`。
@@ -66,20 +75,17 @@ last_verified: "2026-10-23"
 判据：`目标 JDK ≥ 特性最低版本` 可用，否则禁用。LTS 锚点 8 / 11 / 17 / 21 / 25；非 LTS 按版本号比较，
 preview / incubator 一律不用。
 
+只列低版本项目里最常被误用的，同一意图在四档 LTS 上的写法对照见 `references/02-version-matrix.md`：
+
 | 特性 | 最低 JDK |
 |---|---|
-| `Objects.equals`、`Comparator.comparing`、`Map.getOrDefault`、`ThreadLocalRandom`、`Arrays.stream` | 8 |
-| `List.of` / `Set.of` / `Map.of`、`Objects.requireNonNullElse`、`Optional.ifPresentOrElse`、`Stream.ofNullable`、`takeWhile` / `dropWhile` | 9 |
-| `List.copyOf` / `Map.copyOf`、`Collectors.toUnmodifiableList`、`Optional.orElseThrow()` 无参 | 10 |
-| `String.isBlank` / `strip` / `lines` / `repeat`、`Files.readString` / `writeString`、`Predicate.not` | 11 |
-| `switch` 表达式（箭头 / `yield`）、NPE 精确到变量名 | 14 |
+| `List.of` / `Set.of` / `Map.of`、`takeWhile` / `dropWhile`、`Optional.ifPresentOrElse` | 9 |
+| `List.copyOf` / `Map.copyOf`、`Collectors.toUnmodifiableList` | 10 |
+| `String.isBlank` / `strip`、`Files.readString` / `writeString` | 11 |
+| `switch` 表达式（`->` / `yield`） | 14 |
 | 文本块 `"""`、`String.formatted` | 15 |
-| `record`、`Stream.toList()`（不可变）、`instanceof` 模式匹配 | 16 |
-| `sealed` | 17 |
-| 虚拟线程、`switch` 模式匹配 + 守卫、`SequencedCollection`、`Math.clamp` | 21 |
-| 未命名变量 `_` | 22 |
-
-按 API 反查（集合 / 字符串 / 数值 / 语法 / 并发）、以及「同一意图 × 版本写法」见 `references/02-version-matrix.md`。
+| `record`、`Stream.toList()`、`instanceof` 模式匹配 | 16 |
+| 虚拟线程、`SequencedCollection`、`Math.clamp` | 21 |
 
 **报错判据**：`cannot find symbol` 且 `symbol` 是 `class var`、或方法名属于 JDK 9+ API 时，先怀疑版本，
 不要顺着报错去补 import 或改名——那会把版本问题改成一堆无用代码。`record` / 文本块 / `switch` 表达式会
@@ -92,10 +98,11 @@ preview / incubator 一律不用。
 2. 契约相关分支至少跑一次：空入参、无结果、重复 key 三类各一个调用或用例。没有测试的，说明原因。
 3. 项目有门禁就跑 `mvn -f .qualitygate/pmd-pom.xml pmd:check -B`，被拦按输出修。
 
-## 审查（独立动作）
+## 审查（存量代码，独立动作）
 
+靶子是**已有的、别人写的代码**。刚生成的新代码不必逐条对照——这些坑生成时基本不犯，对照只是消耗上下文。
+审存量时读 `references/03-review.md` 按它的顺序走，那份清单收的是 PMD 查不出、出错也不报错的写法。
 审查与生成分开做：写完立刻自审会顺着自己的思路看，最容易漏的是「返回契约与调用方期望不一致」。
-审查时读 `references/03-review.md`，按它的顺序逐条对照——那份清单收的是 PMD 查不出、出错也不报错的写法。
 可交给子代理执行，rubric 用项目里的契约文件。
 
 ## 门禁（可选，项目级）
@@ -129,7 +136,7 @@ preview / incubator 一律不用。
 
 1. 读项目（pom、契约文件、同类方法），确认目标 JDK。
 2. 无契约文件时按「契约六项」提议落盘，等用户确认。
-3. 定本次方法的返回契约，再动手。
-4. 写代码；不熟悉的 API 查 `references/02-version-matrix.md`。
+3. 用三问定位本次方法落在哪几项，定下返回契约，再动手。
+4. 写代码；目标版本不确定时查 `references/02-version-matrix.md`。
 5. 写完编译，契约分支跑一次。
-6. 需要审查时按 `references/03-review.md` 独立执行。
+6. 要审存量代码时按 `references/03-review.md` 独立执行。

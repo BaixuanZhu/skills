@@ -20,7 +20,7 @@ paths:
 
 | 分歧点 | 默认 | 本项目 |
 |---|---|---|
-| 无结果 | 单条 `Optional`；列表空集合；聚合 `Optional` 或抛异常。不用 null，不用 0 代替「无数据」 | |
+| 无结果 | 单条 `Optional`；列表空集合；聚合看 0 是否有业务含义（求和→0，平均/最大→`Optional`）。不用 null | |
 | 必填参数为 null | `Objects.requireNonNull`，不编默认值 | |
 | 集合中的 null 元素 | 跳过，不参与计算 | |
 | 重复 key | `putIfAbsent` 保留首条；覆盖需 `put` + 注释 | |
@@ -33,7 +33,7 @@ paths:
 - 写完编译：`⟨编译命令⟩`；契约相关分支（空入参 / 无结果 / 重复 key）至少跑一次
 - 合并前跑门禁：`mvn -f .qualitygate/pmd-pom.xml pmd:check -B`（项目无 `.qualitygate/` 时跳过）
 - 新 API 不确定版本 → 查技能 `java-contract` 的 `references/02-version-matrix.md`
-- 审查按 `references/03-review.md` 的顺序走，与生成分开做
+- 审存量代码按 `references/03-review.md` 的顺序走，与生成分开做
 
 ## 边界
 
