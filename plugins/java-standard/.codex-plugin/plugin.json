@@ -1,7 +1,7 @@
 {
   "name": "java-standard",
-  "version": "2.3.0",
-  "description": "Java 编码契约：为项目定目标 JDK、把边界决策（空结果 / null 参数 / 重复 key / 非法参数）落成 .claude/rules/java-contract.md、写完即编译验证。不含第三方库用法与工程分层。",
+  "version": "2.4.0",
+  "description": "Java 编码契约：把需求不写的边界决策（无结果 / null 参数 / 集合里的 null / 重复 key / 结果顺序与可变性 / 非法参数）落成 .claude/rules/java-contract.md，动手前先读、写完编译验证；附 PMD 查不出的静默陷阱审查清单。不含第三方库用法与工程分层。",
   "author": {
     "name": "BaixuanZhu",
     "email": "66127517+BaixuanZhu@users.noreply.github.com",
@@ -14,14 +14,13 @@
     "java",
     "jdk",
     "coding-contract",
-    "java-contract",
-    "pmd"
+    "java-contract"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Java 编码契约",
-    "shortDescription": "把边界决策落成项目契约，把 JDK 版本约束住",
-    "longDescription": "不教 JDK 怎么写（模型本来就会），只做三件事：读 pom 确认目标 JDK 并据此门控 API 版本；把需求文档不写、几个实现会给出几种答案的边界决策（无结果返回什么、null 参数怎么办、重复 key 留谁、非法参数容错还是拒绝、静态还是实例）落成 .claude/rules/java-contract.md，之后每次触碰 .java 自动注入，跨会话与跨并行 agent 同一套答案；写完即编译，让版本不匹配在最便宜的一步暴露。附带 PMD 7 规则集与 CI 门禁配置（可选，项目级一次性装配），以及一份 PMD 查不出的静默陷阱审查清单。不含第三方库 API 用法与工程分层。",
+    "shortDescription": "把行为边界决策落成项目契约",
+    "longDescription": "不教 JDK 怎么写（模型本来就会），只做三件事：把需求文档不写、几个实现会给出几种答案的边界决策（无结果返回什么、null 参数怎么办、集合里的 null 怎么处理、重复 key 留谁、返回集合的顺序与可变性、非法参数容错还是拒绝、静态还是实例）落成 .claude/rules/java-contract.md；动手前主动读一次——它不会自动进上下文，读不到时按默认值写并声明来源；写完即编译，让版本与语法问题在最便宜的一步暴露。另附一份 PMD 查不出、出错也不报错的静默陷阱审查清单，用于审存量代码。不含第三方库 API 用法与工程分层。",
     "developerName": "BaixuanZhu",
     "category": "Engineering",
     "capabilities": [
@@ -31,8 +30,8 @@
     "defaultPrompt": [
       "给这个项目建立 Java 编码契约",
       "这个方法该返回 null、空集合还是 Optional",
-      "确认这个 API 在我的目标 JDK 版本上能不能用",
-      "按静默陷阱清单审查这段代码"
+      "按静默陷阱清单审查这段存量代码",
+      "这个方法该按空集合还是 requireNonNull 处理 null"
     ]
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "java-standard",
-  "version": "2.3.0",
-  "description": "Java 编码契约：为项目定目标 JDK、把边界决策（空结果 / null 参数 / 重复 key / 非法参数）落成 .claude/rules/java-contract.md、写完即编译验证。不含第三方库用法与工程分层。",
+  "version": "2.4.0",
+  "description": "Java 编码契约：把需求不写的边界决策（无结果 / null 参数 / 集合里的 null / 重复 key / 结果顺序与可变性 / 非法参数）落成 .claude/rules/java-contract.md，动手前先读、写完编译验证；附 PMD 查不出的静默陷阱审查清单。不含第三方库用法与工程分层。",
   "author": {
     "name": "BaixuanZhu",
     "email": "66127517+BaixuanZhu@users.noreply.github.com"

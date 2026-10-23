@@ -1,7 +1,8 @@
 # 03 · 存量代码审查
 
 审查**已有的、别人写的**代码时逐条对照。收录标准是 **PMD 查不出、出错也不报错**——能静态判定的
-写法已进 `assets/gate/` 的规则集，本文件不重复。
+写法（空 catch、`finally` 里 `return`、`new BigDecimal(0.1)` 字面量、命名规范、未用变量、
+`printStackTrace`）交给项目自己的静态检查，本文件不重复。
 
 写新代码时不必逐条对照：这些坑在生成时基本不犯（实测 3/3、7/7 全部避开）。本清单的靶子是**人写的
 遗留代码**——`Integer ==`、`finally` 里 return、`Arrays.asList(int[])` 在存量里很常见，
@@ -89,10 +90,8 @@
 | `findAny` 当 `findFirst` 用 | 并行流返回的元素不确定，测试偶发失败 | 需要第一个就 `findFirst` |
 | 共享可变字段无线程安全措施 | 可见性与竞态，压测才暴露 | `volatile` / 原子类 / 加锁，或改为不可变 |
 
-## 与门禁的分工
+## 边界
 
-| 类型 | 归属 |
-|---|---|
-| 空 catch、`finally` return、`new BigDecimal(0.1)` 字面量、命名规范、未用变量、`printStackTrace`、`SimpleDateFormat` 静态字段 | 规则集（`assets/gate/`），PMD 能查 |
-| 本文件全部条目 | 人工或 agent 审查，PMD 查不出 |
-| 空指针解引用、资源泄漏、弱加密 / SQL 注入等字节码级问题 | 需 SpotBugs / Semgrep 一类工具，本技能不含 |
+本文件只收 **PMD 查不出、出错也不报错** 的写法。能静态判定的（空 catch、`finally` 里 `return`、
+`new BigDecimal(0.1)` 字面量、命名规范、未用变量、`printStackTrace`）交给项目的静态检查；
+空指针解引用、资源泄漏、弱加密 / SQL 注入等字节码级问题需 SpotBugs / Semgrep。这两类本技能都不含。
