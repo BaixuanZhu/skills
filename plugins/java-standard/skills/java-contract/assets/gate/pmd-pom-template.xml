@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  PMD 门禁包装工程模板。用法见 jdk-rules 技能「静态检查」一节：
+  PMD 门禁包装工程模板。装配步骤见 java-contract 技能「门禁」一节：
   1. 复制到 <项目根>/.qualitygate/pmd-pom.xml
-  2. 复制 assets/pmd7-ruleset.xml 到 <项目根>/.qualitygate/pmd7-ruleset.xml
+  2. 复制同目录的 pmd7-ruleset.xml 到 <项目根>/.qualitygate/pmd7-ruleset.xml
   3. maven.compiler.release 改成项目实际 JDK 版本
-  4. compileSourceRoots 按项目模块逐个补齐
+  4. compileSourceRoots 每个源码根一行，路径必须相对 ${project.basedir}
   5. .gitignore 只追加 .qualitygate/target/（pom 与规则集要入库）
 
   门禁：mvn -f .qualitygate/pmd-pom.xml pmd:check -B   接 CI，不装 git hook

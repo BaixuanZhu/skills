@@ -1,7 +1,7 @@
 {
   "name": "java-standard",
-  "version": "1.2.0",
-  "description": "JDK 标准库编码规范。覆盖：JDK 已有现成写法却手写、API 与目标 JDK 版本不匹配、方法边界语义（空结果 / null 参数 / 重复 key / 非法参数）。不含第三方库用法与工程分层。",
+  "version": "2.0.0",
+  "description": "Java 编码契约：为项目定目标 JDK、把边界决策（空结果 / null 参数 / 重复 key / 非法参数）落成 .claude/rules/java-contract.md、写完即编译验证。不含第三方库用法与工程分层。",
   "author": {
     "name": "BaixuanZhu",
     "email": "66127517+BaixuanZhu@users.noreply.github.com",
@@ -13,15 +13,15 @@
   "keywords": [
     "java",
     "jdk",
-    "coding-standards",
-    "jdk-rules",
+    "coding-contract",
+    "java-contract",
     "pmd"
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Java 规范",
-    "shortDescription": "JDK 编码规则与版本门控",
-    "longDescription": "只讲 JDK 标准库怎么用、目标版本能用什么：先定方法返回契约（无结果返回什么、null 参数怎么办、重复 key 留谁）；手写循环与判断换成现成 API、Optional 与集合的正确用法、BigDecimal 与日期时间陷阱、API 到最低 JDK 版本的对照表；附带 PMD 7 规则集与 CI 门禁配置。不含第三方库 API 用法，缺库时只给坐标推荐。",
+    "displayName": "Java 编码契约",
+    "shortDescription": "把边界决策落成项目契约，把 JDK 版本约束住",
+    "longDescription": "不教 JDK 怎么写（模型本来就会），只做三件事：读 pom 确认目标 JDK 并据此门控 API 版本；把需求文档不写、几个实现会给出几种答案的边界决策（无结果返回什么、null 参数怎么办、重复 key 留谁、非法参数容错还是拒绝、静态还是实例）落成 .claude/rules/java-contract.md，之后每次触碰 .java 自动注入，跨会话与跨并行 agent 同一套答案；写完即编译，让版本不匹配在最便宜的一步暴露。附带 PMD 7 规则集与 CI 门禁配置（可选，项目级一次性装配），以及一份 PMD 查不出的静默陷阱审查清单。不含第三方库 API 用法与工程分层。",
     "developerName": "BaixuanZhu",
     "category": "Engineering",
     "capabilities": [
@@ -29,9 +29,10 @@
       "Write"
     ],
     "defaultPrompt": [
-      "这段 Java 代码有哪些地方该用标准库替代手写",
+      "给这个项目建立 Java 编码契约",
+      "这个方法该返回 null、空集合还是 Optional",
       "确认这个 API 在我的目标 JDK 版本上能不能用",
-      "跑一次 PMD 静态检查并按严重级修复"
+      "按静默陷阱清单审查这段代码"
     ]
   }
 }

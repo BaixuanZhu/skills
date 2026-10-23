@@ -175,18 +175,18 @@
     },
     {
       "name": "java-standard",
-      "version": "1.2.0",
+      "version": "2.0.0",
       "author": {
         "name": "BaixuanZhu",
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
       "source": "./plugins/java-standard",
-      "description": "JDK 标准库编码规范：只解决「该用标准库却手写」「API 与目标 JDK 版本不匹配」，并统一方法边界语义（空结果 / null 参数 / 重复 key / 非法参数）。不绑第三方库、不含工程分层。",
+      "description": "Java 编码契约：读 pom 定目标 JDK，把边界决策（空结果 / null 参数 / 重复 key / 非法参数 / 静态或实例）落成 .claude/rules/java-contract.md，之后每次改 .java 自动注入；写完即编译验证。附可选 PMD 门禁与静默陷阱审查清单。不绑第三方库、不含工程分层。",
       "category": "engineering",
       "keywords": [
         "java",
         "jdk",
-        "jdk-rules",
+        "java-contract",
         "coding-standards",
         "pmd"
       ]

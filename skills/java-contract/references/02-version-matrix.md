@@ -1,8 +1,10 @@
-# 07 · 版本矩阵
+# 02 · 版本矩阵
 
-目标 JDK 决定可用语法。本文件给两张表：**按 API 反查最低版本**、**同一意图在各版本的写法**。
+目标 JDK 决定可用语法。本文件给三张表：**按 API 反查最低版本**、**同一意图在各版本的写法**、
+**误用高版本 API 的编译症状**。
 
-LTS 锚点：8 / 11 / 17 / 21 / 25。非 LTS 按版本号比较，preview / incubator 一律不用（编译需 `--enable-preview`，CI 与生产环境不匹配）。
+LTS 锚点：8 / 11 / 17 / 21 / 25。非 LTS 按版本号比较，preview / incubator 一律不用
+（编译需 `--enable-preview`，CI 与生产环境不匹配）。
 
 ## 一、API → 最低版本
 
@@ -63,15 +65,15 @@ LTS 锚点：8 / 11 / 17 / 21 / 25。非 LTS 按版本号比较，preview / incu
 | `Files.readString` / `writeString` | 11 |
 | `ExecutorService` 实现 `AutoCloseable` | 19 |
 | 虚拟线程 `Thread.ofVirtual()` / `Executors.newVirtualThreadPerTaskExecutor()` | 21 |
-| `ScopedValue` | 25 |
 | `Stream.gather`（Gatherers） | 24 |
+| `ScopedValue` | 25 |
 
 ## 二、同一意图 × 版本写法
 
 | 意图 | JDK 8 | JDK 11 | JDK 17 | JDK 21 |
 |---|---|---|---|---|
 | 判空字符串 | `s != null && !s.trim().isEmpty()` | `s != null && !s.isBlank()` | 同 11 | 同 11 |
-| 不可变列表 | `Collections.unmodifiableList(new ArrayList<>(src))` | `List.copyOf(src)`（10+）或 `Collections.unmodifiableList` | 同 | 同 |
+| 不可变列表 | `Collections.unmodifiableList(new ArrayList<>(src))` | `List.copyOf(src)`（10+） | 同 | 同 |
 | 固定元素列表 | `Arrays.asList(a, b)`（定长） | `List.of(a, b)` | 同 | 同 |
 | Stream 转 List | `collect(Collectors.toList())` | 同 | `toList()`（不可变） | 同 |
 | 多行字符串 | `"a\n" + "b\n"` | 文本块（15+） | 文本块 | 文本块 |
@@ -82,11 +84,11 @@ LTS 锚点：8 / 11 / 17 / 21 / 25。非 LTS 按版本号比较，preview / incu
 | 多分支返回 | `if-else` 链或 `switch` + `break` | 需 14 | `return switch (k) { case A -> 1; default -> 0; };` | 同，可加 `case Integer i when i > 0 -> ...` |
 | 取集合首尾 | `list.get(0)` / `list.get(list.size() - 1)` | 同 | 同 | `list.getFirst()` / `list.getLast()` |
 | 剔除 null 元素 | `filter(x -> x != null)` | `filter(Objects::nonNull)`（9+） | 同 | 同 |
-| 有值才执行 | `if (o.isPresent()) { use(o.get()); }` | `o.ifPresent(this::use)`（8 已有）/ `ifPresentOrElse`（9+） | 同 | 同 |
+| 有值才执行 | `if (o.isPresent()) { use(o.get()); }` | `o.ifPresent(this::use)`（8 已有） | 同 | 同 |
 | 区间限制 | `Math.min(max, Math.max(min, v))` | 同 | 同 | `Math.clamp(v, min, max)` |
 | 后台任务 | `new Thread(r).start()` / 固定线程池 | 同 | 同 | `Thread.ofVirtual().start(r)`（IO 密集场景） |
 
-## 三、低版本项目误用高版本 API 的编译症状
+## 三、误用高版本 API 的编译症状
 
 | 症状 | 原因 |
 |---|---|
@@ -98,13 +100,14 @@ LTS 锚点：8 / 11 / 17 / 21 / 25。非 LTS 按版本号比较，preview / incu
 | `illegal start of expression` 指向 `instanceof Foo f` | 模式匹配需 16 |
 | `cannot find symbol: class ScopedValue` / `Stream.gather` | 用了更高版本的 API |
 
-看到这些错误，**先确认目标 JDK，再改写法**；不要通过调高 `pom.xml` 的 `release` 来消除——那会让产物在目标运行时上直接 `UnsupportedClassVersionError`。
+判断顺序：**先确认目标 JDK，再改写法**。`cannot find symbol` 这类不说明原因的报错，若 `symbol`
+是 `class var` 或方法是 JDK 9+ API，先怀疑版本；不要去补 import、改方法名，那只会把版本问题改成一堆无用代码。
 
-## 四、升级时的优先收益
+不要通过调高 `pom.xml` 的 `release` 消除报错——产物会在目标运行时 `UnsupportedClassVersionError`。
 
-从低版本升到某版本后，可立即减少手写的地方：
+## 四、升级后能立刻删掉的手写代码
 
-| 升到 | 立刻能删掉的手写代码 |
+| 升到 | 可删的手写 |
 |---|---|
 | 11 | 判空辅助方法（`isBlank` / `strip`）、文件读写工具（`Files.readString`）、手写 HTTP 客户端（`HttpClient`） |
 | 17 | 手写 DTO 的 getter/setter/equals/hashCode（`record`）、手写类型判断强转（`instanceof` 模式）、层层 if-else 分支（`switch` 表达式） |
