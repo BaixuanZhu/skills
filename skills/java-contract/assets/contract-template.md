@@ -21,9 +21,10 @@ paths:
 | 分歧点 | 默认 | 本项目 |
 |---|---|---|
 | 无结果 | 单条 `Optional`；列表空集合；聚合看 0 是否有业务含义（求和→0，平均/最大→`Optional`）。不用 null | |
-| 必填参数为 null | `Objects.requireNonNull`，不编默认值 | |
-| 集合中的 null 元素 | 跳过，不参与计算 | |
+| null 参数 | 必填标量 `requireNonNull`，不编默认值；集合参数按空处理，业务要求非空用 `isEmpty()` 校验 | |
+| 集合里的 null | `null` 元素跳过；字段无值：累加/平均跳过整条记录，拼接跳该值，排序/分页保留排末尾；**先剔除再切页** | |
 | 重复 key | `putIfAbsent` 保留首条；覆盖需 `put` + 注释 | |
+| 返回集合的形态 | 对外返回的 `Map` 保插入顺序，字典序用 `TreeMap`；默认不可变，`Map.copyOf` 不保序（用 `unmodifiableMap(new LinkedHashMap<>(x))`），8 用 `unmodifiableList(new ArrayList<>(x))` | |
 | 非法参数 | 展示层容错（`pageNo < 1` 纠正为 1），领域层 fail fast | |
 | 静态还是实例 | 纯函数 `static`，依赖注入用实例，同一个类不混用 | |
 

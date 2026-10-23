@@ -11,8 +11,8 @@
 
 按影响面从大到小，不要跳步：
 
-1. **返回契约**——无结果返回什么、null 参数怎么处理、重复 key 留谁。对照项目的 `.claude/rules/java-contract.md`。
-2. **集合与 Map**——视图、不可变、null 元素。
+1. **返回契约**——无结果返回什么、null 参数怎么处理、重复 key 留谁、结果要不要顺序。对照项目的 `.claude/rules/java-contract.md`。
+2. **集合与 Map**——视图、不可变、null 元素、遍历顺序。
 3. **数值与时间**——精度比较、除法、时区、包装类型。
 4. **字符串**——拆分、区域、正则。
 5. **异常与资源**——吞掉、断言、中断恢复。
@@ -37,9 +37,12 @@
 | `Collectors.toMap` 两参 | 脏数据出现重复 key 才抛 `IllegalStateException` | 三参 `(a, b) -> a`，或 `groupingBy` |
 | `toMap` 的 value 可能为 null | 内部走 `HashMap.merge`，抛 NPE | `groupingBy` 或先 `filter` |
 | 返回内部集合引用 | 调用方 `clear()` 改了对象状态，排查时找不到调用点 | `List.copyOf(items)` |
+| `unmodifiableList(x)` 直接包原集合 | 包出来的是视图，原集合后续 `add` 照样反映到「不可变」结果里 | 先复制再包：`unmodifiableList(new ArrayList<>(x))`；9+ 用 `List.copyOf` |
 | 可变字段做 `HashMap` / `HashSet` 的 key | 改字段后再也查不到，`contains` 恒 false | key 用不可变对象；或用 id 作 key |
 | `ConcurrentHashMap` 存 null value | `get` 返回 null 无法区分「没有」与「值是 null」 | 哨兵值或 `Optional` 包装 |
 | `List.of` / `Arrays.asList` 结果做 `add` | 抛 `UnsupportedOperationException`，只在特定分支触发 | 需可变就 `new ArrayList<>(...)` |
+| `groupingBy` / `toMap` 直接返回，遍历顺序当固定 | 换 JDK 版本或 key 分布变化后报表分组顺序改变，数值不变、无报错 | 对外返回用 `LinkedHashMap` 保插入序，或用 `TreeMap` 定字典序 |
+| `Map.copyOf(linkedMap)` 当保序不可变用 | 它不保证迭代顺序，声明保序的接口约定当场失效 | 保序不可变用 `unmodifiableMap(new LinkedHashMap<>(x))` |
 
 ## 三、数值与时间
 

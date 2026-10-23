@@ -4,15 +4,16 @@ slug: java-contract
 displayName: Java 编码契约
 description: >-
   为项目建立并执行 Java 编码契约：读 pom 定目标 JDK，把需求没说明的边界决策（空结果 / null 参数 /
-  重复 key / 非法参数 / 静态还是实例）落成 .claude/rules/java-contract.md，写完即编译验证，
+  集合里的 null / 重复 key / 结果顺序 / 非法参数）落成 .claude/rules/java-contract.md，写完即编译验证，
   审存量代码时按静默陷阱清单对照。
   在编写、修改、审查 Java 代码时使用；也用于确认某个 API 在目标 JDK 上是否可用、
   决定方法该返回 null 还是空集合、空集合聚合该返回 0 还是 Optional、为项目配置 CI 静态检查。
   触发信号：新写工具类或 Service 方法、containsKey 后紧跟 get、map.get 判空再 put、
-  put 与 putIfAbsent 混用、分页参数校验、cannot find symbol 且 symbol 是 var 或 JDK 9+ 方法名、
+  put 与 putIfAbsent 混用、groupingBy 结果直接对外返回、分页参数校验、
+  cannot find symbol 且 symbol 是 var 或 JDK 9+ 方法名、
   split 不传 limit、BigDecimal 用 equals 比较、Collectors.toMap 无 merge、catch 块有语句但无处理。
   不适用：第三方库 API 用法与选型、Spring 分层与工程组织、测试框架、前端代码。
-version: "2.1.0"
+version: "2.2.0"
 last_verified: "2026-10-23"
 ---
 
@@ -24,7 +25,7 @@ last_verified: "2026-10-23"
 
 ## 三条原则
 
-1. **契约先落盘**。第一次在项目里写 Java 时，把六项边界决策写进 `.claude/rules/java-contract.md`。
+1. **契约先落盘**。第一次在项目里写 Java 时，把七项边界决策写进 `.claude/rules/java-contract.md`。
    之后每次触碰 `.java` 该文件自动注入，跨会话、跨并行 agent 拿到同一套答案。不落盘的决策等于没定。
 2. **版本从 pom 来**。读 `maven.compiler.release` / `<source>` / `sourceCompatibility` / `java.toolchain`，
    四者都读不到才问一次。禁止凭印象用 `List.of` / `var` / `record`。
@@ -43,16 +44,17 @@ last_verified: "2026-10-23"
 
 **项目惯例与下表默认冲突时，惯例优先。** 契约的作用是消除分歧，不是推行新风格。
 
-## 契约六项
+## 契约七项
 
 需求没说明时按下表取；项目已有不同做法就记进契约文件，不在代码里另搞一套。
 
 | 分歧点 | 默认 |
 |---|---|
-| 无结果 | 单条 → `Optional`；列表 → 空集合；聚合值 → `Optional` 或抛异常。不返回 null，不用 0 代替「无数据」 |
-| 必填参数为 null | `Objects.requireNonNull` 抛异常，不编默认值 |
-| 集合中的 null 元素 | 跳过，不参与计算 |
+| 无结果 | 单条 → `Optional`；列表 → 空集合；聚合值看 0 是否有业务含义（求和 → 0，平均 / 最大 → `Optional`）。不返回 null |
+| null 参数 | 必填标量 → `Objects.requireNonNull`，不编默认值；**集合参数一律按空处理**，不用 `requireNonNull`，业务要求非空用 `isEmpty()` 校验 |
+| 集合中的 null 元素 | `null` 元素跳过；字段无值看用途——累加 / 平均跳过整条记录，拼接跳过该值，排序 / 分页保留并排末尾；**先剔除再切页** |
 | 重复 key | `putIfAbsent` 保留首条；要覆盖用 `put` 并在注释写明原因 |
+| 返回集合的形态 | 顺序：对外返回的 `Map` 保插入顺序（`groupingBy` 传 `LinkedHashMap::new`），字典序用 `TreeMap`。可变性：默认不可变；`Map.copyOf` 不保序，保序 Map 用 `unmodifiableMap(new LinkedHashMap<>(x))`；8 用 `unmodifiableList(new ArrayList<>(x))` |
 | 非法参数 | 展示层容错（`pageNo < 1` 纠正为 1），领域层 fail fast（状态码不认识就抛） |
 | 静态还是实例 | 纯函数 `static`；依赖注入用实例；同一个类不混用 |
 
@@ -60,10 +62,10 @@ last_verified: "2026-10-23"
 
 1. 入参为空时，结果是「没有」还是「就是 0」？→ 第一节（无结果）
 2. 哪个参数为 `null` 时方法无意义？→ 第二节（null 参数）
-3. 有没有从外部数据构造 `Map`？→ 第四节（重复 key）
+3. 有没有从外部数据构造 `Map`、或按 key 分组汇总？→ 第四节（重复 key）、第七节（顺序与可变性）
 4. 有分页、条数、状态码这类外部数值或枚举参数吗？→ 第五节（非法参数）
 
-四句都不成立（纯计算、无集合入参）就不必套模板。第六项（静态还是实例）不看单个方法，建类时定一次、
+四句都不成立（纯计算、无集合入参）就不必套模板。静态还是实例这一项不看单个方法，建类时定一次、
 类内统一。每项的识别判据、两项冲突时听谁，见 `references/01-contract.md`。
 
 **落盘**：模板 `assets/contract-template.md` → `.claude/rules/java-contract.md`，`paths` 固定
@@ -135,8 +137,8 @@ preview / incubator 一律不用。
 ## 使用流程
 
 1. 读项目（pom、契约文件、同类方法），确认目标 JDK。
-2. 无契约文件时按「契约六项」提议落盘，等用户确认。
-3. 用三问定位本次方法落在哪几项，定下返回契约，再动手。
+2. 无契约文件时按「契约七项」提议落盘，等用户确认。
+3. 用四问定位本次方法落在哪几项，定下返回契约，再动手。
 4. 写代码；目标版本不确定时查 `references/02-version-matrix.md`。
 5. 写完编译，契约分支跑一次。
 6. 要审存量代码时按 `references/03-review.md` 独立执行。
