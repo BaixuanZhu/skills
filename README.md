@@ -35,7 +35,7 @@ npx skills add BaixuanZhu/skills
 | 插件 | 包含技能 | 用途 | 适用场景 |
 |------|----------|------|----------|
 | **java-quality** | `java-coding-guide-pro`<br>`java-coding-quality` | 编码规范「怎么写对」（JDK 8~25、阿里手册、SonarQube）+ PMD7 / SpotBugs 门禁「怎么查」 | 编写 / 修改 / 审查任何 Java·Spring 代码；提交前扫描 |
-| **java-standard** | `java-contract` | 读 pom 定目标 JDK，把边界决策落成 `.claude/rules/java-contract.md`，改 `.java` 时自动注入 | 新项目立规矩、确认 API 在目标 JDK 是否可用 |
+| **java-standard** | `java-contract` | 读 pom 定目标 JDK，把边界决策（八项）落成 `.claude/rules/java-contract.md`——用前主动读一次（不会自动注入），写完编译验证；附按失效模式追问的存量审查七组 | 新项目立规矩、定某个方法返回 null 还是空集合、审存量代码 |
 | **java-test** | `java-unit-test`<br>`java-integration-test` | 单元测试规范对齐（`@Mock` 毫秒级）+ 集成测试（Testcontainers 真实依赖，替代 curl 仿真） | 编写 / 评审 / 补全测试；功能稳定后补集成层 |
 | **sa-token-dev** | `sa-token-dev` | Sa-Token 权限认证框架开发助手 | 登录鉴权、权限角色、SSO、JWT、会话管理 |
 | **mybatis-plus-dev** | `mybatis-plus-dev` | MyBatis-Plus ORM 增强框架开发助手 + 项目播种机制 | CRUD、分页查询、Mapper/Service 层、事务、逻辑删除 |
