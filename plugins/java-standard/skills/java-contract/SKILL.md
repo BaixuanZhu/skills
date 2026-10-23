@@ -5,15 +5,14 @@ displayName: Java 编码契约
 description: >-
   为项目建立并执行 Java 编码契约：把需求没说明的边界决策（无结果 / null 参数 / 集合里的 null /
   重复 key / 结果顺序与可变性 / 非法参数 / 静态还是实例 / 重复到达）落成 .claude/rules/java-contract.md，
-  动手前先读、写完编译验证，审存量代码时按静默陷阱清单对照。
+  动手前先读、写完编译验证；审存量代码时按失效模式七组追问。
   在编写、修改、审查 Java 代码时使用；也用于决定某个方法该返回 null 还是空集合、
   空集合聚合该返回 0 还是 Optional、为项目定下统一的边界处理规则。
-  触发信号：新写工具类或 Service 方法、containsKey 后紧跟 get、map.get 判空再 put、
-  put 与 putIfAbsent 混用、groupingBy 结果直接对外返回、分页参数校验、
-  cannot find symbol 且 symbol 是 var 或 JDK 9+ 方法名、
-  split 不传 limit、BigDecimal 用 equals 比较、Collectors.toMap 无 merge、catch 块有语句但无处理。
+  触发信号：要为新方法定返回契约、项目里还没有 .claude/rules/java-contract.md、
+  put 与 putIfAbsent 混用、写操作可能被重复投递或重试、
+  cannot find symbol 且 symbol 是 var 或 JDK 9+ 方法名。
   不适用：第三方库 API 用法与选型、Spring 分层与工程组织、测试框架、静态检查规则集、前端代码。
-version: "2.6.0"
+version: "2.6.1"
 last_verified: "2026-10-23"
 ---
 

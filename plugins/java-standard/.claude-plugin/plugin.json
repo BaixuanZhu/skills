@@ -1,6 +1,6 @@
 {
   "name": "java-standard",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "Java 编码契约：把需求不写的边界决策（无结果 / null 参数 / 集合里的 null / 重复 key / 结果顺序与可变性 / 非法参数 / 静态还是实例 / 重复到达）落成 .claude/rules/java-contract.md，动手前先读、写完编译验证；另附按失效模式追问的存量审查清单。不含第三方库用法与工程分层。",
   "author": {
     "name": "BaixuanZhu",
