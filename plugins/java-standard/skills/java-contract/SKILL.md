@@ -13,7 +13,7 @@ description: >-
   cannot find symbol 且 symbol 是 var 或 JDK 9+ 方法名、
   split 不传 limit、BigDecimal 用 equals 比较、Collectors.toMap 无 merge、catch 块有语句但无处理。
   不适用：第三方库 API 用法与选型、Spring 分层与工程组织、测试框架、静态检查规则集、前端代码。
-version: "2.5.0"
+version: "2.5.1"
 last_verified: "2026-10-23"
 ---
 
