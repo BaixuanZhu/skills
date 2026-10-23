@@ -12,7 +12,7 @@ description: >-
   put 与 putIfAbsent 混用、写操作可能被重复投递或重试、
   cannot find symbol 且 symbol 是 var 或 JDK 9+ 方法名。
   不适用：第三方库 API 用法与选型、Spring 分层与工程组织、测试框架、静态检查规则集、前端代码。
-version: "2.6.1"
+version: "2.7.0"
 last_verified: "2026-10-23"
 ---
 
