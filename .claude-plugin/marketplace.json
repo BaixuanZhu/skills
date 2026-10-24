@@ -8,13 +8,13 @@
   "plugins": [
     {
       "name": "java-test",
-      "version": "2.0.5",
+      "version": "2.1.0",
       "author": {
         "name": "BaixuanZhu",
         "email": "66127517+BaixuanZhu@users.noreply.github.com"
       },
       "source": "./plugins/java-test",
-      "description": "Java 测试套件（2 技能合一）：单元测试规范对齐 + 集成测试（MockMvc/Testcontainers 替代 curl 仿真）。编写、评审、补全测试时使用。",
+      "description": "Java 测试套件（2 技能）：纯单测（AssertJ 断言、Mock 边界、写错仍绿的静默陷阱）+ 集成测试（容器准入判据、测试事务假绿、@DataJpaTest 默认换 H2、Testcontainers 替代 H2）。",
       "category": "engineering",
       "keywords": [
         "java",

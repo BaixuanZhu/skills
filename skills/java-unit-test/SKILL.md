@@ -3,144 +3,96 @@ name: java-unit-test
 slug: java-unit-test
 displayName: Java 开发期测试
 description: >-
-  Java 开发期测试（纯单元测试）助手——@Mock + @InjectMocks，毫秒级，不起
-  Spring Context、不起容器、零基础设施。在编写、评审、补全、重构单元
-  测试时使用本技能，无论用户是否提到具体框架（unit test / JUnit / Mockito /
-  测试用例 / 怎么测 / 测哪些 / 写多少）。
+  Java 开发期测试（纯单元测试）助手——@Mock + @InjectMocks 或项目既有的
+  @TestConfiguration 轻量 mock 装配，AssertJ 断言，毫秒级，零外部基础设施
+  （不连真实 DB / 容器 / 中间件）。在编写、评审、补全、重构单元测试时使用
+  本技能，无论用户是否提到具体框架（unit test / JUnit / Mockito / 测试用例 /
+  怎么测 / 测哪些 / 写多少）。
   次级触发信号——代码或 pom 中出现：spring-boot-starter-test、junit-jupiter、
   @Test / @BeforeEach / @ParameterizedTest / @MethodSource、
-  assertEquals / assertThrows / assertThat / extracting（AssertJ）、
-  @Mock / @InjectMocks / MockitoAnnotations.openMocks、mockStatic /
-  MockedStatic、mockito-core；
-  用户任务词或痛点出现：只写 happy path、补测试不知道写几个、手写一堆重复
-  @Test、多条件分支只测一两种、有状态对象只测正常流转、@MockBean / @MockitoBean
-  用于纯单测、测够了没 / 写到什么程度算够、等价类 / 边界值 / 决策表 / 状态迁移用例设计。
-  核心默认：一个方法四维度必检（正向/反向/边界/异常）、JUnit 5 原生断言为
-  默认、栈中立跟随项目既有（JUnit 4/5 均支持）。接口级验证（接口通不通）
-  不写测试、不属本技能范围；需要真实依赖断言 / 可重复回归的重型测试
-  （Testcontainers / E2E）→ java-integration-test（明示或确认后激活）。
+  assertEquals(new BigDecimal、BigDecimal 比金额、
+  assertThat / isEqualByComparingTo / assertThatThrownBy（AssertJ）、
+  @Mock / @InjectMocks / MockitoAnnotations.openMocks、spy( / mockStatic /
+  MockedStatic / mockito-core、@MockBean / @MockitoBean 用于纯单测；
+  用户任务词或痛点出现：只写 happy path、补测试不知道写几个、@MockBean 用于纯单测、
+  测够了没 / 写到什么程度算够、mock 不到内部 new 的对象、异常断言断 RuntimeException。
+  核心默认：AssertJ 断言（金额用 isEqualByComparingTo / compareTo，不用 equals）、
+  一个方法四维度必检（正向/反向/边界/异常）、栈中立跟随项目既有（JUnit 4/5 均支持）。
+  接口级验证（接口通不通）不写测试、不属本技能范围；需要真实依赖断言 / 可重复回归的
+  重型测试（Testcontainers / E2E）→ java-integration-test（明示或确认后激活）。
   不适用：切片 / 集成 / 冒烟 / E2E 测试（@SpringBootTest 全量上下文 /
   @WebMvcTest / Testcontainers / REST Assured / WireMock）→
   java-integration-test；性能测试、前端测试。
-version: "2.0.0"
-last_verified: "2026-08-03"
+version: "2.1.0"
+last_verified: "2026-10-24"
 ---
 
 # Java 开发期测试
 
-开发期测试 = **纯单元测试**：`@Mock`+`@InjectMocks`，毫秒级，`mvn test` 秒级跑完——不起 Spring Context、不引 Testcontainers / H2，零基础设施。规范分两部分——**A. 设计方法**（等价类/边界值/决策表/状态迁移）保证测得全；**B. 工程默认值与纪律**（断言库/Mock 边界/停止标准）保证每次一样。每条规则含「✗ 错误设计 → ✓ 正确设计」。
+开发期测试 = **纯单元测试**：被测对象是真实对象，外部依赖用 mock，毫秒级，`mvn test` 秒级跑完——零外部基础设施（不连真实 DB / 容器 / 中间件）。默认 `@Mock`+`@InjectMocks`；项目既有 `@TestConfiguration` 手写 `@Bean` mock + `@Import` 的轻量装配惯例时跟随，但上下文里只允许 mock 与纯内存对象。
 
 > 接口级验证（"接口通不通"）不写测试、不属本技能范围；需要真实依赖断言 / 可重复回归的重型测试 → java-integration-test，明示或确认后激活。
 
-## 三条铁律
+## 三条硬规则
 
-1. **设计优先于编码**：先确定"测哪些用例"（等价类/边界值/决策表/状态），再落成 `@Test`。禁止上来就写代码、想到哪测到哪——那是"覆盖率的幻觉"，不是测试设计。
-2. **最小充分集**：用等价类合并代表"无穷输入"，用边界值钉住 off-by-one 高发区；穷尽测试不可能，目标是"用最少的用例覆盖最有代表性的输入"。一个方法的有效用例通常在 3~8 个之间。
-3. **零基础设施**：纯单测不起 Spring、不引 Testcontainers / H2 / 内嵌库。需要真实依赖才能断言的行为（SQL 实际执行 / 迁移 / 缓存语义）不属单测——→ java-integration-test（激活后）。
+1. **只 mock 外部依赖**（DB / RPC / 时间 / 第三方），不 mock 被测对象，也不指望 mock 被测类内部 `new` 出来的对象——那种情况测试会假绿，必须先把依赖改成构造器注入。
+2. **金额与小数用 `compareTo`**：`assertThat(actual).isEqualByComparingTo("90.00")`。`BigDecimal.equals` 连 scale 一起比，实现改一次 `setScale` 断言就假红，scale 恰好一致时又掩盖了「本该固定两位小数」的问题。全项目一律不用 `assertEquals(BigDecimal, BigDecimal)`。
+3. **异常断言到具体异常类 + 消息**，不断 `RuntimeException` / `Exception` 根父类——断根父类等于任何异常都能过。
 
-## 断言库策略
+## 断言库
 
-**默认用 JUnit 原生 `Assertions`（`assertEquals`/`assertThrows`/`assertTrue` 等）。仅当满足以下任一条件时，升级到 AssertJ：**
+**默认 AssertJ**（`spring-boot-starter-test` 已传递，非 Spring 项目按需引 `assertj-core`）：
 
-- **集合内容断言**（断言 list 元素构成/顺序/提取字段）—— AssertJ 的 `containsExactlyInAnyOrder` / `extracting(...)`。
-- **字段分组断言**（同一逻辑组的多个字段作为一个整体校验，如坐标 x/y/z、时间窗 start/end）—— AssertJ 的 `extracting(...).containsExactly(...)`。
+| 场景 | 写法 |
+|---|---|
+| 金额、小数 | `isEqualByComparingTo("90.00")` |
+| 抛异常 | `assertThatThrownBy(() -> ...).isInstanceOf(X.class).hasMessage("...")` |
+| 集合内容 | `containsExactlyInAnyOrder(...)` / `extracting(Foo::getId)` |
+| 简单值 | `isEqualTo(...)` |
 
-**其余场景（简单值、抛异常、各列语义独立的逐列断言如表格型 VO）一律 JUnit 原生，不切换。升级标准可机械执行：是否集合？是否同一逻辑组？两条都不是 → 留在原生逐列断言（失败定位准、加列只改一处）。**
+项目已有测试统一用 JUnit 原生 `Assertions` 时跟随，但金额仍要 `compareTo(actual, expected) == 0`，不用 `assertEquals`。
 
-- Spring 项目 `spring-boot-starter-test` 已传递 AssertJ，触发条件时直接用；非 Spring 项目首次触发时按 `references/03` §1 引入 `assertj-core`。
-- 既有代码已用 AssertJ 的不主动改写；新测试默认 JUnit 原生，触发条件时该测试用 AssertJ，同文件内可混用。
+## 写完自检四项
 
-## 快速入门（第一次用，按这条线走）
+被测方法四维度各至少一条：**正向**（合法输入）/ **反向**（非法输入被拒绝）/ **边界**（端点、空、`null`、极值）/ **异常**（契约指定的异常类）。缺一维即设计漏洞。
 
-| 你想做的 | 看这份 | 读多少 |
+多条件逻辑画决策表，列数即用例数；有状态对象按迁移列表走，合法与非法都要覆盖。这两件事不需要方法论——列出组合、逐列写用例即可。
+
+## 静默陷阱（写错不报警，测试仍然绿）
+
+下表是索引。遇到命中项或需要改法细节时读 `references/01-pitfalls.md`——那里有完整代码与**怎么判断自己是不是正在假绿**。
+
+| ✗ 写法 | 为什么绿 | ✓ 改法 |
 |---|---|---|
-| 不知道测什么 / 测多少 / 测到什么程度算够 | `references/01` 四维度 + 覆盖率立场 + 三个停止信号（完成判定用本文「DoD 锚点」） | 前 70 行 |
-| 写纯计算/校验 / 多条件组合 / 状态机测试 | `references/02` 设计方法速查 | 按需查 |
-| 设计好的用例怎么落代码 / Mock 怎么写 / 栈版本 | `references/03` | 按需查 |
+| `assertEquals(new BigDecimal("90.00"), actual)` | scale 恰好一致时全绿，实现改 scale 才红；真正该固定的小数位反而没人管 | `isEqualByComparingTo`；需要校小数位另断 `scale()` |
+| 被测类内部 `new` 依赖，测试照样跑通 | mock 注入的是另一个实例，被测代码用的是自己 new 的，断言看的是假对象 | 重构为构造器注入再 mock；改不动就说明这个类不可测，先拆 |
+| `when(spy.size()).thenReturn(10)` | `when()` 会先执行真实方法，副作用已经发生，再回放桩值 | 对 spy 与会抛异常的方法一律 `doReturn(10).when(spy).size()` |
+| `when(mapper.selectOne(any()))` 后只断返回值 | `any()` 放过了 wrapper 构造错误（`.eq(User::getId, ...)` 字段写错也不报） | 需要校条件时用 `ArgumentCaptor` 捕获再 `verify` |
+| `mockStatic` 不包 try-with-resources | 静态 mock 泄漏到同线程后续测试，失败点漂移到别的类 | `try (MockedStatic<X> m = mockStatic(X.class)) { ... }` |
+| 异常断言用 `RuntimeException.class` | 任何异常都满足，被测代码抛 NPE 也算通过 | 断契约指定的具体类 + `hasMessage` |
+| 无断言，调一下方法就算「覆盖」 | 全部通过，什么都没验 | 每个测试至少一条行为断言 |
+| `@MockBean` / `@SpringBootTest` 用于纯单测 | 不是错，是拉全量 Context——慢、且掩盖了依赖关系 | 纯单测用 `@Mock`；只装 mock 的轻量装配用 `@TestConfiguration` + `@Bean` |
 
-## 第 0 步：探测被测对象（技能触发时先执行）
+其余 Mockito 细节（`verify` 默认恰好 1 次、严格桩模式的多余 stub）会让测试**变红**，agent 当场就会改对，不必预先记。
 
-读被测方法/类，一次性判断（读不到则问用户，勿分多轮）：
+## 与 java-integration-test 的边界
 
-1. **工具栈**：是否 Spring Boot（决定 `spring-boot-starter-test` 一行 vs 逐库坐标）；JUnit 4 还是 5；Mockito 版本（决定 `mockStatic` 能否用）。决策表见 `references/03` §1。
-2. **被测对象类型**（决定用哪种设计方法，详见路由表）：纯计算/校验 → 等价类+边界值；多条件组合 → 决策表；有状态对象 → 状态迁移；有外部依赖 → Mock，界定边界。
+本技能 = 纯单测（`@Mock`+`@InjectMocks` 或只装 mock 的 `@TestConfiguration`，毫秒级，零外部基础设施，全周期默认）。需要真实依赖才能断言的行为（SQL 实际执行、唯一约束、事务回滚、序列化、迁移）→ java-integration-test，明示或确认后激活。
 
-## 设计方法 → 场景路由
+注解分界：无 Context 的 `@Mock`、只装 mock 的 `@TestConfiguration` 属本技能；`@SpringBootTest` / `@MockitoBean` / 切片注解（`@WebMvcTest` / `@JdbcTest` / `@DataJpaTest`）→ java-integration-test。
 
-| 被测对象特征 | 用什么方法 | 典型用例数 | 详见 |
-|---|---|---|---|
-| 任何方法（先读它） | 四维度 + 黑盒优先 | — | `references/01` |
-| 纯计算/校验（输入→输出） | 等价类划分 + 边界值 | 3~8 | `references/02` |
-| 多条件组合（促销/费率/权限） | 决策表（列数=用例数） | 化简后列数 | `references/02` |
-| 有状态对象（状态机） | 状态迁移 | 合法迁移数 + 非法迁移数 | `references/02` |
-| **"写到什么程度算够"** | 覆盖率反向校验 + 成本收益 | — | `references/01` |
-| 设计好的用例怎么落代码 | JUnit5/Mockito/Parameterized 映射 | — | `references/03` |
+## 完成判定（DoD 锚点）
 
-## 每个方法的四维度（必检清单）
+供外部 PR / checklist 直接引用，三条同时满足才算最小充分：
 
-任何被测方法，至少回答这四组"有没有测到"——**缺一个维度就是设计漏洞**：
+- [ ] 四维度各至少一个代表用例（正向 / 反向 / 边界 / 异常）。
+- [ ] 被测方法的每个 `if/switch` 分支至少被一个用例走到。
+- [ ] 有效 / 无效等价类清单已逐项打勾（`null`、空串、越界最易漏）。
 
-| 维度 | 测什么 | 设计方法 |
-|---|---|---|
-| **正向** | 合法、正常输入的预期输出 | 等价类有效代表 |
-| **反向** | 非法、异常输入的拒绝行为 | 等价类无效代表 → `assertThrows` |
-| **边界** | 区间端点、空/null、极值 | 边界值分析（off-by-one 高发区） |
-| **异常** | 抛出的业务异常/受检异常路径 | 异常等价类 |
-
-## S/A 规则表（设计层）
-
-- **S 级（设计缺陷级）**：导致"测试存在但测不出 bug"——新测试禁止；审查既有测试命中 → 立即指出补全。
-- **A 级（约定）**：约束新生成测试。
-
-| 级别 | ✗ 错误设计 | ✓ 正确设计 |
-|---|---|---|
-| S | 只写 happy path，缺反向/边界/异常 | 四维度各至少一个代表用例 |
-| S | "想到几个写几个"，无等价类/边界分析 | 先划等价类再取代表，边界必取端点 |
-| S | 多条件逻辑只测一两种组合 | 画决策表，**列数=用例数**，不漏不重 |
-| S | 有状态对象只测正常流转，不测非法/不可达转移 | 状态迁移：每条合法迁移+每个非法转移的拒绝 |
-| S | 被测类内部 `new` 的依赖被 mock 掉 | 重构为构造器注入，再 mock 注入的依赖 |
-| S | `@MockBean` 用于纯单元测试 | 纯单测默认 `@Mock`+`@InjectMocks`；**项目既定的 mock 装配模式（如 TestConfig 手写 `@Bean` mock 轻量容器）优先于本默认**——跟随项目，不强加。`@MockBean` 的红线是"用于纯单测起全量 Spring Context" |
-| S | `mockStatic` 未包 try-with-resources | `try (MockedStatic<x> m = mockStatic(X.class)) {...}`（不释放会污染同线程其他测试） |
-| S | 为跑单测引入 Testcontainers / H2 / 内嵌库 | 纯单测零基础设施；需要真实依赖才能断言的行为 → java-integration-test（激活后） |
-| S | 直接采信 AI 一次性生成的"四维度齐全"测试 | 必须人工复核三维度的**真代表性**；异常维度断言**被测契约指定的具体异常类**，勿断言 `RuntimeException`/`Exception` 根父类 |
-| A | 测试方法间共享可变状态 | 每个 `@Test` 自包含、可乱序执行 |
-| A | 测试名 `test1`/`testMethod` | `should_<期望>_when_<条件>` 或 Given-When-Then |
-| A | 一个 `@Test` 塞多个无关断言 | 一个测试一个行为（可多断言但同一关注点） |
-| A | 手写一堆重复 `@Test` 仅输入不同 | `@ParameterizedTest`+`@MethodSource` |
-| A | JUnit4 `@Before` 与 JUnit5 混用 | 按探测到的 JUnit 版本统一 |
-| A | 无断言测试（调一下方法即算"覆盖"） | 每个测试必须有行为断言 |
-| A | 反射测私有方法 | 通过公有方法间接测；私有方法复杂到要单测→提取为独立类 |
-| A | 测框架胶水（`@Autowired` 能否注入、getter/setter） | 胶水不测；POJO 用 Lombok 不测 |
-| A | 一个测试 mock 了 5+ 依赖仍硬测 | 提示被测类违反 SRP，建议拆分而非硬测 |
-
-## Mock 边界
-
-- **只 Mock 外部依赖**（DB / RPC / 时间 / 第三方），**不 Mock 被测对象自身**及其内部协作对象。
-- 其余 Mock 纪律（内部 `new` 的依赖、5+ 依赖、`mockStatic` try-with-resources、spy/doReturn）见 S/A 表 + `references/03` §3。
-
-## 使用流程
-
-1. **第 0 步探测**：工具栈 + 被测对象类型。
-2. **读对应 reference**：查路由表，设计用例前先读「详见」列。
-3. **设计用例**：四维度逐项检视 → 应用对应设计方法 → 最小充分用例集。
-4. **落成代码**：按 `references/03` 映射表。
-5. **输出前自检 S 级**：尤其"四维度是否齐全""多条件是否画了决策表""有状态对象是否测了非法转移""`new` 的依赖是否被误 mock"。
-
-## 测试完成判定（DoD 锚点）
-
-本节供外部 PR/DoD checklist **直接引用**——回答"这个方法的测试做完了没有"。三条**同时**满足才算最小充分（不是穷尽）。判定陷阱见 `references/01`「三个停止信号」。
-
-- [ ] **四维度齐全**：正向 / 反向 / 边界 / 异常各至少一个代表用例。
-- [ ] **分支盲区清零**：被测方法的每个 `if/switch` 分支至少被一个用例走到（JaCoCo 口径下即 Branch 列 Missed = 0，无 JaCoCo 时人工分支清单全勾）。
-- [ ] **等价类清单已显式走完**：列出有效/无效等价类清单，逐类打勾（`null`/空串/越界这些无效类最易漏）。
-
-> 三条全勾即判"完成"——开发期不以"还没写集成 / 接口测试"为由继续加测试；重型层（Testcontainers / E2E）由 java-integration-test 在明示或确认后补齐。
-
-> ✗ DoD 写"覆盖率 ≥ 80%" → ✓ DoD 写"四维度齐全 + 分支盲区清零 + 等价类清单已显式走完"。前者把覆盖率当目标，催生凑数测试；后者才是测试设计完整性的判定。
+三条全勾即判完成——不以「覆盖率 ≥ 80%」为目标（那会催生凑数测试），也不以「还没写集成测试」为由继续加。
 
 ## 版本与范围
 
-- JUnit 5（Jupiter）为主，JDK 8+；JUnit 4 项目的写法差异见 `references/03` §1 栈基线决策表。
-- Spring Boot 项目测试依赖一行 `spring-boot-starter-test`；非 Spring 项目逐库坐标见 `references/03` §1。断言默认 JUnit 原生，升级条件见上文"断言库策略"。
-- **与 `java-integration-test` 的边界**：本技能 = 纯单测（`@Mock`+`@InjectMocks`，毫秒级，零基础设施，全周期默认）；测试自管真实依赖（Testcontainers、迁移、真实事务传播、E2E、WireMock、契约切片 `@WebMvcTest`/`@JsonTest`）——→ java-integration-test，明示或确认后激活。注解分界：纯单测 `@Mock`（本技能），Spring 测试内 `@MockitoBean`（→ java-integration-test）。
-- **不适用**：性能测试、前端测试。
+- JUnit 5 为主，JUnit 4 项目按既有写法跟随，同一模块不混用（生命周期注解不互通）。
+- 版本跟随项目既有；Spring Boot 项目测试依赖一行 `spring-boot-starter-test`，非 Spring 项目按需引 `junit-jupiter` / `mockito-core` / `assertj-core`。
+- 不适用：性能测试、前端测试。

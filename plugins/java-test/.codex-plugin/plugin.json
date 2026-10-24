@@ -1,7 +1,7 @@
 {
   "name": "java-test",
-  "version": "2.0.5",
-  "description": "Java 测试套件（2 技能合一）：单元测试规范对齐 + 集成测试（MockMvc/Testcontainers 替代 curl 仿真）。编写、评审、补全测试时使用。",
+  "version": "2.1.0",
+  "description": "Java 测试套件（2 技能）：纯单测（AssertJ 断言、Mock 边界、写错仍绿的静默陷阱）+ 集成测试（容器准入判据、测试事务假绿、@DataJpaTest 默认换 H2、Testcontainers 替代 H2）。",
   "author": {
     "name": "BaixuanZhu",
     "email": "66127517+BaixuanZhu@users.noreply.github.com",
@@ -21,8 +21,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Java 测试套件",
-    "shortDescription": "Java 单元测试 + 集成测试规范",
-    "longDescription": "合并两个 Java 测试技能：java-unit-test（规范对齐——等价类/边界值/决策表/状态迁移 + JUnit 5 原生断言 + Mock 边界）与 java-integration-test（消灭 curl 仿真测试——@SpringBootTest/MockMvc/Testcontainers/REST Assured/WireMock）。",
+    "shortDescription": "Java 纯单测 + 集成测试（只留静默陷阱）",
+    "longDescription": "合并两个技能的当前形态。java-unit-test——只留写错不报警的部分：金额用 equals 比较、内部 new 的依赖 mock 不到、spy 用 when() 打桩触发真实方法、any() 放过参数构造错误、mockStatic 不释放污染后续测试、异常断言断根父类、无断言；断言默认 AssertJ（金额 isEqualByComparingTo）。等价类 / 决策表 / 状态迁移这些模型本来就会，不再展开。java-integration-test——分层由一条判据决定（这条断言离开真实 DB / Redis / Kafka 就不成立吗），保留测试级 @Transactional 让回滚断言假绿、RANDOM_PORT 下隔离完全失效、@DataJpaTest 默认替换数据源、H2 方言差异、启动日志有 WARN 但测试全绿这些静默陷阱；真实依赖默认容器，不用 H2 替代。",
     "developerName": "BaixuanZhu",
     "category": "Engineering",
     "capabilities": [
@@ -30,8 +30,10 @@
       "Write"
     ],
     "defaultPrompt": [
-      "帮我为这个 Service 方法写单元测试",
-      "把这个 curl 接口测试改成集成测试"
+      "为这个方法补单元测试",
+      "这些测试是不是假绿",
+      "给下单流程补集成测试",
+      "这个断言该用哪种测试层"
     ]
   }
 }
