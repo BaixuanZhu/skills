@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""架构决策""ADR""C4""需求变了""要改故事""依赖检查"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.4.2
+version: 5.5.0
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -137,7 +137,7 @@ version: 5.4.2
 |---|---|---|
 | `hook-session` | 会话开始 | 注入状态快照 + 本阶段该做什么 |
 | `hook-prompt` | 每轮用户发言 | 同上（长会话被 compact 后 SessionStart 的内容会丢，这行不会）；没有 `agile-docs/` 的项目，在提问命中规划类词时提示一次入口，同一会话只提一次；其余静默。prompt 含 `no-agile` 当轮静默 |
-| `hook-post-write` | 写 `backlog.json` / `PRODUCT-BACKLOG.md` 后 | json：结构校验 → 重新渲染 md → Sprint 点数对账；md：发现被手改就按 json 回滚并说明改哪里 |
+| `hook-post-write` | 写 `backlog.json` / `PRODUCT-BACKLOG.md` / `*.done.yaml` 后 | json：结构校验 → 重新渲染 md → Sprint 点数对账；md：发现被手改就按 json 回滚并说明改哪里；回填：校验内容（引用不存在的条目 ID、同一 ID 既 completed 又 moved_next、feedback.type 越界、两个数组都空），只提示不阻断——回填允许分次写 |
 
 **「本阶段该做什么」不是脚本里的字符串**，而是 `references/turn-brief.md` 里按阶段分块的文本：脚本只判断阶段，文案在 markdown 里改。七个阶段是 `conflict` / `backfill` / `sprint` / `active` / `init` / `architecture` / `backlog`，判据与每段对应的技能章节都写在该文件里。
 
@@ -148,3 +148,5 @@ version: 5.4.2
 生效平台：Claude Code、ZCode（都自动加载插件标准位置的 `hooks/hooks.json`）。Codex 的 PostToolUse 只拦 shell 命令、写文件不触发，未适配——那边按 `backlog-rules.md §七` 手动跑 `agile.py check`。
 
 `hook-session` 与 `hook-post-write` 只在存在 `agile-docs/` 的项目上工作；`hook-prompt` 在没有的项目上也只发一次入口提示，不写任何文件。其余情况完全静默。插件内 `scripts/agile.py`（Python 3.9+，标准库 only，零正则）由 `scripts/run-python.sh` 探测可用解释器；没有 python 时 hook 静默退出，不影响任何操作，`UserPromptSubmit` 永不阻断输入。
+
+**hook 与 `check` 的分工**：hook 是即时的、只提示不阻断（回填可能分次写）；`agile.py check` 是全量出口检查，多查两项——`sprints/*.done.yaml` 的内容，以及 md 是否与 json 逐字同步。关闭 Sprint 前、以及 Codex 那边，都以 `check` 为准。

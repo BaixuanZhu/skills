@@ -40,6 +40,7 @@ done_file:
     moved_next: 未完成移下 Sprint 条目 ID 列表
     feedback: 消费 Agent 执行反馈（可选）。reason 作 DoD 关闭时 moved_next 依据展示；issue 由 agile-backlog 同步时转为 Backlog 新条目候选；decision 停下请用户裁决
   note: completed 和 moved_next 至少一个可为空数组；不应包含 Sprint 任务清单之外的 ID；两个列表之外的清单内条目视为未执行，DoD 时归入 moved_next；含交接契约的任务，completed 前须已产出对应交接文档
+  validation: "agile.py check 会读本文件内容，报出「引用不存在的条目 ID」「同一 ID 既在 completed 又在 moved_next」「feedback.type 不在枚举内」「两个数组都空」。注意 check 只做这几项——type 与 note 的内容是否说得通仍由人判断。"
   mandatory: true  # 回填是硬性义务：消费 Agent 执行完毕必须生成，否则 Sprint 无法关闭、Backlog 无法同步
   timing: 消费 Agent 执行完毕后生成（含部分完成）
   lifecycle: 写入（消费 Agent）→ 读取（agile-sprint DoD 检查，含 feedback）→ 检测（using-agile 默认闭环）→ 消费（agile-backlog 同步到 PRODUCT-BACKLOG.md 阶段表 + 反馈处理）→ 改后缀 .done.processed.yaml（留痕，不删除）

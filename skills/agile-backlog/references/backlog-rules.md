@@ -144,9 +144,12 @@ Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改�
 ```bash
 python <插件根>/scripts/agile.py render  [项目根]   # json → md
 python <插件根>/scripts/agile.py stats   [项目根]   # 全量重算并打印
-python <插件根>/scripts/agile.py check   [项目根]   # 结构校验 + Sprint 点数对账，有问题返回 1
+python <插件根>/scripts/agile.py check   [项目根]   # 结构校验 + Sprint 点数对账 + 回填文件内容校验，有问题返回 1
+python <插件根>/scripts/agile.py brief   [项目根]   # 打印当前阶段与将要注入的原文
 python <插件根>/scripts/agile.py migrate [项目根]   # 旧版 md → json（一次性）
 ```
+
+`check` 的跨文件部分包括 `sprints/*.done.yaml` 的内容：引用了不存在的条目 ID、同一 ID 既在 `completed` 又在 `moved_next`、`feedback.type` 不是 `reason / issue / decision`、两个数组都空——这些在文件名层面看不出来，只能在内容层面报。
 
 脚本在**插件的 `scripts/` 下，不在项目里**。装插件时其中两个动作已挂到 hook 上（写完 json 自动校验并重渲染、会话开始注入状态），通常不需要手动执行。
 

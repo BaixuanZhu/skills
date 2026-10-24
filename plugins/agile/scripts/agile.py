@@ -45,6 +45,9 @@ CONFIRMED_MARK = "✓"
 EMPTY_MARK = "—"
 ID_PREFIXES = ("T-", "F-")
 HASH_KEY = "backlog-sha256"
+QUOTES = "\"'“”‘’"
+POINT_BRACKETS = (("(", ")"), ("（", "）"))
+FEEDBACK_TYPES = ("reason", "issue", "decision")
 RENDER_NOTICE = (
     "> 本文件由 `agile.py render` 从 `backlog.json` 生成，**改条目请改 `backlog.json`**。\n"
     "> 直接编辑本文件的内容会在下次写入时被渲染覆盖。"
@@ -301,8 +304,24 @@ def root_of(backlog_path: Path) -> Path:
     return parent.parent if parent.name == DOCS_DIR else parent
 
 
+def unquote(value: str) -> str:
+    return value.strip().strip(QUOTES)
+
+
+def split_kv(line: str) -> tuple[str, str, str]:
+    """拆 `键: 值`，半角与全角冒号都认。返回值里的 sep 为空表示这行不是键值行。"""
+    for sep in ("：", ":"):
+        head, found, tail = line.partition(sep)
+        if found:
+            return head.strip().strip("*").strip(), found, tail.strip()
+    return line.strip(), "", ""
+
+
 def parse_sprint_items(text: str) -> list[tuple[str, int | None]]:
-    """sprint 任务清单：`- T-001 标题 (3) → ADR-007`。取 id 与括号里的点。"""
+    """sprint 任务清单：`- T-001 标题 (3) → ADR-007`。取 id 与括号里的点。
+
+    全角括号也认——中文输入法下 `（3）` 太容易打出来，只认半角会让点数静默丢失。
+    """
     found: list[tuple[str, int | None]] = []
     for line in text.splitlines():
         stripped = line.strip()
@@ -313,33 +332,37 @@ def parse_sprint_items(text: str) -> list[tuple[str, int | None]]:
             continue
         ident, rest = parts
         points = None
-        close = rest.rfind(")")
-        if close != -1:
-            opening = rest.rfind("(", 0, close)
-            if opening != -1:
-                inner = rest[opening + 1: close].strip()
-                if inner.isdigit():
-                    points = int(inner)
+        for open_ch, close_ch in POINT_BRACKETS:
+            close = rest.rfind(close_ch)
+            if close == -1:
+                continue
+            opening = rest.rfind(open_ch, 0, close)
+            if opening == -1:
+                continue
+            inner = rest[opening + 1: close].strip()
+            if inner.isdigit():
+                points = int(inner)
+                break
         found.append((ident, points))
     return found
 
 
 def parse_sprint_meta(text: str) -> dict[str, str]:
-    """只取白名单键，避免把任务清单行也读成字段。"""
+    """只取白名单键，避免把任务清单行也读成字段。
+
+    容忍手写的常见变体：全角冒号、`* ` 列表符、`**状态**:` 加粗键、值带引号。
+    状态值带引号若不剥掉，`"已关闭"` 会被判成未关闭，阶段永远停在 active。
+    """
     wanted = ("状态", "周期", "目标")
     meta: dict[str, str] = {}
     for line in text.splitlines():
         stripped = line.strip()
-        if not stripped.startswith("- "):
+        if not stripped or stripped[0] not in "-*":
             continue
-        body = stripped[2:].strip()
-        for sep in ("：", ":"):
-            if sep in body:
-                key, _, value = body.partition(sep)
-                key = key.strip()
-                if key in wanted:
-                    meta.setdefault(key, value.strip())
-                break
+        body = stripped[1:].strip()
+        key, found, value = split_kv(body)
+        if found and key in wanted:
+            meta.setdefault(key, unquote(value))
     return meta
 
 
@@ -402,6 +425,106 @@ def check_sprint_consistency(root: Path, data: dict) -> list[str]:
                     f"{path.name} 写 {ident} = {points} 点，backlog.json 是 {item.get('points')} 点"
                 )
     return problems
+
+
+# ── 回填文件（.done.yaml）──────────────────────────────────────────────────────
+def parse_done(text: str) -> dict:
+    """只看回填文件固定的三层结构，不引通用 YAML 解析器。
+
+    completed / moved_next 是 ID 列表（逐行 `- ID` 或内联 `[A, B]` 都认）；
+    feedback 是 `- item / type / note` 的对象列表。块标量（`note: |`）不支持，
+    note 是给人读的、脚本不校验其内容，多行会只取到 `|` 本身。
+    """
+    result: dict = {"completed": [], "moved_next": [], "feedback": []}
+    section = ""
+    current: dict | None = None
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        indent = len(raw) - len(raw.lstrip())
+        if indent == 0:
+            head, found, tail = split_kv(line)
+            current = None
+            if not found or head not in result:
+                section = ""
+                continue
+            section = head
+            if tail.startswith("[") and tail.endswith("]"):
+                for part in tail[1:-1].split(","):
+                    value = unquote(part)
+                    if value:
+                        result[section].append(value)
+            continue
+        if section in ("completed", "moved_next"):
+            if line[0] in "-*":
+                value = unquote(line[1:])
+                if value:
+                    result[section].append(value)
+        elif section == "feedback":
+            if line[0] in "-*":
+                current = {}
+                result["feedback"].append(current)
+                line = line[1:].strip()
+                if not line:
+                    continue
+            if current is not None:
+                head, found, tail = split_kv(line)
+                if found:
+                    current[head] = unquote(tail)
+    return result
+
+
+def inspect_done(path: Path, known: set[str]) -> list[str]:
+    """单个回填文件的内容检查。known 是 backlog.json 里的合法条目 ID 集合。"""
+    text = read_text(path)
+    if text is None:
+        return [f"{path.name} 读不出来（编码或权限）"]
+    done = parse_done(text)
+    problems: list[str] = []
+    if not done["completed"] and not done["moved_next"]:
+        problems.append(f"{path.name} 的 completed 与 moved_next 都空，回填至少要有一个非空数组")
+    for key in ("completed", "moved_next"):
+        seen = set()
+        for ident in done[key]:
+            if ident in seen:
+                problems.append(f"{path.name} 的 {key} 里 {ident} 重复")
+            seen.add(ident)
+            if ident not in known:
+                problems.append(f"{path.name} 的 {key} 引用 {ident}，backlog.json 里没有这个条目")
+    for ident in sorted(set(done["completed"]) & set(done["moved_next"])):
+        problems.append(f"{path.name} 的 {ident} 同时在 completed 与 moved_next（逻辑矛盾）")
+    for entry in done["feedback"]:
+        kind = entry.get("type", "")
+        if kind and kind not in FEEDBACK_TYPES:
+            problems.append(f"{path.name} 的 feedback type「{kind}」不在 {' / '.join(FEEDBACK_TYPES)} 内")
+        ident = entry.get("item", "")
+        if ident and ident not in known:
+            problems.append(f"{path.name} 的 feedback 关联 {ident}，backlog.json 里没有这个条目")
+    return problems
+
+
+def check_done_files(root: Path, data: dict) -> list[str]:
+    """回填文件的内容校验。
+
+    文件名只能说明「有待闭环」，内容错了没人会发现——而闭环的下一步就是拿这份
+    内容去同步 backlog。这里把「引用了不存在的条目」「同一 ID 既完成又顺延」
+    「feedback 类型拼错」这类问题报出来。
+    """
+    known = {item["id"] for _phase, item in iter_items(data) if item.get("id")}
+    problems: list[str] = []
+    for rel in SPRINT_DIRS:
+        directory = root / rel
+        if not directory.is_dir():
+            continue
+        try:
+            files = sorted(p for p in directory.iterdir() if p.name.endswith(".done.yaml"))
+        except Exception:
+            continue
+        for path in files:
+            problems.extend(inspect_done(path, known))
+    return problems
+
 
 
 # ── 旧格式迁移（唯一需要读 Markdown 表格的地方，一次性） ─────────────────────
@@ -497,6 +620,8 @@ def hook_post_write() -> None:
         handle_json_write(path)
     elif path.name == BACKLOG_MD:
         handle_md_write(path)
+    elif path.name.endswith(".done.yaml"):
+        handle_done_write(path, root)
 
 
 def handle_json_write(json_path: Path) -> None:
@@ -537,6 +662,30 @@ def handle_json_write(json_path: Path) -> None:
             "PostToolUse",
             f"[agile] backlog.json 已通过结构校验并重新渲染 {BACKLOG_MD}，另有 {len(notes)} 处待处理：\n{listed}",
         )
+
+
+def handle_done_write(done_path: Path, root: Path) -> None:
+    """回填写完立刻校验内容。
+
+    用提示而不是 exit 2：回填允许分次写，中途半成品不应该打断。真正强制在
+    `check` 与关闭 Sprint 之前——那时内容必须已经定型。
+    """
+    json_path = root / DOCS_DIR / BACKLOG_JSON
+    if not json_path.exists():
+        return
+    data = load_json(json_path)
+    if data is None:
+        return
+    known = {item["id"] for _phase, item in iter_items(data) if item.get("id")}
+    problems = inspect_done(done_path, known)
+    if not problems:
+        return
+    listed = "\n".join("  · " + line for line in problems)
+    emit_context(
+        "PostToolUse",
+        f"[agile] 回填文件 {done_path.name} 有 {len(problems)} 处问题：\n{listed}\n"
+        "  口径见 agile-docs/interfaces/sprint-schema.yaml 的 done_file 段。",
+    )
 
 
 def handle_md_write(md_path: Path) -> None:
@@ -830,6 +979,7 @@ def cli_check(root_arg: str | None) -> int:
     problems.extend("结构：" + line for line in errors)
     problems.extend("规范：" + line for line in warnings)
     problems.extend("跨文件：" + line for line in check_sprint_consistency(root, data))
+    problems.extend("回填：" + line for line in check_done_files(root, data))
 
     sync_ok = False
     if md_path.exists():
