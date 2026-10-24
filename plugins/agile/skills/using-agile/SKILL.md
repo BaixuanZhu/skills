@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户说"开始项目""敏捷""Sprint""待办""Backlog""用户故事""迭代""架构决策""ADR""C4""需求变了""要改故事""依赖检查"或进入含 agile-docs/ 目录的项目时触发。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.0.0
+version: 5.1.0
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -110,3 +110,14 @@ version: 5.0.0
 - ✅ 只做：检测状态 → 逐层询问"更新 or 继续"（不替用户决定走向）→ 路由 → 变更协调（引用矩阵，不直接改业务正文）。
 - ✅ 渐进式：业务技能产出即停；下一步须用户再次调用本技能或下个业务技能。
 - ✅ 路由到业务技能时提示其遵循 `references/interview-protocol.md`（选择题 + 推荐）、`references/probing-protocol.md`（追问/跳过）、`references/gate-protocol.md`（门禁）。
+
+## 8. 配套 hook（插件安装时生效）
+
+插件带两个 hook，随插件启用自动加载。用 `npx skills` 只装技能文件时不存在，此时完全靠本文档的规则自觉执行，规则本身不变。
+
+| Hook | 触发 | 作用 | 生效平台 |
+|---|---|---|---|
+| `session-state` | 会话开始 | 有 `agile-docs/` 时注入一行状态：Sprint 序号与状态、Backlog 条目数 / 点数 / 待确认数、ADR 待拍板数、未处理回填数 | Claude Code、ZCode、Codex |
+| `backlog-stats` | 写 `PRODUCT-BACKLOG.md` 后 | 按 `agile-backlog/references/backlog-rules.md §七` 的列契约重算统计，和「## 统计」段不符时把正确值整块喂回 | Claude Code、ZCode（Codex 的 PostToolUse 只拦 shell 命令，不触发；统计靠 §七.5 手动全量重算） |
+
+两者都只在存在 `agile-docs/` 的项目上工作，其余项目完全静默。

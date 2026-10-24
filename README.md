@@ -38,7 +38,7 @@ npx skills add BaixuanZhu/skills
 | **java-test** | `java-unit-test`<br>`java-integration-test` | 不教测试代码怎么写，教**什么时候绿灯是假的**：开发期纯单测（`@Mock` 毫秒级）+ 集成测试三决策（回归谁值守 / 放哪层 / 环境用什么跑）与假绿三机制（路径不对 / 时间点不对 / 失败不算失败） | 编写 / 评审 / 补全测试；功能稳定后补集成层 |
 | **sa-token-dev** | `sa-token-dev` | Sa-Token 权限认证框架开发助手 | 登录鉴权、权限角色、SSO、JWT、会话管理 |
 | **mybatis-plus-dev** | `mybatis-plus-dev` | MyBatis-Plus ORM 增强框架开发助手 + 项目播种机制 | CRUD、分页查询、Mapper/Service 层、事务、逻辑删除 |
-| **agile** | `using-agile`<br>`agile-strategic`<br>`agile-backlog`<br>`agile-sprint` | 敏捷套件（4 技能合一）：入口路由 → 愿景/架构 C4/ADR → 产品待办 → Sprint 规划 | 从零做项目规划、迭代管理、写架构决策记录 |
+| **agile** | `using-agile`<br>`agile-strategic`<br>`agile-backlog`<br>`agile-sprint` | 敏捷套件（4 技能合一）：入口路由 → 愿景/架构 C4/ADR → 产品待办 → Sprint 规划。**附带两个 hook**：会话开始注入 Sprint/Backlog/ADR 状态，Backlog 写完后全量重算统计（不再由模型现场算） | 从零做项目规划、迭代管理、写架构决策记录 |
 
 ### 分层建议
 

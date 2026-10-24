@@ -40,7 +40,7 @@ npx skills add BaixuanZhu/skills
 | **java-test** | `java-unit-test`<br>`java-integration-test` | Not how to write test code, but **when a green build is lying**: millisecond unit tests (`@Mock`) + three integration decisions (who owns the regression, which layer, how to run it) and three false-green mechanisms (wrong path / wrong timing / failure not counted) | Writing / reviewing / backfilling tests; adding an integration layer once features stabilize |
 | **sa-token-dev** | `sa-token-dev` | Sa-Token auth framework dev assistant | Login/auth, roles & permissions, SSO, JWT, session management |
 | **mybatis-plus-dev** | `mybatis-plus-dev` | MyBatis-Plus ORM enhancement dev assistant + project seeding | CRUD, pagination, Mapper/Service layers, transactions, logical delete |
-| **agile** | `using-agile`<br>`agile-strategic`<br>`agile-backlog`<br>`agile-sprint` | Agile suite (4-in-1): entry routing → vision / C4 architecture / ADR → product backlog → sprint planning | Greenfield project planning, iteration management, architecture decision records |
+| **agile** | `using-agile`<br>`agile-strategic`<br>`agile-backlog`<br>`agile-sprint` | Agile suite (4-in-1): entry routing → vision / C4 architecture / ADR → product backlog → sprint planning. **Ships two hooks**: session start injects sprint/backlog/ADR state, and backlog stats are recomputed from the table instead of being calculated by the model | Greenfield project planning, iteration management, architecture decision records |
 
 ### Recommended layering
 
