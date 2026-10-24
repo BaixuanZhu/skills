@@ -1,5 +1,5 @@
 {
-  "description": "敏捷状态门禁：① 会话开始时把 Sprint / Backlog / ADR 的当前状态注入上下文，避免「装了技能但没人读」；② backlog.json 写完后校验结构并重新渲染 PRODUCT-BACKLOG.md，手改渲染产物会被回滚并告知改 json——计算和格式不交给模型。只在存在 agile-docs/ 的项目上工作，其余项目完全静默。依赖本机 python（找不到解释器或脚本自身出错时静默退出，不影响任何操作）。",
+  "description": "敏捷状态门禁：① 会话开始时把 Sprint / Backlog / ADR 的当前状态注入上下文，避免「装了技能但没人读」；② 每轮用户发言判一次这轮要不要走敏捷流程——已有 agile-docs/ 的项目补一行状态（长会话 compact 后不丢），没有的项目在规划类提问上提示一次初始化入口，其余静默；③ backlog.json 写完后校验结构并重新渲染 PRODUCT-BACKLOG.md，手改渲染产物会被回滚并告知改 json——计算和格式不交给模型。只在存在 agile-docs/ 的项目上工作，其余项目完全静默。依赖本机 python（找不到解释器或脚本自身出错时静默退出，不影响任何操作）。",
   "hooks": {
     "SessionStart": [
       {
@@ -9,6 +9,18 @@
             "command": "sh",
             "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/run-python.sh", "hook-session"],
             "timeout": 20
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/run-python.sh", "hook-prompt"],
+            "timeout": 5
           }
         ]
       }

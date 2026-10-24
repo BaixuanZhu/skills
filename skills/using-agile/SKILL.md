@@ -3,12 +3,27 @@ name: using-agile
 slug: using-agile
 displayName: 敏捷管理入口
 description: |
-  当用户说"开始项目""敏捷""Sprint""待办""Backlog""用户故事""迭代""架构决策""ADR""C4""需求变了""要改故事""依赖检查"或进入含 agile-docs/ 目录的项目时触发。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
+  当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""架构决策""ADR""C4""需求变了""要改故事""依赖检查"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.2.0
+version: 5.3.0
 ---
 
 # 敏捷管理入口 (Using Agile)
+
+## 0. 本轮要不要走这套流程
+
+装了插件不等于每个任务都走敏捷。**判据只有一条：这轮的产出会不会落进 `agile-docs/`。**
+
+- 会 → 走流程。否则下次（或下一个 agent）根本不知道这份规划存在。
+- 不会 → 直接做，不要为了「流程完整」去建文档，也不要为了走流程先问一堆画像问题。
+
+| 本轮在做什么 | 走不走 | 入口 |
+|---|---|---|
+| 从零定方向：愿景、MVP 边界、架构、技术选型、里程碑 | 走 | §4 |
+| 改规划：加/改/删 backlog 条目、排 Sprint、关 Sprint | 走 | §6 |
+| 写代码、修 bug、查日志、跑测试、解释一段代码 | 不走 | 直接做；只有需要回写 backlog 状态时才回来 |
+
+插件装好时有机械兜底（见 §8）：已有 `agile-docs/` 的项目每轮补一行状态，没有的项目在规划类提问上提示一次入口，用户打 `no-agile` 当轮静默。**兜底只负责提醒，判断仍按上面那条判据做。**
 
 ## 1. 定位
 
@@ -114,13 +129,14 @@ version: 5.2.0
 
 ## 8. 配套 hook（插件安装时生效）
 
-插件带两个 hook，随插件启用自动加载。用 `npx skills` 只装技能文件时不存在，此时按本文档的规则自觉执行，规则本身不变——只是少了「保存即校验」这道机械兜底。
+插件带三个 hook，随插件启用自动加载。用 `npx skills` 只装技能文件时不存在，此时按本文档的规则自觉执行，规则本身不变——只是少了机械兜底。
 
 | 入口 | 触发 | 作用 |
 |---|---|---|
 | `hook-session` | 会话开始 | 有 `agile-docs/` 时注入一行状态：Sprint 序号与状态、Backlog 条目数 / 点数 / 待确认数、ADR 待拍板数、未处理回填数；`PRODUCT-BACKLOG.md` 与 json 不同步时直接点名 |
+| `hook-prompt` | 每轮用户发言 | 有 `agile-docs/` 的项目补一行状态（长会话被 compact 后 SessionStart 的内容会丢，这行不会）；无 `agile-docs/` 的项目，在提问命中规划类词时提示一次入口，同一会话只提一次；其余静默。prompt 含 `no-agile` 当轮静默 |
 | `hook-post-write` | 写 `backlog.json` / `PRODUCT-BACKLOG.md` 后 | json：结构校验 → 重新渲染 md → Sprint 点数对账；md：发现被手改就按 json 回滚并说明改哪里 |
 
 生效平台：Claude Code、ZCode（都自动加载插件标准位置的 `hooks/hooks.json`）。Codex 的 PostToolUse 只拦 shell 命令、写文件不触发，未适配——那边按 `backlog-rules.md §七` 手动跑 `agile.py check`。
 
-两者都只在存在 `agile-docs/` 的项目上工作，其余项目完全静默。插件内 `scripts/agile.py`（Python 3.9+，标准库 only，零正则）由 `scripts/run-python.sh` 探测可用解释器；没有 python 时 hook 静默退出，不影响任何操作。
+`hook-session` 与 `hook-post-write` 只在存在 `agile-docs/` 的项目上工作；`hook-prompt` 在没有的项目上也只发一次入口提示，不写任何文件。其余情况完全静默。插件内 `scripts/agile.py`（Python 3.9+，标准库 only，零正则）由 `scripts/run-python.sh` 探测可用解释器；没有 python 时 hook 静默退出，不影响任何操作，`UserPromptSubmit` 永不阻断输入。

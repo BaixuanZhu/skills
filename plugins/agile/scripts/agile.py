@@ -18,6 +18,8 @@ import hashlib
 import json
 import os
 import sys
+import tempfile
+import time
 from pathlib import Path
 
 # ── 约定 ────────────────────────────────────────────────────────────────────
@@ -556,16 +558,11 @@ def handle_md_write(md_path: Path) -> None:
     )
 
 
-def hook_session() -> None:
-    payload = read_stdin_json()
-    root = payload_root(payload)
+def describe_state(root: Path) -> list[str]:
+    """Sprint / 回填 / Backlog / ADR 的一行式摘要，两个 hook 共用。"""
     docs = root / DOCS_DIR
     json_path = docs / BACKLOG_JSON
     md_path = docs / BACKLOG_MD
-
-    if not json_path.exists() and not md_path.exists():
-        return  # 项目没启用敏捷套件 → 完全沉默
-
     parts: list[str] = []
 
     sprints = scan_sprints(root)
@@ -606,8 +603,77 @@ def hook_session() -> None:
         if total:
             parts.append(f"ADR {total} 条（{proposed} 条 Proposed 待拍板）" if proposed else f"ADR {total} 条")
 
+    return parts
+
+
+def hook_session() -> None:
+    payload = read_stdin_json()
+    root = payload_root(payload)
+    docs = root / DOCS_DIR
+    if not (docs / BACKLOG_JSON).exists() and not (docs / BACKLOG_MD).exists():
+        return  # 项目没启用敏捷套件 → 完全沉默
+    parts = describe_state(root)
     if parts:
         emit_context("SessionStart", "[agile] " + "｜".join(parts))
+
+
+# ── 本轮 triage（UserPromptSubmit） ─────────────────────────────────────────
+SKIP_KEYWORD = "no-agile"
+
+# 只为「建立或改动规划」提示；写代码、修 bug、查日志不该被念。
+PLANNING_SIGNALS = (
+    "规划", "路线图", "roadmap", "backlog", "sprint", "迭代", "待办",
+    "用户故事", "优先级", "拆解", "里程碑", "mvp", "敏捷", "adr",
+)
+
+ROUTING_LINE = (
+    "动 backlog / sprint / 愿景 / ADR 前先读 `using-agile` 做变更分级与路由；"
+    "纯执行任务（写代码、修 bug、查日志）直接做，不必走流程。"
+)
+
+
+def hint_marker(root: Path, session: str) -> Path:
+    """同一会话只提示一次的新项目提示位；无 session_id 时退化为「同项目同一天一次」。"""
+    key = session or (str(root) + time.strftime("%Y-%m-%d"))
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+    return Path(tempfile.gettempdir()) / f"agile-hint-{digest}.marker"
+
+
+def hook_prompt() -> None:
+    payload = read_stdin_json()
+    prompt = payload.get("prompt")
+    if not isinstance(prompt, str) or not prompt.strip():
+        return
+    lowered = prompt.lower()
+    if SKIP_KEYWORD in lowered:
+        return  # 用户本轮明确不要敏捷
+
+    root = payload_root(payload)
+    docs = root / DOCS_DIR
+    if (docs / BACKLOG_JSON).exists() or (docs / BACKLOG_MD).exists():
+        # 长会话被 compact 后 SessionStart 的上下文会丢，这里每轮补一行。
+        parts = describe_state(root)
+        body = "｜".join(parts) if parts else "agile-docs/ 已存在"
+        emit_context("UserPromptSubmit", f"<agile-state>\n{body}\n{ROUTING_LINE}\n</agile-state>")
+        return
+
+    hits = [word for word in PLANNING_SIGNALS if word in lowered]
+    if not hits:
+        return
+    marker = hint_marker(root, str(payload.get("session_id") or ""))
+    if marker.exists():
+        return
+    try:
+        marker.write_text("1", encoding="utf-8")
+    except Exception:
+        return
+    emit_context(
+        "UserPromptSubmit",
+        "<agile-hint>\n"
+        f"这轮命中「{'/'.join(hits)}」。若要从零建立愿景、待办池与迭代计划，"
+        "先读 `using-agile` 走初始化（先问项目画像，不写任何文件）；只是讨论技术细节就忽略本行。\n"
+        "</agile-hint>",
+    )
 
 
 # ── 命令行 ──────────────────────────────────────────────────────────────────
@@ -620,6 +686,7 @@ USAGE = """agile.py —— Backlog 机械操作（标准库 only，零正则）
 
   hook-post-write    hook 入口：写完文件后校验并渲染（exit 2 = 需要模型处理）
   hook-session       hook 入口：会话开始注入敏捷状态
+  hook-prompt        hook 入口：每轮判断本轮要不要走敏捷流程
 """
 
 
@@ -745,6 +812,9 @@ def main(argv: list[str]) -> int:
         return 0
     if command == "hook-session":
         hook_session()
+        return 0
+    if command == "hook-prompt":
+        hook_prompt()
         return 0
     handler = COMMANDS.get(command)
     if handler is None:
