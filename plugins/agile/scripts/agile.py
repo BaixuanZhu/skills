@@ -120,6 +120,11 @@ def is_item_id(value: str) -> bool:
     return 3 <= len(tail) <= 4 and tail.isdigit()
 
 
+def is_int(value) -> bool:
+    """布尔是 int 的子类：`true` 会被 isinstance(..., int) 当成 1 混过整数校验。"""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
 def validate(data: dict) -> tuple[list[str], list[str]]:
     """返回 (errors, warnings)。errors 是结构性问题，warnings 是规范问题。"""
     errors: list[str] = []
@@ -133,14 +138,14 @@ def validate(data: dict) -> tuple[list[str], list[str]]:
         if not isinstance(phase, dict):
             errors.append(f"phases[{index}] 不是对象")
             continue
-        if not isinstance(phase.get("id"), int):
+        if not is_int(phase.get("id")):
             errors.append(f"phases[{index}] 缺少整数 id")
         if not phase.get("title"):
             errors.append(f"phases[{index}] 缺少 title")
         if not isinstance(phase.get("items"), list):
             errors.append(f"phases[{index}] 缺少 items 数组")
             continue
-        phase_id = phase.get("id") if isinstance(phase.get("id"), int) else index
+        phase_id = phase.get("id") if is_int(phase.get("id")) else index
         for item in phase["items"]:
             if not isinstance(item, dict):
                 errors.append(f"阶段 {phase_id} 有非对象条目")
@@ -157,7 +162,7 @@ def validate(data: dict) -> tuple[list[str], list[str]]:
                 if not item.get(field):
                     errors.append(f"{ident} 缺少必填字段 {field}")
             points = item.get("points")
-            if not isinstance(points, int) or points <= 0:
+            if not is_int(points) or points <= 0:
                 errors.append(f"{ident} 的 points 必须是正整数，当前是 {points!r}")
             if not isinstance(item.get("confirmed"), bool):
                 errors.append(f"{ident} 的 confirmed 必须是 true/false，当前是 {item.get('confirmed')!r}")
@@ -168,7 +173,7 @@ def validate(data: dict) -> tuple[list[str], list[str]]:
                 warnings.append(f"{ident} 优先级「{item['priority']}」不在 {'/'.join(PRIORITIES)}")
             if item.get("status") and item["status"] not in STATUSES:
                 warnings.append(f"{ident} 状态「{item['status']}」不在 {'/'.join(STATUSES)}")
-            if isinstance(points, int) and points > 0 and points not in FIB:
+            if is_int(points) and points > 0 and points not in FIB:
                 warnings.append(f"{ident} 点数 {points} 不在斐波那契 {'/'.join(map(str, FIB))}")
             detail = item.get("detail")
             if detail is not None and not isinstance(detail, list):
@@ -180,7 +185,7 @@ def validate(data: dict) -> tuple[list[str], list[str]]:
 def compute_stats(data: dict) -> dict:
     """全量重算。已撤回的留痕不入账。"""
     live: list[tuple[int, dict]] = [
-        (phase.get("id") if isinstance(phase.get("id"), int) else 0, item)
+        (phase.get("id") if is_int(phase.get("id")) else 0, item)
         for phase, item in iter_items(data)
         if item.get("status") != WITHDRAWN
     ]
@@ -280,16 +285,6 @@ def render_md(data: dict) -> str:
     return "\n".join(out) + "\n"
 
 
-def read_embedded_fingerprint(text: str) -> str | None:
-    """取渲染时写下的指纹。行扫描，不解析表格。"""
-    marker = f"<!-- {HASH_KEY}:"
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith(marker) and stripped.endswith("-->"):
-            return stripped[len(marker): -3].strip()
-    return None
-
-
 # ── 跨文件读取（全部行扫描，不解析 Markdown 结构） ──────────────────────────
 def read_text(path: Path) -> str | None:
     try:
@@ -328,9 +323,12 @@ def parse_sprint_items(text: str) -> list[tuple[str, int | None]]:
         if not stripped.startswith("- "):
             continue
         parts = stripped[2:].strip().split(None, 1)
-        if len(parts) != 2 or not is_item_id(parts[0]):
+        if not parts or not is_item_id(parts[0]):
             continue
-        ident, rest = parts
+        # 允许 `- T-001` 这种只写 ID 的清单行：漏解析等于对账网少一个洞，
+        # 而「写漏了标题」本身不该让存在性检查跟着失效。
+        ident = parts[0]
+        rest = parts[1] if len(parts) > 1 else ""
         points = None
         for open_ch, close_ch in POINT_BRACKETS:
             close = rest.rfind(close_ch)
@@ -385,6 +383,13 @@ def parse_adr(text: str) -> tuple[int, int]:
     return len(blocks), proposed
 
 
+def sprint_seq(stem: str) -> tuple[int, int, str]:
+    """按序号排序，不按字符串——`sprint-10` 排到 `sprint-2` 前面，
+    于是「当前 Sprint」取 `[-1]` 永远拿到 sprint-9，注入的状态是错的。"""
+    tail = stem.rsplit("-", 1)[-1]
+    return (0, int(tail), stem) if tail.isdigit() else (1, 0, stem)
+
+
 def scan_sprints(root: Path):
     """返回 [(文件路径, 文件主名, 元信息, 任务清单)]，按序号升序。"""
     found = []
@@ -404,7 +409,7 @@ def scan_sprints(root: Path):
             if text is None:
                 continue
             found.append((path, path.stem, parse_sprint_meta(text), parse_sprint_items(text)))
-    found.sort(key=lambda row: row[1])
+    found.sort(key=lambda row: sprint_seq(row[1]))
     return found
 
 
@@ -415,7 +420,7 @@ def check_sprint_consistency(root: Path, data: dict) -> list[str]:
         if item.get("id"):
             index[item["id"]] = item
     problems: list[str] = []
-    for path, stem, _meta, items in scan_sprints(root):
+    for path, _stem, _meta, items in scan_sprints(root):
         for ident, points in items:
             item = index.get(ident)
             if item is None:
@@ -528,6 +533,36 @@ def check_done_files(root: Path, data: dict) -> list[str]:
 
 
 # ── 旧格式迁移（唯一需要读 Markdown 表格的地方，一次性） ─────────────────────
+def split_table_row(line: str) -> list[str]:
+    """按未转义的 `|` 切单元格。
+
+    `render_md` 把标题里的竖线写成 `\\|`。按裸 `|` 切会让该行后面每一列左移
+    一位：标题被截成两半、点数落进优先级、整条记录错得无声无息。
+    """
+    body = line.strip()
+    if body.startswith("|"):
+        body = body[1:]
+    if body.endswith("|") and not body.endswith("\\|"):
+        body = body[:-1]
+    cells: list[str] = []
+    buffer: list[str] = []
+    index = 0
+    while index < len(body):
+        char = body[index]
+        if char == "\\" and body[index + 1: index + 2] == "|":
+            buffer.append("|")
+            index += 2
+            continue
+        if char == "|":
+            cells.append("".join(buffer).strip())
+            buffer = []
+        else:
+            buffer.append(char)
+        index += 1
+    cells.append("".join(buffer).strip())
+    return cells
+
+
 def convert_legacy_md(text: str) -> dict:
     phases: list[dict] = []
     details: dict[str, list[str]] = {}
@@ -572,7 +607,7 @@ def convert_legacy_md(text: str) -> dict:
 
         if phase is None or not stripped.startswith("|"):
             continue
-        cells = [part.strip() for part in stripped.strip("|").split("|")]
+        cells = split_table_row(stripped)
         if len(cells) < 10 or not is_item_id(cells[0]):
             continue
         points = int(cells[4]) if cells[4].isdigit() else 0
@@ -981,11 +1016,11 @@ def cli_check(root_arg: str | None) -> int:
     problems.extend("跨文件：" + line for line in check_sprint_consistency(root, data))
     problems.extend("回填：" + line for line in check_done_files(root, data))
 
-    sync_ok = False
-    if md_path.exists():
-        actual = read_text(md_path)
-        sync_ok = actual is not None and actual.replace("\r\n", "\n") == render_md(data)
-    if not sync_ok:
+    actual = read_text(md_path) if md_path.exists() else None
+    if actual is None:
+        # 文件不存在 / 读不出来时不能说「不一致」——排查的人会被引去比对两份内容。
+        problems.append(f"同步：{md_path.name} 缺失或读不出来，跑 `agile.py render` 生成")
+    elif actual.replace("\r\n", "\n") != render_md(data):
         problems.append(f"同步：{md_path.name} 与 backlog.json 不一致，跑 `agile.py render`")
 
     if not problems:
@@ -1075,7 +1110,6 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    _init_io()
     mode = sys.argv[1] if len(sys.argv) > 1 else "help"
     if mode.startswith("hook-"):
         # fail-open：门禁脚本自己出错时沉默退出，不能让每次编辑都弹一条错误。
