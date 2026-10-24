@@ -1,7 +1,7 @@
 {
   "name": "agile",
-  "version": "5.3.0",
-  "description": "敏捷开发套件（4 技能合一）：入口路由 + 战略层（愿景/架构/ADR）+ 产品待办 + Sprint 规划，文件驱动地做项目规划与迭代管理。附带三个 hook：会话开始注入状态、每轮判断这轮该不该走敏捷流程、写 backlog.json 后校验并重渲染。",
+  "version": "5.4.0",
+  "description": "敏捷开发套件（4 技能合一）：入口路由 + 战略层（愿景/架构/ADR）+ 产品待办 + Sprint 规划，文件驱动地做项目规划与迭代管理。附带三个 hook：按当前阶段每轮注入「下一步该做什么与该步最容易漏的铁律」、会话开始注入状态、写 backlog.json 后校验并重渲染。",
   "author": {
     "name": "BaixuanZhu",
     "email": "66127517+BaixuanZhu@users.noreply.github.com",
@@ -22,7 +22,7 @@
   "interface": {
     "displayName": "敏捷开发套件",
     "shortDescription": "文件驱动的敏捷开发套件",
-    "longDescription": "合并 4 个敏捷技能：using-agile（入口路由）、agile-strategic（愿景 + 架构 C4 + ADR）、agile-backlog（JSON 真源的产品待办）、agile-sprint（纯规划器）。用纯文件（agile-docs/）驱动项目规划与 Sprint 迭代，统计与渲染交给脚本，不靠模型现场计算。",
+    "longDescription": "合并 4 个敏捷技能：using-agile（入口路由）、agile-strategic（愿景 + 架构 C4 + ADR）、agile-backlog（backlog.json 单真源 + 渲染视图）、agile-sprint（纯规划器）。用纯文件（agile-docs/）驱动项目规划与 Sprint 迭代；三个 hook 按阶段注入下一步、会话开始注入状态、写 backlog.json 后校验并重渲染。",
     "developerName": "BaixuanZhu",
     "category": "Productivity",
     "capabilities": [

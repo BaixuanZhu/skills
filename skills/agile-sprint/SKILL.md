@@ -5,7 +5,7 @@ displayName: Sprint规划
 description: |
   当用户说"开 Sprint""规划迭代""关闭 Sprint"或 using-agile 路由到此，且 backlog.json 已有条目时触发。
 agent_created: true
-version: 5.2.0
+version: 5.2.1
 dependencies:
   - skill: using-agile
     reason: 提供 DOD.md 模板
@@ -21,6 +21,8 @@ dependencies:
 |------|-----------|
 | `agile-docs/backlog.json` 存在且 ≥1 条「待办」 | → agile-backlog |
 | `agile-docs/DOD.md` 存在 | → using-agile 补 DoD 模板 |
+
+前置条件缺失才回退；齐备时直接从 §2 开始，不必先经 `using-agile` 做状态检测。
 
 **条目来源硬约束**：Sprint 任务清单必须从 `agile-docs/backlog.json` 按 priority 取顶部条目。条目须经 `agile-backlog` 流程产出并写入 json；**口头/临时任务清单不能直接进入 Sprint**。若用户跳过 agile-backlog 给临时清单且坚持不回退，按渐进式节奏停下提示风险（`using-agile/references/gate-protocol.md §四`），由用户显式确认是否仍要回 agile-backlog 走正规流程。
 

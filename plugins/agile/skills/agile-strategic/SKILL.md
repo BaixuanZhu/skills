@@ -5,7 +5,7 @@ displayName: 敏捷战略层（愿景+架构+ADR）
 description: |
   当用户说"写愿景""产品目标""电梯演讲""定位""使命""红线""价值观""画架构图""C4""技术选型""ADR""架构决策""容器图""技术约束"或 using-agile 路由到此，且项目已有 agile-docs/ 时触发。
 agent_created: true
-version: 5.2.0
+version: 5.2.1
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架
@@ -19,6 +19,8 @@ dependencies:
 |------|-----------|
 | `agile-docs/` 目录存在 | → using-agile 初始化 |
 | `agile-docs/DOD.md` 存在 | → using-agile 补 DoD 模板 |
+
+前置条件缺失才回退；齐备时直接从 §2 / §3 开始，不必先经 `using-agile` 做状态检测。
 
 ## 1. 定位
 

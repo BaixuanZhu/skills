@@ -5,7 +5,7 @@ displayName: 敏捷产品待办
 description: |
   当用户说"写待办""拆任务""Backlog""Product Backlog""使能项""优先级排序""排迭代"或 using-agile 路由到此，且战略层（VISION + ARCHITECTURE/ADR）已确认时触发。
 agent_created: true
-version: 5.2.0
+version: 5.2.1
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架与路由
@@ -22,6 +22,8 @@ dependencies:
 | `agile-docs/` 目录存在 | → using-agile 初始化 |
 | `agile-docs/VISION.md` 存在 | → agile-strategic 阶段 A |
 | `agile-docs/ARCHITECTURE.md` + `ADR.md` 存在 | → agile-strategic 阶段 B（用户明确跳层时可缺，T-NNN 由门禁 ① 拦截） |
+
+前置条件缺失才回退；齐备时直接从 §2 开始，不必先经 `using-agile` 做状态检测。
 
 ## 1. 定位
 本技能是执行层中枢，产出 `agile-docs/backlog.json`——**唯一的机器真源**，字段定义见 `references/backlog-rules.md §二`。同目录的 `PRODUCT-BACKLOG.md` 由脚本从它渲染，供人读，不手写、不反向写。

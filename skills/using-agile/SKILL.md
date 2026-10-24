@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""架构决策""ADR""C4""需求变了""要改故事""依赖检查"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.3.0
+version: 5.4.0
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -23,11 +23,13 @@ version: 5.3.0
 | 改规划：加/改/删 backlog 条目、排 Sprint、关 Sprint | 走 | §6 |
 | 写代码、修 bug、查日志、跑测试、解释一段代码 | 不走 | 直接做；只有需要回写 backlog 状态时才回来 |
 
-插件装好时有机械兜底（见 §8）：已有 `agile-docs/` 的项目每轮补一行状态，没有的项目在规划类提问上提示一次入口，用户打 `no-agile` 当轮静默。**兜底只负责提醒，判断仍按上面那条判据做。**
+插件装好时有机械兜底（见 §8）：有 `agile-docs/` 的项目每轮注入「当前处在哪一步 + 这一步最容易漏的铁律」，没有的项目在规划类提问上提示一次入口，用户打 `no-agile` 当轮静默。**兜底只负责提醒，判断仍按上面那条判据做。**
+
+**注入已经给出阶段时，直接进它点到的那个技能，不必回来重做状态检测。** 入口仍是「不确定该走哪一步」和「变更协调」的落点——它不再是每次的必经关卡。
 
 ## 1. 定位
 
-本技能是敏捷套件的**唯一入口**，承担三件事：
+本技能是敏捷套件的**默认入口**——不知道现在该走哪一步、或要改已有规划时的落点。承担三件事：
 - **初始化**：项目无 `agile-docs/` 时，建空骨架 + `DOD.md` 模板 + `interfaces/sprint-schema.yaml`。
 - **检测路由**：项目有 `agile-docs/` 时，先做 .done.yaml 回填检测（存在即默认执行闭环），再扫描三层状态 → 输出状态表 → 逐层询问"更新 or 继续" → 路由到对应业务技能。
 - **变更协调**：当用户说"需求变了"时，引用 `references/change-matrix.md` 做变更分级 + 影响面评估 → 路由到对应业务技能就地更新。
@@ -62,7 +64,7 @@ version: 5.3.0
 
 ## 3. 激活流程（有 agile-docs/ 时）
 
-1. **.done.yaml 回填检测（必做，第 1 步）**：扫描 `sprints/*.done.yaml`。存在即视为用户意图"处理回填闭环"，**默认执行，不问"是否先关 Sprint"**：
+1. **.done.yaml 回填检测（必做，第 1 步）**：扫描 `sprints/*.done.yaml`。存在即视为用户意图"处理回填闭环"，**默认执行，不问"是否先关 Sprint"**（注入里已报出回填时，直接从闭环的第一步做起，不必重扫）：
    - 对应 Sprint 非"已关闭" → 路由 `agile-sprint` 环节 B/C 做 DoD 关闭（含 feedback 读取）
    - Sprint 已关闭 → 跳过关闭，直接进入同步
    - 路由 `agile-backlog` 阶段 4 同步 Backlog（更新状态列；`issue` 转新条目候选、`decision` 停下请用户裁决）
@@ -133,9 +135,15 @@ version: 5.3.0
 
 | 入口 | 触发 | 作用 |
 |---|---|---|
-| `hook-session` | 会话开始 | 有 `agile-docs/` 时注入一行状态：Sprint 序号与状态、Backlog 条目数 / 点数 / 待确认数、ADR 待拍板数、未处理回填数；`PRODUCT-BACKLOG.md` 与 json 不同步时直接点名 |
-| `hook-prompt` | 每轮用户发言 | 有 `agile-docs/` 的项目补一行状态（长会话被 compact 后 SessionStart 的内容会丢，这行不会）；无 `agile-docs/` 的项目，在提问命中规划类词时提示一次入口，同一会话只提一次；其余静默。prompt 含 `no-agile` 当轮静默 |
+| `hook-session` | 会话开始 | 注入状态快照 + 本阶段该做什么 |
+| `hook-prompt` | 每轮用户发言 | 同上（长会话被 compact 后 SessionStart 的内容会丢，这行不会）；没有 `agile-docs/` 的项目，在提问命中规划类词时提示一次入口，同一会话只提一次；其余静默。prompt 含 `no-agile` 当轮静默 |
 | `hook-post-write` | 写 `backlog.json` / `PRODUCT-BACKLOG.md` 后 | json：结构校验 → 重新渲染 md → Sprint 点数对账；md：发现被手改就按 json 回滚并说明改哪里 |
+
+**「本阶段该做什么」不是脚本里的字符串**，而是 `references/turn-brief.md` 里按阶段分块的文本：脚本只判断阶段，文案在 markdown 里改。七个阶段是 `conflict` / `backfill` / `sprint` / `active` / `init` / `architecture` / `backlog`，判据与每段对应的技能章节都写在该文件里。
+
+- 改提示词 → 改那个 md，不动代码。
+- 那段文本缺失或阶段名对不上 → 注入会显式写「阶段说明缺失」，**故意不静默降级**，否则你会以为兜底还在。
+- 排查「hook 为什么没说话」→ `agile.py brief [项目根]` 打印当前阶段与将要注入的原文。
 
 生效平台：Claude Code、ZCode（都自动加载插件标准位置的 `hooks/hooks.json`）。Codex 的 PostToolUse 只拦 shell 命令、写文件不触发，未适配——那边按 `backlog-rules.md §七` 手动跑 `agile.py check`。
 

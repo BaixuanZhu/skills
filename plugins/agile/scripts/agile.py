@@ -28,7 +28,13 @@ DOCS_DIR = "agile-docs"
 BACKLOG_JSON = "backlog.json"
 BACKLOG_MD = "PRODUCT-BACKLOG.md"
 ADR_MD = "ADR.md"
+STRATEGY_CONFLICT = "STRATEGY_CONFLICT.md"
 SPRINT_DIRS = ("sprints", f"{DOCS_DIR}/sprints")
+
+# 每轮提示文本的真源：脚本只判断阶段，文案在 markdown 里。
+# 文案写进代码会让「改一句话」变成「改代码 + 记得同步两份副本」，且 review 时看不见。
+PLUGIN_ROOT = Path(__file__).resolve().parent.parent
+BRIEF_REL = "skills/using-agile/references/turn-brief.md"
 
 TYPES = ("技术", "功能")
 PRIORITIES = ("Must", "Should", "Could", "Won't")
@@ -558,6 +564,95 @@ def handle_md_write(md_path: Path) -> None:
     )
 
 
+def pending_backfills(root: Path) -> list[str]:
+    """未闭环的回填文件名（`sprints/*.done.yaml`）。"""
+    pending: list[str] = []
+    for rel in SPRINT_DIRS:
+        directory = root / rel
+        if not directory.is_dir():
+            continue
+        try:
+            pending.extend(p.name[: -len(".done.yaml")] for p in directory.iterdir() if p.name.endswith(".done.yaml"))
+        except Exception:
+            continue
+    return pending
+
+
+def active_sprints(root: Path) -> list[tuple[str, dict]]:
+    """状态不是「已关闭」的 Sprint。"""
+    return [(stem, meta) for _p, stem, meta, _items in scan_sprints(root) if meta.get("状态") != "已关闭"]
+
+
+def detect_stage(root: Path) -> str:
+    """当前处在流程的哪一步。顺序即优先级。
+
+    判据看重「最靠后的里程碑」，不是严格按层顺序：套件允许用户显式跳层
+    （agile-backlog §0），已有条目的项目不能被判回「战略层未起步」。
+    与 turn-brief.md 的阶段表一一对应；改这里要同步改那张表。
+    """
+    docs = root / DOCS_DIR
+    if not docs.is_dir():
+        return ""
+    if (docs / STRATEGY_CONFLICT).exists():
+        return "conflict"
+    if pending_backfills(root):
+        return "backfill"
+
+    has_vision = (docs / "VISION.md").exists()
+    has_arch = (docs / "ARCHITECTURE.md").exists()
+    has_adr = (docs / ADR_MD).exists()
+    json_path = docs / BACKLOG_JSON
+    data = load_json(json_path) if json_path.exists() else None
+    has_items = data is not None and any(True for _ in iter_items(data))
+
+    if has_items:
+        return "sprint" if not active_sprints(root) else "active"
+    if not has_vision:
+        return "init"
+    if not (has_arch and has_adr):
+        return "architecture"
+    return "backlog"
+
+
+def parse_briefs(text: str) -> dict[str, str]:
+    """解析 `[agile-brief:阶段]` 块。用 startswith 行扫描，不用正则。"""
+    briefs: dict[str, str] = {}
+    current: str | None = None
+    buffer: list[str] = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if line.startswith("[agile-brief:") and line.endswith("]"):
+            current = line[len("[agile-brief:") : -1].strip()
+            buffer = []
+        elif line.startswith("[/agile-brief:"):
+            if current:
+                body = "\n".join(buffer).strip()
+                if body:
+                    briefs[current] = body
+            current = None
+            buffer = []
+        elif current is not None:
+            buffer.append(raw.rstrip())
+    return briefs
+
+
+def load_briefs() -> dict[str, str]:
+    text = read_text(PLUGIN_ROOT / BRIEF_REL)
+    return parse_briefs(text) if text else {}
+
+
+def build_state_block(root: Path) -> str:
+    """每轮 / 每次会话注入的 `<agile-state>` 块：状态快照 + 本阶段该做什么。"""
+    parts = describe_state(root)
+    body = "｜".join(parts) if parts else "agile-docs/ 已存在"
+    stage = detect_stage(root)
+    brief = load_briefs().get(stage, "") if stage else ""
+    if not brief:
+        # 故意显眼：文案文件缺失或被改名时，要让模型知道自己在裸奔，而不是静默降级。
+        brief = f"阶段说明缺失（{BRIEF_REL} 里没有 [{stage or '?'}] 块），按 `using-agile` 自行判断该走哪一步。"
+    return "\n".join(["<agile-state>", body, brief, ROUTING_LINE, "</agile-state>"])
+
+
 def describe_state(root: Path) -> list[str]:
     """Sprint / 回填 / Backlog / ADR 的一行式摘要，两个 hook 共用。"""
     docs = root / DOCS_DIR
@@ -577,15 +672,7 @@ def describe_state(root: Path) -> list[str]:
             bits.append("(" + meta["周期"] + ")")
         parts.append(" ".join(bits))
 
-    pending: list[str] = []
-    for rel in SPRINT_DIRS:
-        directory = root / rel
-        if not directory.is_dir():
-            continue
-        try:
-            pending.extend(p.name[: -len(".done.yaml")] for p in directory.iterdir() if p.name.endswith(".done.yaml"))
-        except Exception:
-            continue
+    pending = pending_backfills(root)
     if pending:
         # 只报数量 + 至多 3 个名字：这一行每轮都进上下文，不能随项目规模线性膨胀。
         names = sorted(pending)
@@ -612,12 +699,9 @@ def describe_state(root: Path) -> list[str]:
 def hook_session() -> None:
     payload = read_stdin_json()
     root = payload_root(payload)
-    docs = root / DOCS_DIR
-    if not (docs / BACKLOG_JSON).exists() and not (docs / BACKLOG_MD).exists():
+    if not (root / DOCS_DIR).is_dir():
         return  # 项目没启用敏捷套件 → 完全沉默
-    parts = describe_state(root)
-    if parts:
-        emit_context("SessionStart", "[agile] " + "｜".join(parts))
+    emit_context("SessionStart", build_state_block(root))
 
 
 # ── 本轮 triage（UserPromptSubmit） ─────────────────────────────────────────
@@ -629,10 +713,7 @@ PLANNING_SIGNALS = (
     "用户故事", "优先级", "拆解", "里程碑", "mvp", "敏捷", "adr",
 )
 
-ROUTING_LINE = (
-    "动 backlog / sprint / 愿景 / ADR 前先读 `using-agile` 做变更分级与路由；"
-    "纯执行任务（写代码、修 bug、查日志）直接做，不必走流程。"
-)
+ROUTING_LINE = "纯执行任务（写码 / 修 bug / 查日志）直接做；动规划先读上面点到的那个技能。"
 
 
 def hint_marker(root: Path, session: str) -> Path:
@@ -652,12 +733,10 @@ def hook_prompt() -> None:
         return  # 用户本轮明确不要敏捷
 
     root = payload_root(payload)
-    docs = root / DOCS_DIR
-    if (docs / BACKLOG_JSON).exists() or (docs / BACKLOG_MD).exists():
-        # 长会话被 compact 后 SessionStart 的上下文会丢，这里每轮补一行。
-        parts = describe_state(root)
-        body = "｜".join(parts) if parts else "agile-docs/ 已存在"
-        emit_context("UserPromptSubmit", f"<agile-state>\n{body}\n{ROUTING_LINE}\n</agile-state>")
+    if (root / DOCS_DIR).is_dir():
+        # 长会话被 compact 后 SessionStart 的内容会丢，这里每轮补：状态 + 本阶段该做什么。
+        # 只要 agile-docs/ 存在就注入，哪怕 backlog.json 还没建——战略层做到一半才最需要。
+        emit_context("UserPromptSubmit", build_state_block(root))
         return
 
     hits = [word for word in PLANNING_SIGNALS if word in lowered]
@@ -686,6 +765,7 @@ USAGE = """agile.py —— Backlog 机械操作（标准库 only，零正则）
   stats   [项目根]   打印统计（每次全量重算，已撤回不计入）
   check   [项目根]   结构校验 + Sprint 点数对账，有问题返回 1
   migrate [项目根]   旧版 PRODUCT-BACKLOG.md → backlog.json（json 已存在则不动）
+  brief   [项目根]   打印当前阶段与每轮将要注入的内容（排查 hook 用）
 
   hook-post-write    hook 入口：写完文件后校验并渲染（exit 2 = 需要模型处理）
   hook-session       hook 入口：会话开始注入敏捷状态
@@ -796,11 +876,28 @@ def cli_migrate(root_arg: str | None) -> int:
     return 0 if not errors else 1
 
 
+def cli_brief(root_arg: str | None) -> int:
+    """打印当前阶段与将要注入的内容——排查「hook 为什么没说话」时用这个。"""
+    root = Path(root_arg) if root_arg else Path.cwd()
+    if not (root / DOCS_DIR).is_dir():
+        print("没有 agile-docs/：视为新项目，只在提问命中规划类词时提示一次入口（同会话一次）")
+        return 0
+    stage = detect_stage(root)
+    brief = load_briefs().get(stage, "")
+    print(f"阶段：{stage or '（未识别）'}")
+    if not brief:
+        print(f"⚠ {BRIEF_REL} 里没有 [{stage}] 块，注入会退化为「阶段说明缺失」")
+    print()
+    print(build_state_block(root))
+    return 0
+
+
 COMMANDS = {
     "render": cli_render,
     "stats": cli_stats,
     "check": cli_check,
     "migrate": cli_migrate,
+    "brief": cli_brief,
 }
 
 
