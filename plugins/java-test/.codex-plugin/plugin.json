@@ -1,7 +1,7 @@
 {
   "name": "java-test",
-  "version": "2.2.0",
-  "description": "Java 测试套件（2 技能）：开发期纯单测（AssertJ 断言、Mock 边界、写错仍绿的静默陷阱）+ 集成测试（三个决策按序——回归谁值守 / 断言离开真实依赖还成立吗 / 环境起不起得起容器；Testcontainers 是首选执行方式而非定义，无 Docker 有降级路径，不许静默换 H2）。",
+  "version": "2.3.0",
+  "description": "Java 测试套件（2 技能）：不教测试代码怎么写，教什么时候绿灯是假的。开发期纯单测（AssertJ 取值、mock 边界、三条假绿检查点）+ 集成测试（回归谁值守 / 放哪层 / 环境用什么跑 三决策，路径不对 / 时间点不对 / 失败不算失败 三机制）。",
   "author": {
     "name": "BaixuanZhu",
     "email": "66127517+BaixuanZhu@users.noreply.github.com",
@@ -21,8 +21,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Java 测试套件",
-    "shortDescription": "Java 纯单测 + 集成测试（三决策 + 静默陷阱）",
-    "longDescription": "合并两个技能的当前形态。java-unit-test——只留写错不报警的部分：金额用 equals 比较、内部 new 的依赖 mock 不到、spy 用 when() 打桩触发真实方法、any() 放过参数构造错误、mockStatic 不释放污染后续测试、异常断言断根父类、无断言；断言默认 AssertJ（金额 isEqualByComparingTo）。等价类 / 决策表 / 状态迁移这些模型本来就会，不再展开。java-integration-test——三个决策按序走完：① 建不建，看这段代码的回归由谁值守，有专职测试就不自建，个人 / 小团队自动化是唯一回归网，优先建冒烟与核心链路；② 放哪层，看这条断言离开真实 DB / Redis / Kafka 还成不成立；③ 用什么跑，有 Docker 走 Testcontainers，无 Docker 连本地实库 + 独立 schema（不可重复），都没有就明说不写、转手工清单，绝不静默换 H2。Testcontainers 只是首选执行方式，不是这一层的定义。静默陷阱保留测试级 @Transactional 让回滚断言假绿、RANDOM_PORT 下隔离完全失效、@DataJpaTest 默认替换数据源、降级时连错库、并行连接数打满、启动日志有 WARN 但测试全绿。",
+    "shortDescription": "Java 单测 + 集成测试（教判据，不教写法）",
+    "longDescription": "两个技能的共同前提：具体测试代码模型本来就会，写进技能只留「写错后测试仍然通过」的判断。java-unit-test——唯一判据是把被测代码改坏这条测试会不会红，三个检查点：① mock 注入的是被测代码真正用的那个实例吗（内部 new、spy 用 when() 会先执行真实方法、mockStatic 泄漏）；② 断言比的是你真正要保证的东西吗（金额 equals 连 scale 一起比、异常断根父类、any() 放过参数构造）；③ 这条断言有任何可能失败吗（无断言、桩返回恒等于期望值）。断言默认 AssertJ，金额用 isEqualByComparingTo。java-integration-test——三个决策按序：① 建不建，看这段代码的回归由谁值守，有专职测试就不自建，个人/小团队自动化是唯一回归网、优先冒烟与核心链路；② 放哪层，看这条断言离开真实依赖还成不成立；③ 用什么跑，Docker 走 Testcontainers，无 Docker 连本地实库 + 独立 schema（不可重复），都没有就用同族嵌入式替身验能验的、方言相关列清单移交真库。Testcontainers 只是首选执行方式，不是这一层的定义。假绿三机制：测的不是生产那条路径（测试级 @Transactional、RestAssuredMockMvc、@DataJpaTest 静默换库），验的时间点不对（RANDOM_PORT 下事务隔离完全失效、异步没等），失败没被算成失败（启动日志 WARN 仍全绿、断言断根父类、桩恒等）。",
     "developerName": "BaixuanZhu",
     "category": "Engineering",
     "capabilities": [
