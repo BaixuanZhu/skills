@@ -5,7 +5,7 @@ displayName: 敏捷战略层（愿景+架构+ADR）
 description: |
   当用户说"写愿景""产品目标""电梯演讲""定位""使命""红线""价值观""画架构图""C4""技术选型""ADR""架构决策""容器图""技术约束"或 using-agile 路由到此，且项目已有 agile-docs/ 时触发。
 agent_created: true
-version: 5.2.1
+version: 5.2.2
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架
@@ -159,9 +159,7 @@ dependencies:
 
 ### 门禁 ② ADR 不可篡改
 
-状态为"已接受"的 ADR 章节，**决策内容不动**。要变更须在 ADR.md 底部新建章节标"替代 ADR-NNN"，原章节字段改：
-- 状态：`Superseded by ADR-013`
-- 被替代：`ADR-013`
+状态为"已接受"的 ADR 章节，**决策内容不动**——变更只能在 ADR.md 底部新建「替代」章节。字段写法（`状态` / `被替代` 填什么）见 `references/c4-adr.md`，拦截动作与合规路径见 `using-agile/references/gate-protocol.md §二 ②`。
 
 ### 门禁 ④ ADR 内容瘦身
 

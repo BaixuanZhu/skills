@@ -5,7 +5,7 @@ displayName: Sprint规划
 description: |
   当用户说"开 Sprint""规划迭代""关闭 Sprint"或 using-agile 路由到此，且 backlog.json 已有条目时触发。
 agent_created: true
-version: 5.2.1
+version: 5.2.2
 dependencies:
   - skill: using-agile
     reason: 提供 DOD.md 模板
@@ -41,6 +41,7 @@ dependencies:
 姿态遵循 `using-agile/references/probing-protocol.md`（一次一问，含糊必追问）；需要你拍板的决策点用「候选 + 推荐 + 自定义」选择题问。
 
 - 确认取哪些 backlog.json 顶部条目（按 priority 排序）
+- **`confirmed: false` 的条目不许纳入**：跳过并告警，先回 agile-backlog 请用户确认；不私自默认成 `true`（agent 推荐 ≠ 用户确认）
 - **Sprint 目标反问**：取完候选条目后，先向用户确认"这 {N} 条能否支撑一个可陈述的 Sprint 目标？用一句话说是什么？"——目标说不出来 → 建议调整取用条目（换入/换出由用户裁决），不开"杂项堆" Sprint
 - **技术任务（T-NNN）需关联 ADR 章节编号**；若关联缺失，按 `using-agile/references/gate-protocol.md §二 ①` 拦截，先回 agile-strategic 阶段 B 补 ADR
 - **容量参数必问**：团队人数 / Sprint 工作日 / 团队成熟度（决定专注系数）——三者任一未知就问（可先读 `agile-docs/DOD.md` 头部项目画像取团队人数），**禁止静默按 0.6 默认**；专注系数给选项 + 推荐（A 0.5 新团队 / B 0.6 成熟 / C 0.7-0.75 全职专注），确认后使用并在 Sprint 文件中标注"agent 推荐"
@@ -61,7 +62,7 @@ dependencies:
 
 ### 环节 B：DoD 关闭
 - 读取 `sprints/{sprint文件}.done.yaml`：
-  - 存在 → 按 completed / moved_next 列表核对 DoD + **读取 feedback**：`reason` 类作 moved_next 依据展示（未完成原因随条目状态建议列出），`issue`/`decision` 类汇总列出，需产品层裁决的停下请用户拍板
+  - 存在 → 按 completed / moved_next 列表核对 DoD + **读取 feedback**：`reason` 类作 moved_next 依据展示（未完成原因随条目状态建议列出），`issue`/`decision` 类**只列出不裁决**，处置权在 agile-backlog 阶段 4（新条目候选 / 产品层拍板），本环节不替它停
   - 不存在 → 提示用户人工确认每条任务的完成情况
 - 逐条过 `agile-docs/DOD.md` 的 Sprint 完成标准；**含交接契约的任务**，completed 前须已产出对应交接文档（见「交接契约」段），未产出的归入 moved_next
 - 在本 Sprint 文件内追加「条目状态建议」清单（通过 → 已完成；未达标 → 移至下个Sprint），格式见 `references/sprint-template.md §二`
@@ -70,7 +71,7 @@ dependencies:
 ### 环节 C：关闭
 - 在文件头追加行标注执行结果来源（.done.yaml 文件路径 或 "人工确认"）
 - 将 Sprint 文件头"状态"改为"已关闭"
-- 提示用户完整闭环：入口下次激活时检测到 `.done.yaml` 即**默认执行闭环**（Sprint 已由本环节关闭 → 路由到 agile-backlog 同步 + 反馈处理）→ **同步完成后 `.done.yaml` 改后缀为 `.done.processed.yaml` 留痕（不删除，防重复同步）**。链路 lifecycle 见 `using-agile/references/sprint-schema.yaml`
+- 提示用户完整闭环：入口下次激活时检测到 `.done.yaml` 即**默认执行闭环**——Sprint 已由本环节关闭，剩下的「同步 backlog → 处理 feedback → 改后缀 `.done.processed.yaml`」由 agile-backlog 阶段 4 执行，**本技能不碰**。链路见 `using-agile/references/sprint-schema.yaml` 的 `lifecycle`
 
 ## 4. 写完即停（结构化审阅）
 

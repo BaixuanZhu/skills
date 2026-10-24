@@ -25,7 +25,7 @@
 2. **统计快照重算**：跑 `agile.py stats` 得到本 Sprint 关闭后的 Backlog 快照（总条目 / 有效条目(排除已撤回) / 按优先级分组 / 按状态分组 / ADR 关联覆盖），作为 Sprint 文件「变更记录」段的当前事实底。没有脚本时才自己全量重算，禁止在旧数字上增量加减。
 3. 在本 Sprint 文件头标注执行结果来源（.done.yaml 路径或"人工确认"）。
 4. 本 Sprint 文件头"状态"改为"已关闭"（不删除，自然保留作历史）。
-5. 提示用户：入口下次激活时检测到 `.done.yaml` 即默认执行闭环（DoD 关闭 → Backlog 同步 + 反馈处理）；**同步完成后 .done.yaml 改后缀为 .done.processed.yaml 留痕（不删除，防重复同步）**。
+5. 提示用户：入口下次激活时检测到 `.done.yaml` 即默认执行闭环（DoD 关闭 → Backlog 同步 + 反馈处理）。同步与改名归 agile-backlog 阶段 4，本技能只负责关到这个状态；生命周期见 `using-agile/references/sprint-schema.yaml` 的 `lifecycle`。
 6. **不写回顾 / 发布说明 / 反馈记录等附加文件**——临时发现直接转 backlog.json 条目。
 
 ## 四、估点体系（默认与异常）

@@ -5,7 +5,7 @@ displayName: 敏捷产品待办
 description: |
   当用户说"写待办""拆任务""Backlog""Product Backlog""使能项""优先级排序""排迭代"或 using-agile 路由到此，且战略层（VISION + ARCHITECTURE/ADR）已确认时触发。
 agent_created: true
-version: 5.3.0
+version: 5.3.1
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架与路由
@@ -182,6 +182,6 @@ dependencies:
 - ✅ **未确认条目 Sprint 取用前必须显式 confirm**：`confirmed: false` 的「待办」条目，`agile-sprint` 取用时跳过并告警；不私自默认成 `true`（agent 推荐 ≠ 用户确认）。
 
 ## 6. 门禁
-- **T-NNN 无 ADR**：技术任务涉及架构决策但未关联 ADR.md 章节 → 停下，先回 agile-strategic 阶段 B 补 ADR 章节，再回填关联字段。现有 ADR 无合适章节时同样回阶段 B 补，**禁止发明"待 ADR-NNN 确认"之类的占位关联**（判定细则见 `using-agile/references/gate-protocol.md §二 ①`）。
+- **T-NNN 无 ADR**：停下，回 agile-strategic 阶段 B 补章节后再填关联；「待 ADR-NNN 确认」这类占位关联不算数。判定细则（什么算架构决策、F-NNN 何时该改判 T-NNN）见 `using-agile/references/gate-protocol.md §二 ①`。
 - **条目过大无法估点**：用拆分法降为多个 T-/F- 条目再估点（边界异常 ⑤）。
 - 冲突 / 歧义即停（见 `using-agile/references/gate-protocol.md`）。
