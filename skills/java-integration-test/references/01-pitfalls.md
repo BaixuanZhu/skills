@@ -21,7 +21,7 @@ class OrderRollbackTest {
 
 ```java
 // ✓ 让 Service 自己开事务、自己提交或回滚，测试只读最终状态
-@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:rollback_test")
+@SpringBootTest          // 数据源由决策 ③ 选定：容器 / 本地实库，不用 H2 顶替
 class OrderRollbackTest {
     @AfterEach
     void cleanUp() { jdbcTemplate.update("DELETE FROM t_order"); jdbcTemplate.update("DELETE FROM t_stock"); }
