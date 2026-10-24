@@ -1,0 +1,6 @@
+# 仓库默认按文本处理，但行尾交给各平台默认（Windows 检出为 CRLF）。
+* text=auto
+
+# shell 脚本必须 LF。CRLF 会让 run-python.sh 里的 "$@" 带上 \r，
+# 子命令变成 "hook-session\r"，hook 直接失效，且报错信息完全不指向行尾。
+*.sh text eol=lf
