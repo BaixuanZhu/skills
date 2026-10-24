@@ -18,7 +18,7 @@
 | `conflict` | `agile-docs/STRATEGY_CONFLICT.md` 存在 | using-agile §5 |
 | `backfill` | `sprints/*.done.yaml` 存在 | using-agile §3 → agile-sprint §3 环节 B/C → agile-backlog §3 阶段 4 |
 | `sprint` | `backlog.json` 有条目、无进行中 Sprint | agile-sprint §2 |
-| `active` | 有状态非「已关闭」的 Sprint | agile-sprint §5 |
+| `active` | 有状态非「已关闭」的 Sprint | agile-sprint §5（不追执行态）/ §3 环节 B（关 Sprint） |
 | `init` | 无 `VISION.md` | agile-strategic §2 |
 | `architecture` | 有 VISION，缺 ARCHITECTURE 或 ADR | agile-strategic §3 |
 | `backlog` | 战略齐、`backlog.json` 不存在或没有条目 | agile-backlog §2b/§3 |
