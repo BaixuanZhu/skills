@@ -54,7 +54,7 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity",
-      "version": "5.1.0"
+      "version": "5.2.0"
     },
     {
       "name": "java-standard",

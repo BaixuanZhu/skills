@@ -5,7 +5,7 @@ displayName: 敏捷战略层（愿景+架构+ADR）
 description: |
   当用户说"写愿景""产品目标""电梯演讲""定位""使命""红线""价值观""画架构图""C4""技术选型""ADR""架构决策""容器图""技术约束"或 using-agile 路由到此，且项目已有 agile-docs/ 时触发。
 agent_created: true
-version: 5.1.0
+version: 5.2.0
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架
@@ -146,7 +146,7 @@ dependencies:
 
 ## 5. 硬约束
 
-- ✅ 阶段 A 只产 `VISION.md`；阶段 B 只产 `ARCHITECTURE.md` + `ADR.md`；❌ **不顺手写** PRODUCT-BACKLOG / Sprint（各阶段写完即停，见 §2.3/§3.3）
+- ✅ 阶段 A 只产 `VISION.md`；阶段 B 只产 `ARCHITECTURE.md` + `ADR.md`；❌ **不顺手写** backlog.json / Sprint（各阶段写完即停，见 §2.3/§3.3）
 - ✅ **决策问询是产出前环节**，决策点未确认不落盘（§2.0/§3.1，口径见 `using-agile/references/interview-protocol.md`）
 - ✅ **关键决策落盘带来源标注**（用户给出 / agent 推断 / agent 推荐待确认，§2.2/§3.2）
 - ✅ **每项技术选型必须经过候选对比 + 用户裁决**（§3.1 步骤 4），禁止未经讨论直接写 ADR

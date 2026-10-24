@@ -40,7 +40,7 @@
 - 候选方案对比表 → 代码仓库 `docs/research/` 或删除
 - 详细实现说明 → 代码仓库 `docs/` 或代码注释
 - 安全要求细则 → `DOD.md` 或代码仓库 `SECURITY.md`
-- 待办事项 → `PRODUCT-BACKLOG.md`
+- 待办事项 → `backlog.json`
 - 长篇业务规则 → `VISION.md` 或代码业务文档
 
 **执行原则**：拦截 ≠ 拒绝。始终以「要做 X，正确做法是先 Y」的建设性方式给合规路径。
@@ -50,7 +50,7 @@
 | # | 异常场景 | 处理动作 |
 |---|----------|----------|
 | ① | 无 `agile-docs/` 却请求开 Sprint / 写故事 | 由 using-agile 建目录骨架，再继续 |
-| ② | Backlog 为空（PRODUCT-BACKLOG.md 不存在或无条目）却要开 Sprint | 先引导创建至少 1 个条目，不创建空 Sprint |
+| ② | Backlog 为空（backlog.json 不存在或没有「待办」条目）却要开 Sprint | 先引导创建至少 1 个条目，不创建空 Sprint |
 | ③ | 请求多 Sprint 并行 | 本模型仅一个活跃 Sprint；确需并行建议拆两个项目实例 |
 | ④ | Sprint 进行中大量加新需求 | 新需求先入 PRODUCT-BACKLOG 排序，下 Sprint 再纳入；仅用户正式中止重规划方可变更当前 Sprint |
 | ⑤ | 条目过大无法估点（史诗级） | 拆为多个 T-/F- 条目再估斐波那契点 |

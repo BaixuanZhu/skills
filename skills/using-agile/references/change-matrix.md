@@ -9,7 +9,7 @@
 | 改 ADR（技术选型） | 关联 PRODUCT-BACKLOG 任务、Sprint 技术任务、ARCHITECTURE 图 |
 | 改 PRODUCT-BACKLOG 任务 | 所在 Sprint 规划 |
 | 加新任务到 Backlog（Sprint 执行中） | 对当前 Sprint 无直接影响（进 Backlog 池等待下个 Sprint 取用），需校验与 VISION/ADR 的对齐 |
-| 关 Sprint | `PRODUCT-BACKLOG.md` 阶段表（相关条目状态列更新） |
+| 关 Sprint | `backlog.json` 对应条目的 `status` 更新 |
 | 改 DoD | Sprint 出口检查、已完成条目复核 |
 
 ## 二、变更分级（响应速度的关键，先分级再动手）

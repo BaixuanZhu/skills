@@ -1,14 +1,14 @@
 {
-  "description": "敏捷状态门禁：① 会话开始时把 Sprint / Backlog / ADR 的当前状态注入上下文，避免「装了技能但没人读」；② PRODUCT-BACKLOG.md 写完后按阶段表全量重算，统计段数字对不上就把正确结果喂回去——计算不交给模型。只在存在 agile-docs/ 的项目上工作，其余项目完全静默，不阻断任何操作。需要本机有 node（没有则 hook 报非阻塞错误，功能不受影响）。",
+  "description": "敏捷状态门禁：① 会话开始时把 Sprint / Backlog / ADR 的当前状态注入上下文，避免「装了技能但没人读」；② backlog.json 写完后校验结构并重新渲染 PRODUCT-BACKLOG.md，手改渲染产物会被回滚并告知改 json——计算和格式不交给模型。只在存在 agile-docs/ 的项目上工作，其余项目完全静默。依赖本机 python（找不到解释器或脚本自身出错时静默退出，不影响任何操作）。",
   "hooks": {
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/session-state.mjs"],
-            "timeout": 15
+            "command": "sh",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/run-python.sh", "hook-session"],
+            "timeout": 20
           }
         ]
       }
@@ -19,9 +19,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/backlog-stats.mjs"],
-            "timeout": 15
+            "command": "sh",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/run-python.sh", "hook-post-write"],
+            "timeout": 20
           }
         ]
       }

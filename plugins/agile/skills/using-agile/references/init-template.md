@@ -8,14 +8,15 @@ project-root/
 │   ├── VISION.md                  # [战略层] 由 agile-strategic 阶段 A 产出
 │   ├── ARCHITECTURE.md            # [战略层] 由 agile-strategic 阶段 B 产出（C4 合并）
 │   ├── ADR.md                     # [战略层] 由 agile-strategic 阶段 B 产出（章节式）
-│   ├── PRODUCT-BACKLOG.md         # [执行层] 由 agile-backlog 产出（人读与 Agent 共读）
+│   ├── backlog.json               # [执行层] 唯一真源，由 agile-backlog 产出
+│   ├── PRODUCT-BACKLOG.md         # 由 backlog.json 渲染，勿手改
 │   ├── DOD.md                     # [执行层] 完成定义（本技能生成模板）
 │   └── interfaces/
 │       └── sprint-schema.yaml     # Sprint 接口契约（本技能初始化时生成）
 └── sprints/                       # 短周期工作区（与 agile-docs 平级，初始为空）
 ```
 
-> 注：以上仅描述 `agile-docs/` 的**最终结构**，初始化时**只建目录 + DOD.md + interfaces/sprint-schema.yaml**，不创建任何业务文档占位文件（VISION/ARCHITECTURE/ADR/PRODUCT-BACKLOG.* 由对应业务技能在用户确认后产出）。占位文件会让"文件存在性路由"误判状态已就绪。
+> 注：以上仅描述 `agile-docs/` 的**最终结构**，初始化时**只建目录 + DOD.md + interfaces/sprint-schema.yaml**，不创建任何业务文档占位文件（VISION/ARCHITECTURE/ADR/backlog.json 由对应业务技能在用户确认后产出）。占位文件会让"文件存在性路由"误判状态已就绪。
 
 路由决策以文件存在性为准，不依赖中心化状态文件。
 
