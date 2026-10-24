@@ -50,5 +50,5 @@ Backlog 已就绪、无进行中 Sprint：走 agile-sprint。取条前先反问 
 [/agile-brief:sprint]
 
 [agile-brief:active]
-Sprint 进行中：执行归消费 Agent，本套件不追 checkbox。新需求先入 backlog 排序，**不改进当前 Sprint**；要关 Sprint 先逐条过 DoD。→ agile-sprint §3 环节 B
+Sprint 进行中：执行归消费 Agent，本套件不追 checkbox。新需求先比对 backlog 已有条目（已覆盖就补记来源，别另立重复条目），**不改进当前 Sprint**；要关 Sprint 先逐条过 DoD。→ agile-sprint §3 环节 B
 [/agile-brief:active]

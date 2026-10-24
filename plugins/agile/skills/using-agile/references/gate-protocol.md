@@ -52,7 +52,7 @@
 | ① | 无 `agile-docs/` 却请求开 Sprint / 写故事 | 由 using-agile 建目录骨架，再继续 |
 | ② | Backlog 为空（backlog.json 不存在或没有「待办」条目）却要开 Sprint | 先引导创建至少 1 个条目，不创建空 Sprint |
 | ③ | 请求多 Sprint 并行 | 本模型仅一个活跃 Sprint；确需并行建议拆两个项目实例 |
-| ④ | Sprint 进行中大量加新需求 | 新需求先入 PRODUCT-BACKLOG 排序，下 Sprint 再纳入；仅用户正式中止重规划方可变更当前 Sprint |
+| ④ | Sprint 进行中大量加新需求 | 先比对 `backlog.json` 是否已被既有条目覆盖——覆盖则在该条 `detail` 补记原话与来源，未覆盖才新增——下 Sprint 再纳入；仅用户正式中止重规划方可变更当前 Sprint |
 | ⑤ | 条目过大无法估点（史诗级） | 拆为多个 T-/F- 条目再估斐波那契点 |
 | ⑥ | DoD 未定义却要关闭/交付 Sprint | 先生成 DOD 逐条确认，再允许关闭 |
 
