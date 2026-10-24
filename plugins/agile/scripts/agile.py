@@ -587,7 +587,10 @@ def describe_state(root: Path) -> list[str]:
         except Exception:
             continue
     if pending:
-        parts.append(f"待回填 {len(pending)} 个（" + "、".join(sorted(pending)) + "）")
+        # 只报数量 + 至多 3 个名字：这一行每轮都进上下文，不能随项目规模线性膨胀。
+        names = sorted(pending)
+        shown = "、".join(names[:3]) + (" 等" if len(names) > 3 else "")
+        parts.append(f"待回填 {len(pending)} 个（{shown}）")
 
     data = load_json(json_path) if json_path.exists() else None
     if data is not None:
