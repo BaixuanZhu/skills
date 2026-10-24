@@ -128,14 +128,12 @@ class OrderIT { ... }        // 项目里 application-prod.yml 用了 ${DB_URL}�
 ```java
 // ✓ 测试专属 profile + 显式库名 + 启动时自检
 @SpringBootTest
-@ActiveProfiles("ittest")    // src/test/resources/application-ittest.yml 里写死测试库
+@ActiveProfiles("ittest")      // application-ittest.yml 里写死测试库
 class OrderIT {
-
     @BeforeAll
-    static void assertNotProduction(@Autowired DataSource ds) throws Exception {
+    static void assertDb(@Autowired DataSource ds) throws Exception {
         try (Connection c = ds.getConnection()) {
-            String url = c.getMetaData().getURL();
-            assertThat(url).as("测试连到了预期之外的库").contains("/app_ittest");
+            assertThat(c.getMetaData().getURL()).as("连到了预期之外的库").contains("/app_ittest");
         }
     }
 }
@@ -151,26 +149,6 @@ class OrderIT {
 
 ## 九、单条十秒级是从哪来的
 
-集成测试慢不是因为容器慢，是因为每次重建了不该重建的东西。按代价排序：
+不是容器慢，是每次重建了不该重建的东西。三处最贵：起了用不到的容器（判据：把这个 `@Container` 注掉，测试还绿吗？绿就是它在验证什么）、Context 缓存失效（统一 `@MockitoBean` 组合）、首跑拉镜像（CI 预拉）。容器 `static` 与 `withReuse` 的脏数据代价见第四节。
 
-| 来源 | 代价 | 处理 |
-|---|---|---|
-| 容器不是 `static` | 每个测试方法启停一次 | 改 `static`（见第四节） |
-| 起了用不到的容器 | 每多一个容器多 3~5 秒 | 删掉它，测试还绿就是多余的 |
-| Context 缓存失效 | 整个上下文重建 | 统一 `@MockitoBean` 组合，别每组换配置 |
-| 首跑拉镜像 | CI 上几十秒到几分钟 | 流水线预拉，或镜像缓存层 |
-| 连接数打满 | 卡住而非变慢，报 `too many connections` | 见下 |
-
-**起了用不到的容器**的判据只有一条：把这个 `@Container` 注掉，测试还绿吗？绿就是这个容器没在验证任何东西。
-
-**连接数**这一条实测最费时间排查：PostgreSQL 容器默认 `max_connections=100`，Hikari 默认池大小 10，10 个测试类并行就是 100——刚好打满，表现为随机卡住或偶发失败，且和本次改动无关。
-
-```java
-// ✓ 池大小对齐容器上限，别各按默认值走
-@DynamicPropertySource
-static void props(DynamicPropertyRegistry registry) {
-    registry.add("spring.datasource.hikari.maximum-pool-size", () -> "2");
-}
-```
-
-并行跑时上限算的是「并行测试类数 × 池大小」，不是单个类的池大小。
+连接数那条最费排查：PostgreSQL 容器默认 `max_connections=100`，Hikari 池 10，10 个测试类并行刚好打满——表现为随机卡住且与本次改动无关。上限是「并行类数 × 池大小」，调 `spring.datasource.hikari.maximum-pool-size` 对齐容器。
