@@ -18,12 +18,11 @@ description: >-
   测够了没 / 写到什么程度算够、mock 不到内部 new 的对象、异常断言断 RuntimeException。
   核心默认：AssertJ 断言（金额用 isEqualByComparingTo / compareTo，不用 equals）、
   一个方法四维度必检（正向/反向/边界/异常）、栈中立跟随项目既有（JUnit 4/5 均支持）。
-  接口级验证（接口通不通）不写测试、不属本技能范围；需要真实依赖断言 / 可重复回归的
-  重型测试（Testcontainers / E2E）→ java-integration-test（明示或确认后激活）。
-  不适用：切片 / 集成 / 冒烟 / E2E 测试（@SpringBootTest 全量上下文 /
-  @WebMvcTest / Testcontainers / REST Assured / WireMock）→
-  java-integration-test；性能测试、前端测试。
-version: "2.1.0"
+  接口级验证（接口通不通）不写测试、不属本技能范围。
+  不适用：切片 / 集成 / 冒烟 / E2E 测试（@SpringBootTest / @WebMvcTest /
+  Testcontainers / REST Assured / WireMock）→ java-integration-test
+  （明示或确认后激活）；性能测试、前端测试。
+version: "2.1.1"
 last_verified: "2026-10-24"
 ---
 
@@ -31,7 +30,7 @@ last_verified: "2026-10-24"
 
 开发期测试 = **纯单元测试**：被测对象是真实对象，外部依赖用 mock，毫秒级，`mvn test` 秒级跑完——零外部基础设施（不连真实 DB / 容器 / 中间件）。默认 `@Mock`+`@InjectMocks`；项目既有 `@TestConfiguration` 手写 `@Bean` mock + `@Import` 的轻量装配惯例时跟随，但上下文里只允许 mock 与纯内存对象。
 
-> 接口级验证（"接口通不通"）不写测试、不属本技能范围；需要真实依赖断言 / 可重复回归的重型测试 → java-integration-test，明示或确认后激活。
+> 接口级验证（"接口通不通"）不写测试、不属本技能范围；需要真实依赖断言 / 可重复回归的集成测试 → java-integration-test，明示或确认后激活。
 
 ## 三条硬规则
 

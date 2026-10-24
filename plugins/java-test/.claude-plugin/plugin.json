@@ -1,7 +1,7 @@
 {
   "name": "java-test",
-  "version": "2.1.0",
-  "description": "Java 测试套件（2 技能）：纯单测（AssertJ 断言、Mock 边界、写错仍绿的静默陷阱）+ 集成测试（容器准入判据、测试事务假绿、@DataJpaTest 默认换 H2、Testcontainers 替代 H2）。",
+  "version": "2.2.0",
+  "description": "Java 测试套件（2 技能）：开发期纯单测（AssertJ 断言、Mock 边界、写错仍绿的静默陷阱）+ 集成测试（三个决策按序——回归谁值守 / 断言离开真实依赖还成立吗 / 环境起不起得起容器；Testcontainers 是首选执行方式而非定义，无 Docker 有降级路径，不许静默换 H2）。",
   "author": {
     "name": "BaixuanZhu",
     "email": "66127517+BaixuanZhu@users.noreply.github.com"
