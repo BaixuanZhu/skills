@@ -40,7 +40,7 @@ dependencies:
 | 阶段 3 | 下游影响评估（§3 阶段 3，仅更新已有 Backlog 时） | 阶段 2 确认 |
 | 阶段 4 | 接受 .done 同步（§3 阶段 4，仅 .done.yaml 回传时） | `.done.yaml` 存在（入口闭环路由；Sprint 未关闭时先经 agile-sprint 关闭） |
 
-**决策用选择题问**（`using-agile/references/interview-protocol.md`）：先读 VISION/ADR 补事实（文档优先），只把真决策（范围/优先级/估点/验收）用「候选 + 推荐 + 自定义」一次一问地喂给用户。变更时先分级（`using-agile/references/change-matrix.md §二`），禁止整层重访。
+**决策用选择题问**（问询纪律见 `using-agile/references/probing-protocol.md`）：只把真决策（范围/优先级/估点/验收）喂给用户，事实先读 VISION/ADR。变更时先分级（`using-agile/references/change-matrix.md §二`），禁止整层重访。
 
 ## 2. 写前对齐（先问询，再产出）
 
@@ -52,9 +52,9 @@ dependencies:
 - **旧格式转写检测**：`agile-docs/backlog.json` 不存在、而 `PRODUCT-BACKLOG.md` 里还是表格 → 按字段规范由 agent 一次性转写（`references/backlog-rules.md §七.4`，写完 hook 校验兜底）；v4.x 的 `.yaml` / `.json` 双文件把其中仅机器侧持有的信息（adr_refs / confirmed / withdrawn）核对进 json 后删除
 - **统计不手算**：条目数 / 点数 / 分组统计由 `agile.py stats` 全量重算，命令见 `references/backlog-rules.md §七.3`。没有脚本时才自己按覆盖式重算，**禁止在旧数字上增量加减**
 
-### 2b. 决策问询（写前必跑，`using-agile/references/interview-protocol.md`）
+### 2b. 决策问询（写前必跑，`using-agile/references/probing-protocol.md`）
 
-按 `using-agile/references/interview-protocol.md` 用选择题问，本技能落点：
+问询纪律按 `using-agile/references/probing-protocol.md`，本技能落点：
 
 0. **需求探索（新增需求场景必跑；更新已有 Backlog 按 `change-matrix.md` 分级，L2 只重问受影响项）**
 
@@ -164,11 +164,11 @@ dependencies:
 
 ## 4. 写完即停（结构化审阅，每阶段都走）
 
-每个产出阶段写完即停，按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列排序依据 / 优先级判断 / agent 自估点数及理由 × 来源；阶段 3 追加「下游影响评估」结论），问"**继续下一阶段 / 下一步**（agile-sprint）还是**更新**本层？"。
+每个产出阶段写完即停：按 `using-agile/references/probing-protocol.md §四` 结构化审阅（重点列：排序依据 / 优先级判断 / agent 自估点数及理由 × 来源，阶段 3 追加「下游影响评估」结论；去向问下一阶段 / agile-sprint 还是更新本层）。
 
 ## 5. 硬约束
 - ✅ 产出 `agile-docs/backlog.json`（唯一 Backlog 文件）；❌ **不顺手写** VISION / ARCHITECTURE / ADR / Sprint / PRODUCT-BACKLOG.md。
-- ✅ **决策问询是产出前环节**（§2b，口径见 `using-agile/references/interview-protocol.md`），决策点未确认不落盘。
+- ✅ **决策问询是产出前环节**（§2b，口径见 `using-agile/references/probing-protocol.md`），决策点未确认不落盘。
 - ✅ **产出分阶段**（排序+估点 → 详情+验收，§3），每阶段写完即停；❌ 禁止一次性出全部。
 - ✅ **`phases[]` 即唯一结构**（§3 阶段 1），**禁止**单独维护"优先级排序表 / 待办池"等平级结构；字段名与取值严格按 `references/backlog-rules.md §二`，不自由增删。
 - ✅ 技术任务（T-NNN）和功能需求（F-NNN）平级；仅"非显然"条目展开（§3 阶段2）。

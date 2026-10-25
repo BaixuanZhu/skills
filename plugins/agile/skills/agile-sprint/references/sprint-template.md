@@ -20,7 +20,7 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
 - 周期: {YYYY-MM-DD} ~ {YYYY-MM-DD}
 - 目标: {一句 Sprint 目标}
 - 容量: 团队 {N} 人 × {D} 天 × {专注系数} ≈ {可用点} 点
-- 估点体系: 斐波那契（默认）/ 线性（仅纯研究型 Sprint，见 `references/sprint-rules.md §四`）
+- 估点体系: 斐波那契（默认）/ 线性（仅纯研究型 Sprint，见 `references/sprint-rules.md §二`）
 - 来源: agile-docs/backlog.json（按 priority 顶部取条目）
 - 消费方: 本文件是单向交付，任务状态由消费 Agent 自行追踪
 - 执行结果: 待回填（消费 Agent 执行后生成 .done.yaml，见下方「回填要求」段）

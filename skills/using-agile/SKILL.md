@@ -99,7 +99,7 @@ version: 5.6.0
 - 需求存在未界定的关键规则（MVP 边界、核心流程等）；
 - 待写内容与现有 Vision / ADR 冲突。
 
-**缺失即问**：若目标层的必答话题存在未覆盖项（用户没提 ≠ 不需要），同样属于门禁触发，但动作是**停下问询**而非停下裁决——用选择题问（`references/interview-protocol.md`），追问/跳过规则见 `references/probing-protocol.md`。
+**缺失即问**：若目标层的必答话题存在未覆盖项（用户没提 ≠ 不需要），同样属于门禁触发，但动作是**停下问询**而非停下裁决——按 `references/probing-protocol.md §一/§二` 用选择题问并追问。
 
 在用户裁决前，不写任何产物文件（仅允许建目录骨架或写 `STRATEGY_CONFLICT.md`）。**冲突记录去重**：`STRATEGY_CONFLICT.md` 由先检测到冲突的技能生成；后续技能激活时发现已存在 → 跳过不重复生成，仅引用。详见 `references/gate-protocol.md`。
 
@@ -126,7 +126,7 @@ version: 5.6.0
 - ❌ **绝不自己 Write 业务文档**（VISION / ARCHITECTURE / ADR / Sprint / `backlog.json`）。
 - ✅ 只做：检测状态 → 逐层询问"更新 or 继续"（不替用户决定走向）→ 路由 → 变更协调（引用矩阵，不直接改业务正文）。
 - ✅ 渐进式：业务技能产出即停；下一步须用户再次调用本技能或下个业务技能。
-- ✅ 路由到业务技能时提示其遵循 `references/interview-protocol.md`（选择题 + 推荐）、`references/probing-protocol.md`（追问/跳过）、`references/gate-protocol.md`（门禁）。
+- ✅ 路由到业务技能时提示其遵循 `references/probing-protocol.md`（问询：选择题 + 追问/跳过 + 审阅）、`references/gate-protocol.md`（门禁）。
 
 ## 8. 配套 hook（插件安装时生效）
 

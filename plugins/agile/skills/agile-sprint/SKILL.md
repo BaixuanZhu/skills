@@ -71,11 +71,12 @@ dependencies:
 ### 环节 C：关闭
 - 在文件头追加行标注执行结果来源（.done.yaml 文件路径 或 "人工确认"）
 - 将 Sprint 文件头"状态"改为"已关闭"
+- **统计快照重算**：跑 `agile.py stats`，输出附进本 Sprint 文件「变更记录」段（没有脚本时才自己全量重算，禁止在旧数字上增量加减）
 - 提示用户完整闭环：入口下次激活时检测到 `.done.yaml` 即**默认执行闭环**——Sprint 已由本环节关闭，剩下的「同步 backlog → 处理 feedback → 改后缀 `.done.processed.yaml`」由 agile-backlog 阶段 4 执行，**本技能不碰**。链路见 `using-agile/references/sprint-schema.yaml` 的 `lifecycle`
 
 ## 4. 写完即停（结构化审阅）
 
-按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列容量参数：人数/工作日/专注系数 / 取条依据 / Sprint 目标 / 交接点（如有） × 来源），问"**继续下一环节**还是**更新**当前产出？"。
+写完即停：按 `using-agile/references/probing-protocol.md §四` 结构化审阅（重点列：容量参数 / 取条依据 / Sprint 目标 / 交接点（如有）× 来源；去向问下一环节还是更新当前产出）。
 
 ## 5. 硬约束
 - ✅ 单文件产出 `sprints/sprint-{序号:03d}-{日期}.md`（命名含序号+日期，不用 `current.md`）；❌ **不顺手写** VISION / ARCHITECTURE / ADR / backlog.json。

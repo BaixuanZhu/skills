@@ -28,32 +28,27 @@ dependencies:
 
 | 阶段 | 产出 | 前置问询 | 模板 |
 |------|------|----------|------|
-| 阶段 0 | （无文件） | 决策问询（§2.0） | `using-agile/references/interview-protocol.md` |
+| 阶段 0 | （无文件） | 决策问询（§2.0） | `using-agile/references/probing-protocol.md` |
 | 阶段 A | `agile-docs/VISION.md` | 阶段 0 完成 | `references/vision-template.md` |
 | 阶段 B | `agile-docs/ARCHITECTURE.md` + `agile-docs/ADR.md` | 选型裁决（§3.1） | `references/c4-adr.md` |
 
 **阶段必须分别完成**：决策点问完 → 才产出；阶段 A 写完 VISION 必须停下询问，**禁止跨阶段顺手写架构**。
 
-**决策用选择题问**（`using-agile/references/interview-protocol.md`）：先读项目画像/已有文档补事实（文档优先），只把真决策（定位/原则/红线/指标/选型）用「候选 + 推荐 + 自定义」一次一问地喂给用户。
+**决策用选择题问**（问询纪律见 `using-agile/references/probing-protocol.md`）：只把真决策（定位/原则/红线/指标/选型）喂给用户，事实先读项目画像与已有文档。
 
 ## 2. 阶段 A：写 VISION.md
 
-### 2.0 决策问询（写前必跑，`using-agile/references/interview-protocol.md`）
+### 2.0 决策问询（写前必跑）
 
 > ⚠️ **启动问询前先过 §6 写前战略门禁**：若检测到多份矛盾输入或与现有 VISION/ADR 冲突，立即停下生成 `STRATEGY_CONFLICT.md`（模板见 `using-agile/references/strategy-conflict-template.md`），不进入问询。若该文件已存在（如 using-agile 已生成）→ **跳过不重复生成，仅引用**。
 
-按 `using-agile/references/interview-protocol.md` 用选择题问，本技能落点：
-
-1. **文档优先**：读 `agile-docs/DOD.md` 头部「项目画像」+ 已存在的 VISION/ADR/Backlog，能查到的事实自己读、不问你。
-2. **一次一问 + 给推荐**：按 §2.1 决策点清单，每个点给候选 + 明确推荐 + 理由 + 自定义兜底；答完再问下一个。
-3. **决策树深度优先**：先定位（上游），再原则/红线/指标（下游）。
-4. **共识后落盘**：决策点问完 → 输出「决策点确认清单」（标来源）→ 你确认后进入 §2.2 产出。
+问询纪律（选择题、一次一问给推荐、文档优先、共识后落盘、追问/跳过）按 `using-agile/references/probing-protocol.md`。本技能的事实源：先读 `agile-docs/DOD.md` 头部「项目画像」+ 已存在的 VISION/ADR/Backlog，再按 §2.1 决策点清单逐项问。
 
 **变更快速响应**：若是「需求变了」触发的更新而非首次产出，先按 `using-agile/references/change-matrix.md §二` 分级——L1 措辞就地改、L2 只重问受影响维度、L3 才走完整问询。**禁止每次更新都整层重问。**
 
 ### 2.1 决策点清单（每项 = 选择题 + 推荐方向）
 
-**姿态**：不是填空问卷。按 `using-agile/references/interview-protocol.md` 用选择题问（口径见该文件），含糊答案必追问，追问/跳过遵守 `using-agile/references/probing-protocol.md`（一次一问、同话题 ≤2 次）。问询中发现新冲突，回到写前战略门禁处理。
+**姿态**：不是填空问卷。选择题与追问纪律按 `using-agile/references/probing-protocol.md`。问询中发现新冲突，回到写前战略门禁处理。
 
 逐项问询，每项 = 决策点 + 候选选项方向 + 追问触发 + 兜底（用户明确跳过 → 标 `{待确认}` 并进文末汇总）：
 
@@ -76,7 +71,7 @@ dependencies:
 
 ### 2.3 阶段 A 写完即停（硬约束，结构化审阅）
 
-按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列 VISION 的定位 / 核心原则 / 战略红线 / 成功指标等关键决策 × 来源），问"**继续阶段 B**（架构层）还是**更新**本愿景？"。然后**停下等用户表态**——禁止跨阶段，即使 VISION 已确认也要等用户明确"继续阶段 B"才进入 §3。
+写完即停：按 `using-agile/references/probing-protocol.md §四` 结构化审阅（重点列：定位 / 核心原则 / 战略红线 / 成功指标 × 来源），**停下等用户明确"继续阶段 B"才进入 §3**——禁止跨阶段，即使 VISION 已确认。
 
 **跳层兜底**：若用户要求跳过阶段 B 直接去 Backlog，提示"战略层架构未完成会让 T-NNN 缺少 ADR 关联，届时由 agile-backlog 按门禁 ① 拦截"。尊重用户选择。
 
@@ -134,7 +129,7 @@ dependencies:
 
 ### 3.3 阶段 B 写完即停（结构化审阅）
 
-按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列每条 ADR 决策 + 架构假设 × 来源），问"**继续下一步**（执行层：agile-backlog 待办池）还是**更新**本层？"。然后停下等用户表态。
+写完即停：按 `using-agile/references/probing-protocol.md §四` 结构化审阅（重点列：每条 ADR 决策 + 架构假设 × 来源；去向问执行层 agile-backlog 还是更新本层）。
 
 ## 4. 变更快速响应（需求变了时的入口）
 
@@ -149,7 +144,7 @@ dependencies:
 ## 5. 硬约束
 
 - ✅ 阶段 A 只产 `VISION.md`；阶段 B 只产 `ARCHITECTURE.md` + `ADR.md`；❌ **不顺手写** backlog.json / Sprint（各阶段写完即停，见 §2.3/§3.3）
-- ✅ **决策问询是产出前环节**，决策点未确认不落盘（§2.0/§3.1，口径见 `using-agile/references/interview-protocol.md`）
+- ✅ **决策问询是产出前环节**，决策点未确认不落盘（§2.0/§3.1，口径见 `using-agile/references/probing-protocol.md`）
 - ✅ **关键决策落盘带来源标注**（用户给出 / agent 推断 / agent 推荐待确认，§2.2/§3.2）
 - ✅ **每项技术选型必须经过候选对比 + 用户裁决**（§3.1 步骤 4），禁止未经讨论直接写 ADR
 - ✅ ARCHITECTURE.md 可演进覆盖（git 记历史）；ADR.md 章节式不可篡改，每条严格 4 行结构（§6 门禁 ②④）
@@ -157,14 +152,6 @@ dependencies:
 
 ## 6. 门禁
 
-### 门禁 ② ADR 不可篡改
-
-状态为"已接受"的 ADR 章节，**决策内容不动**——变更只能在 ADR.md 底部新建「替代」章节。字段写法（`状态` / `被替代` 填什么）见 `references/c4-adr.md`，拦截动作与合规路径见 `using-agile/references/gate-protocol.md §二 ②`。
-
-### 门禁 ④ ADR 内容瘦身
-
-写 ADR 时若超出"4 行结构"或包含禁止内容 → **立即停下**，按禁止内容清单（见 `using-agile/references/gate-protocol.md §二 ④`）引导到正确归属。
-
-### 写前战略门禁
-
-冲突 / 歧义即停（见 `using-agile/references/gate-protocol.md`）。若需生成 `STRATEGY_CONFLICT.md`，模板见 `using-agile/references/strategy-conflict-template.md`；**发现该文件已存在则跳过不重复生成，仅引用**。
+- **门禁 ②（ADR 不可篡改）**：已接受章节的决策内容不动，变更只在 ADR.md 底部新建「替代」章节；字段写法见 `references/c4-adr.md`，拦截动作与合规路径见 `using-agile/references/gate-protocol.md §二 ②`。
+- **门禁 ④（ADR 内容瘦身）**：超出 4 行结构或含禁止内容 → 立即停下，按 `using-agile/references/gate-protocol.md §二 ④` 的禁止内容清单引导到正确归属。
+- **写前战略门禁**：冲突 / 歧义即停（`using-agile/references/gate-protocol.md`）；`STRATEGY_CONFLICT.md` 模板见 `using-agile/references/strategy-conflict-template.md`，已存在则跳过不重复生成，仅引用。

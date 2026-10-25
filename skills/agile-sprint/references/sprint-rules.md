@@ -12,23 +12,7 @@
 >
 > 承诺点 ≤ 可用点；超额部分本次不取用、留待下 Sprint 再取（条目本就在 Backlog 顶部，无需"放回"，Sprint 不修改 backlog.json）。
 
-## 二、DoD 出口检查（关闭 Sprint 前必过）
-
-检查前读取本 Sprint 对应的 `.done.yaml`：存在则以 completed/moved_next 为准，**并读取 feedback**（reason 作 moved_next 依据展示，issue/decision 汇总列出待裁决）；不存在则要求用户人工确认每条任务的完成情况。含「交接契约」的任务，completed 前须已产出对应交接文档，未产出归入 moved_next。
-
-逐条核对 `agile-docs/DOD.md` 的「任务完成标准」+「Sprint 完成标准」。
-任一条未达标 → 该条目归入 moved_next（退回 Backlog 或延续下 Sprint），不计入完成。
-
-## 三、关闭流程
-
-1. 确认环节 B 的 DoD 检查结果已全部落地（「条目状态建议」清单已产出）。
-2. **统计快照重算**：跑 `agile.py stats` 得到本 Sprint 关闭后的 Backlog 快照（总条目 / 有效条目(排除已撤回) / 按优先级分组 / 按状态分组 / ADR 关联覆盖），作为 Sprint 文件「变更记录」段的当前事实底。没有脚本时才自己全量重算，禁止在旧数字上增量加减。
-3. 在本 Sprint 文件头标注执行结果来源（.done.yaml 路径或"人工确认"）。
-4. 本 Sprint 文件头"状态"改为"已关闭"（不删除，自然保留作历史）。
-5. 提示用户：入口下次激活时检测到 `.done.yaml` 即默认执行闭环（DoD 关闭 → Backlog 同步 + 反馈处理）。同步与改名归 agile-backlog 阶段 4，本技能只负责关到这个状态；生命周期见 `using-agile/references/sprint-schema.yaml` 的 `lifecycle`。
-6. **不写回顾 / 发布说明 / 反馈记录等附加文件**——临时发现直接转 backlog.json 条目。
-
-## 四、估点体系（默认与异常）
+## 二、估点体系（默认与异常）
 
 - **默认**：斐波那契（1/2/3/5/8/13）
 - **异常**：纯研究型 Sprint 可用线性估点（1/2/3/4/5），必须在 Sprint 文件头标注「估点体系：线性」
