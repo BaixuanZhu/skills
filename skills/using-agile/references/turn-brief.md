@@ -18,7 +18,7 @@
 | `conflict` | `agile-docs/STRATEGY_CONFLICT.md` 存在 | using-agile §5 |
 | `backfill` | `sprints/*.done.yaml` 存在 | using-agile §3 → agile-sprint §3 环节 B/C → agile-backlog §3 阶段 4 |
 | `sprint` | `backlog.json` 有条目、无进行中 Sprint | agile-sprint §2 |
-| `active` | 有状态非「已关闭」的 Sprint | agile-sprint §5（不追执行态）/ §3 环节 B（关 Sprint） |
+| `active` | 有状态非「已关闭」的 Sprint | agile-sprint §5（不追执行态）/ §3 环节 B（关 Sprint）/ gate-protocol §三 ④（新需求比对） |
 | `init` | 无 `VISION.md` | agile-strategic §2 |
 | `architecture` | 有 VISION，缺 ARCHITECTURE 或 ADR | agile-strategic §3 |
 | `backlog` | 战略齐、`backlog.json` 不存在或没有条目 | agile-backlog §2b/§3 |
@@ -34,7 +34,7 @@
 [/agile-brief:backfill]
 
 [agile-brief:init]
-战略层未起步：先走 agile-strategic 阶段 A（先问项目画像三项，再按决策点一次一问），只写 VISION.md，写完即停。决策点未确认不落盘。→ agile-strategic §2
+战略层未起步：先走 agile-strategic 阶段 A（先读 DOD.md 头部项目画像补事实，缺失才问，再按决策点一次一问），只写 VISION.md，写完即停。决策点未确认不落盘。→ agile-strategic §2
 [/agile-brief:init]
 
 [agile-brief:architecture]
@@ -50,5 +50,5 @@ Backlog 已就绪、无进行中 Sprint：走 agile-sprint。取条前先反问 
 [/agile-brief:sprint]
 
 [agile-brief:active]
-Sprint 进行中：执行归消费 Agent，本套件不追 checkbox。新需求先比对 backlog 已有条目（已覆盖就补记来源，别另立重复条目），**不改进当前 Sprint**；要关 Sprint 先逐条过 DoD。→ agile-sprint §3 环节 B
+Sprint 进行中：执行归消费 Agent，本套件不追 checkbox。新需求先比对 backlog 已有条目（已覆盖就补记来源，别另立重复条目），**不改进当前 Sprint**；要关 Sprint 先逐条过 DoD。→ agile-sprint §3 环节 B；新需求比对规则 → using-agile/references/gate-protocol.md §三 ④
 [/agile-brief:active]
