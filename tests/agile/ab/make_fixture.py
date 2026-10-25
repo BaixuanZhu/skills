@@ -9,11 +9,10 @@ import subprocess
 import sys
 import tempfile
 
-# 从自身位置推导：tests/ab/ → stage fixtures 与插件脚本，产物写临时目录（启动时打印）
+# 从自身位置推导（tests/agile/ab/）：stage fixtures 与插件脚本，产物写临时目录（启动时打印）
 HERE = pathlib.Path(__file__).resolve()
-TESTS = HERE.parent.parent          # plugins/agile/tests
-SRC = TESTS / "stage"
-AGILE = TESTS.parent / "scripts" / "agile.py"
+SRC = HERE.parents[1] / "stage"                                          # tests/agile/stage
+AGILE = HERE.parents[3] / "plugins" / "agile" / "scripts" / "agile.py"   # 仓库根/plugins/agile
 OUT = pathlib.Path(tempfile.mkdtemp(prefix="agile-ab-"))
 
 GROUPS = {

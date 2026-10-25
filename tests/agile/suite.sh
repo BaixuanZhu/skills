@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # hook-prompt 回归矩阵：每个用例断言「有输出 / 无输出」+ 关键子串
-# 用法：bash plugins/agile/tests/suite.sh（解释器叫 python3 的环境：PY=python3 …）
+# 用法：bash tests/agile/suite.sh（解释器叫 python3 的环境：PY=python3 …）
 set -u
 cd "$(dirname "$0")"
-PLUGIN="$(cd .. && pwd)"
+PLUGIN="$(cd ../../plugins/agile && pwd)"
 PY="${PY:-python}"
 AG="$PLUGIN/scripts/agile.py"
 PASS=0; FAIL=0

@@ -1,13 +1,13 @@
 #!/bin/sh
 # 七阶段注入矩阵 + 池耗尽边界：每个阶段一个独立项目目录，断言注入的是对应 brief 块。
-# 用法：sh plugins/agile/tests/stage.sh（解释器叫 python3 的环境：PY=python3 sh …）
+# 用法：sh tests/agile/stage.sh（解释器叫 python3 的环境：PY=python3 sh …）
 cd "$(dirname "$0")" || exit 1
 PY="${PY:-python}"
 
 # -W 输出 Windows 原生路径（Git Bash 特有，JSON payload 里的 cwd 需要它）；其它环境退回 pwd
 w() ( cd "$1" && { pwd -W 2>/dev/null || pwd; } )
 
-AG="$(w ../scripts)/agile.py"
+AG="$(w ../../plugins/agile/scripts)/agile.py"
 ROOT="$(w stage)"
 PASS=0; FAIL=0
 

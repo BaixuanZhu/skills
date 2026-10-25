@@ -1,12 +1,12 @@
 #!/bin/sh
 # agile.py 代码质量回归：每一条都对应一个曾经真实出错的点。
-# 用法：sh plugins/agile/tests/regress.sh（解释器叫 python3 的环境：PY=python3 sh …）
+# 用法：sh tests/agile/regress.sh（解释器叫 python3 的环境：PY=python3 sh …）
 #
 # 注意：所有 python 片段都用相对路径 + 先 cd 进目标目录。Git Bash 里
 # `/i/...`、`/tmp/...` 这类 POSIX 路径写在 `-c` 程序内部不会被翻译，
 # Windows 解释器找不到（这正是本脚本第一版自己踩的坑）。
 set -u
-PLUGIN="$(cd "$(dirname "$0")/.." && pwd)"
+PLUGIN="$(cd "$(dirname "$0")/../../plugins/agile" && pwd)"
 PY="${PY:-python}"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT

@@ -33,9 +33,9 @@
 第 1、2 条是补出来的——初版只给一半目录跑了 `render`，导致「有注入组没手改渲染产物」其实是**那个文件根本不存在**。假通过的形态：被测量对象在对照组里缺位。
 
 ```
-python plugins/agile/tests/ab/make_fixture.py      # 第一轮
-python plugins/agile/tests/ab/make_fixture.py r2   # 第二轮复验
-python plugins/agile/tests/ab/make_fixture.py r3   # 改文案后验证
+python tests/agile/ab/make_fixture.py      # 第一轮
+python tests/agile/ab/make_fixture.py r2   # 第二轮复验
+python tests/agile/ab/make_fixture.py r3   # 改文案后验证
 ```
 
 生成器从自身位置推导 fixture 源（`../stage/`）与 `agile.py` 路径，产物写进临时目录并打印路径——换机器直接跑。**改 `turn-brief.md` 文案后按本方法论复验**：注入的作用域严格等于写下的那句话，措辞改动必须在有/无注入两组上对照确认方向。
