@@ -4,10 +4,10 @@
 
 | 改动源 | 影响面（须同步检查） |
 |----------|---------------------------|
-| 改 VISION（核心原则/红线） | PRODUCT-BACKLOG 排序逻辑、现有任务归属、对齐检查基准 |
+| 改 VISION（核心原则/红线） | Backlog（backlog.json）排序逻辑、现有任务归属、对齐检查基准 |
 | 改 ARCHITECTURE | 关联 ADR、Sprint 技术任务、架构瓶颈条目 |
-| 改 ADR（技术选型） | 关联 PRODUCT-BACKLOG 任务、Sprint 技术任务、ARCHITECTURE 图 |
-| 改 PRODUCT-BACKLOG 任务 | 所在 Sprint 规划 |
+| 改 ADR（技术选型） | 关联 Backlog 技术条目、Sprint 技术任务、ARCHITECTURE 图 |
+| 改 Backlog 条目（backlog.json） | 所在 Sprint 规划 |
 | 加新任务到 Backlog（Sprint 执行中） | 对当前 Sprint 无直接影响（进 Backlog 池等待下个 Sprint 取用），需校验与 VISION/ADR 的对齐 |
 | 关 Sprint | `backlog.json` 对应条目的 `status` 更新 |
 | 改 DoD | Sprint 出口检查、已完成条目复核 |

@@ -43,5 +43,5 @@ done_file:
   validation: "agile.py check 会读本文件内容，报出「引用不存在的条目 ID」「同一 ID 既在 completed 又在 moved_next」「feedback.type 不在枚举内」「两个数组都空」。注意 check 只做这几项——type 与 note 的内容是否说得通仍由人判断。"
   mandatory: true  # 回填是硬性义务：消费 Agent 执行完毕必须生成，否则 Sprint 无法关闭、Backlog 无法同步
   timing: 消费 Agent 执行完毕后生成（含部分完成）
-  lifecycle: 写入（消费 Agent）→ 读取（agile-sprint DoD 检查，含 feedback）→ 检测（using-agile 默认闭环）→ 消费（agile-backlog 同步到 PRODUCT-BACKLOG.md 阶段表 + 反馈处理）→ 改后缀 .done.processed.yaml（留痕，不删除）
+  lifecycle: 写入（消费 Agent）→ 读取（agile-sprint DoD 检查，含 feedback）→ 检测（using-agile 默认闭环）→ 消费（agile-backlog 同步到 backlog.json + 反馈处理）→ 改后缀 .done.processed.yaml（留痕，不删除）
 

@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""架构决策""ADR""C4""需求变了""要改故事""依赖检查"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.5.2
+version: 5.6.0
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -34,7 +34,7 @@ version: 5.5.2
 - **检测路由**：项目有 `agile-docs/` 时，先做 .done.yaml 回填检测（存在即默认执行闭环），再扫描三层状态 → 输出状态表 → 逐层询问"更新 or 继续" → 路由到对应业务技能。
 - **变更协调**：当用户说"需求变了"时，引用 `references/change-matrix.md` 做变更分级 + 影响面评估 → 路由到对应业务技能就地更新。
 
-**本技能绝不自己 Write 任何业务文档**（VISION / ARCHITECTURE / ADR / Sprint 等，含 `backlog.json`）。所有业务文档由对应业务技能在用户确认后产出；`PRODUCT-BACKLOG.md` 是 `backlog.json` 的渲染产物，任何技能都不直接写它。
+**本技能绝不自己 Write 任何业务文档**（VISION / ARCHITECTURE / ADR / Sprint 等，含 `backlog.json`）。所有业务文档由对应业务技能在用户确认后产出。
 
 ### 设计哲学
 
@@ -57,7 +57,7 @@ version: 5.5.2
 | 层 | 产出物 | 负责技能 |
 |----|--------|----------|
 | **战略与约束层** | 愿景 VISION、架构图 ARCHITECTURE、决策 ADR | `agile-strategic`（两阶段一体化） |
-| **执行层** | DoD、`backlog.json`（+ 渲染出的 `PRODUCT-BACKLOG.md`）、Sprint（规划/关闭） | `agile-backlog` / `agile-sprint` |
+| **执行层** | DoD、`backlog.json`（唯一 Backlog 文件）、Sprint（规划/关闭） | `agile-backlog` / `agile-sprint` |
 | **跨层（变更协调）** | 变更传播矩阵评估 + 路由 | `using-agile`（本技能，引用 `references/change-matrix.md`） |
 
 **Sprint 规划由 `agile-sprint` 承担**：纯规划器（规划→DoD关闭），不含执行态追踪。关闭后保留作历史，闭环即止。
@@ -73,9 +73,8 @@ version: 5.5.2
    - 无 `.done.yaml` → 直接进入第 2 步
 2. 检测 `agile-docs/` 下各文件存在性：
    - `VISION.md` + `ARCHITECTURE.md` + `ADR.md` → 战略层
-   - `backlog.json` → 执行层待办池（唯一真源）
-   - `PRODUCT-BACKLOG.md` → 由 json 渲染的人读视图（不单独作为状态依据）
-   - `backlog.json` 不存在但旧 `PRODUCT-BACKLOG.md` 里还是表格 → 旧格式，跑 `agile.py migrate`（见 `agile-backlog/references/backlog-rules.md §七.4`）
+   - `backlog.json` → 执行层待办池（唯一 Backlog 文件；概况问 agent 或跑 `agile.py stats`）
+   - `backlog.json` 不存在但旧 `PRODUCT-BACKLOG.md` 里还是表格 → 旧格式，由 agent 按字段规范一次性转写（见 `agile-backlog/references/backlog-rules.md §七.4`）
    - `DOD.md` → 完成定义
    - `sprints/` 下未关闭的 `.md` → 活跃 Sprint（若检测到 >1 个活跃 Sprint，警告并请用户选择关闭/合并其一后再继续，见 `references/status-routing.md`）
 3. 输出三层状态表（见 `references/status-routing.md`）。
@@ -112,7 +111,7 @@ version: 5.5.2
 2. 用表格呈现"改 X 会影响 Y、Z"，请用户确认范围。
 3. 用户确认后，**路由到对应业务技能就地更新**（本入口不自己改业务正文）：
    - 改 VISION / ARCHITECTURE / ADR → `agile-strategic`
-   - 改 PRODUCT-BACKLOG 任务 / 加新任务到 Backlog → `agile-backlog`（即使 Sprint 执行中提出，不路由到 agile-sprint）
+   - 改 Backlog 条目 / 加新任务到 Backlog → `agile-backlog`（即使 Sprint 执行中提出，不路由到 agile-sprint）
    - 改 Sprint 规划 / 关闭 → `agile-sprint`（执行期状态变更由消费 Agent 自行处理，不进规范层）
    - 改 DoD 模板 → 本入口（DoD 模板就是本技能生成的）
    - 同步 Sprint 执行结果到 Backlog → `agile-backlog`（检测 .done.yaml 后默认闭环时触发）
@@ -124,7 +123,7 @@ version: 5.5.2
 
 ## 7. 硬约束
 
-- ❌ **绝不自己 Write 业务文档**（VISION / ARCHITECTURE / ADR / Sprint / `backlog.json`）；`PRODUCT-BACKLOG.md` 是脚本产物，谁都不手写。
+- ❌ **绝不自己 Write 业务文档**（VISION / ARCHITECTURE / ADR / Sprint / `backlog.json`）。
 - ✅ 只做：检测状态 → 逐层询问"更新 or 继续"（不替用户决定走向）→ 路由 → 变更协调（引用矩阵，不直接改业务正文）。
 - ✅ 渐进式：业务技能产出即停；下一步须用户再次调用本技能或下个业务技能。
 - ✅ 路由到业务技能时提示其遵循 `references/interview-protocol.md`（选择题 + 推荐）、`references/probing-protocol.md`（追问/跳过）、`references/gate-protocol.md`（门禁）。
@@ -137,7 +136,7 @@ version: 5.5.2
 |---|---|---|
 | `hook-session` | 会话开始 | 注入状态快照 + 本阶段该做什么 |
 | `hook-prompt` | 每轮用户发言 | 同上（长会话被 compact 后 SessionStart 的内容会丢，这行不会）；没有 `agile-docs/` 的项目，在提问命中规划类词时提示一次入口，同一会话只提一次；其余静默。prompt 含 `no-agile` 当轮静默 |
-| `hook-post-write` | 写 `backlog.json` / `PRODUCT-BACKLOG.md` / `*.done.yaml` 后 | json：结构校验 → 重新渲染 md → Sprint 点数对账；md：发现被手改就按 json 回滚并说明改哪里；回填：校验内容（引用不存在的条目 ID、同一 ID 既 completed 又 moved_next、feedback.type 越界、两个数组都空），只提示不阻断——回填允许分次写 |
+| `hook-post-write` | 写 `backlog.json` / `*.done.yaml` 后 | json：结构校验 → Sprint 点数对账；回填：校验内容（引用不存在的条目 ID、同一 ID 既 completed 又 moved_next、feedback.type 越界、两个数组都空），只提示不阻断——回填允许分次写 |
 
 **「本阶段该做什么」不是脚本里的字符串**，而是 `references/turn-brief.md` 里按阶段分块的文本：脚本只判断阶段，文案在 markdown 里改。七个阶段是 `conflict` / `backfill` / `sprint` / `active` / `init` / `architecture` / `backlog`，判据与每段对应的技能章节都写在该文件里。
 
@@ -149,4 +148,4 @@ version: 5.5.2
 
 `hook-session` 与 `hook-post-write` 只在存在 `agile-docs/` 的项目上工作；`hook-prompt` 在没有的项目上也只发一次入口提示，不写任何文件。其余情况完全静默。插件内 `scripts/agile.py`（Python 3.9+，标准库 only，零正则）由 hooks.json 的命令串 `python … || python3 …` 兜底探测解释器（Claude Code 与 ZCode 对 command 型 hook 都只执行字符串本体，不认 `args` 字段）；没有 python 时 hook 静默退出，不影响任何操作，`UserPromptSubmit` 永不阻断输入。
 
-**hook 与 `check` 的分工**：hook 是即时的、不撤销已写入的内容——`backlog.json` 结构错误与手改 md 以 `decision: block` 把问题清单递给模型；回填只提示（允许分次写）。`agile.py check` 是全量出口检查，多查两项——`sprints/*.done.yaml` 的内容，以及 md 是否与 json 逐字同步。关闭 Sprint 前、以及 Codex 那边，都以 `check` 为准。
+**hook 与 `check` 的分工**：hook 是即时的、不撤销已写入的内容——`backlog.json` 结构错误以 `decision: block` 把问题清单递给模型；回填只提示（允许分次写）。`agile.py check` 是全量出口检查，另查 `sprints/*.done.yaml` 的内容。关闭 Sprint 前、以及 Codex 那边，都以 `check` 为准。

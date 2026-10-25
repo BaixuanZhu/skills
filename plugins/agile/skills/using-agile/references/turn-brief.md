@@ -17,11 +17,11 @@
 |---|---|---|
 | `conflict` | `agile-docs/STRATEGY_CONFLICT.md` 存在 | using-agile §5 |
 | `backfill` | `sprints/*.done.yaml` 存在 | using-agile §3 → agile-sprint §3 环节 B/C → agile-backlog §3 阶段 4 |
-| `active` | 有状态非「已关闭」的 Sprint（池耗尽仍算：进行中比建池靠后） | agile-sprint §5（不追执行态）/ §3 环节 B（关 Sprint）/ gate-protocol §三 ④（新需求比对） |
+| `active` | 有状态非「已关闭」的 Sprint（池耗尽仍算：进行中比建池靠后） | agile-sprint §5（不追执行态）/ agile-sprint §3 环节 B（关 Sprint）/ gate-protocol §三 ④（新需求比对） |
 | `sprint` | `backlog.json` 有「待办」活条目、无进行中 Sprint | agile-sprint §2 |
 | `init` | 无 `VISION.md` | agile-strategic §2 |
 | `architecture` | 有 VISION，缺 ARCHITECTURE 或 ADR | agile-strategic §3 |
-| `backlog` | 战略齐、`backlog.json` 不存在或没有「待办」活条目（池耗尽回这里补池） | agile-backlog §2b/§3 |
+| `backlog` | 战略齐、`backlog.json` 不存在或没有「待办」活条目（池耗尽回这里补池） | agile-backlog §2b / agile-backlog §3 |
 
 **看最靠后的里程碑，不按层顺序。** 套件允许显式跳层（`agile-backlog §0`），所以「已有条目」优先于「VISION 在不在」——否则跳层项目会被判回「战略层未起步」；进行中的 Sprint 同理，优先于建池判定。
 

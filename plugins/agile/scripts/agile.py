@@ -6,8 +6,10 @@
 
 设计取舍
 --------
-* **JSON 是真源，Markdown 是渲染产物。** 脚本从不需要解析 Markdown 表格，
-  因此也不必写正则去容错列数漂移、全角空格、`\\|` 转义这些迟早会出问题的地方。
+* **backlog.json 是唯一的 Backlog 文件。** 历史上的 PRODUCT-BACKLOG.md 渲染产物
+  已随 5.6.0 退役（人读视图 = 问 agent 或 `agile.py stats`），为它维护的重渲染 /
+  回滚 / 同步比对整套防漂移机制一并删除。脚本因此从不需要解析 Markdown，
+  也不必写正则去容错列数漂移、全角空格、`\\|` 转义这些迟早会出问题的地方。
 * **标准库 only，零正则。** 结构化数据用 json 模块，行级判断用 startswith / split。
 * **hook stdout 只说 JSON。** CC 与 ZCode 都从 stdout 解析 hook 结果，但 ZCode 对
   不以 `{` 开头的输出**静默忽略**（= 永不注入），所以 hook 入口的 stdout 不许混任何
@@ -28,7 +30,6 @@ import time
 from pathlib import Path
 
 # ── 约定 ────────────────────────────────────────────────────────────────────
-SCHEMA = 1
 DOCS_DIR = "agile-docs"
 BACKLOG_JSON = "backlog.json"
 BACKLOG_MD = "PRODUCT-BACKLOG.md"
@@ -47,17 +48,10 @@ STATUSES = ("待办", "已完成", "已撤回")
 FIB = (1, 2, 3, 5, 8, 13)
 TODO_STATUS = "待办"
 WITHDRAWN = "已撤回"
-CONFIRMED_MARK = "✓"
-EMPTY_MARK = "—"
 ID_PREFIXES = ("T-", "F-")
-HASH_KEY = "backlog-sha256"
 QUOTES = "\"'“”‘’"
 POINT_BRACKETS = (("(", ")"), ("（", "）"))
 FEEDBACK_TYPES = ("reason", "issue", "decision")
-RENDER_NOTICE = (
-    "> 本文件由 `agile.py render` 从 `backlog.json` 生成，**改条目请改 `backlog.json`**。\n"
-    "> 直接编辑本文件的内容会在下次写入时被渲染覆盖。"
-)
 
 
 # ── 输入输出（Windows 控制台默认 GBK，显式切 utf-8） ────────────────────────
@@ -112,16 +106,6 @@ def load_json(path: Path) -> dict | None:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return None
-
-
-def dump_json(data: dict) -> str:
-    return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
-
-
-def fingerprint(data: dict) -> str:
-    """与格式无关的数据指纹：键序无关、空白无关，只反映内容。"""
-    canonical = json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
 
 
 def iter_items(data: dict):
@@ -229,14 +213,7 @@ def compute_stats(data: dict) -> dict:
     }
 
 
-# ── 渲染层 ──────────────────────────────────────────────────────────────────
-def cell(value) -> str:
-    """表格单元格：竖线转义，空值统一占位符。"""
-    if value is None or value == "":
-        return EMPTY_MARK
-    return str(value).replace("|", "\\|").replace("\n", " ")
-
-
+# ── 统计输出 ────────────────────────────────────────────────────────────────
 def render_stats_lines(stats: dict) -> list[str]:
     def join(groups, with_points=True, prefix=""):
         parts = []
@@ -258,48 +235,6 @@ def render_stats_lines(stats: dict) -> list[str]:
     if stats["withdrawn"]:
         lines.append(f"- 已撤回：{stats['withdrawn']} 条（不计入以上统计）")
     return lines
-
-
-def render_md(data: dict) -> str:
-    """把 backlog.json 渲染成给人看的 Markdown。脚本本身从不反向解析它。"""
-    out: list[str] = ["# 产品待办", "", RENDER_NOTICE, "", f"<!-- {HASH_KEY}: {fingerprint(data)} -->", ""]
-
-    for phase in data.get("phases") or []:
-        out.append(f"## 阶段 {phase.get('id', '?')} · {phase.get('title', '')}")
-        out.append("")
-        out.append("| ID | 标题 | 类型 | 仓库 | 点 | 优先级 | 状态 | 关联 | 来源/依据 | 已确认 |")
-        out.append("|----|------|------|------|---|--------|------|------|-----------|--------|")
-        for item in phase.get("items") or []:
-            row = [
-                cell(item.get("id")),
-                cell(item.get("title")),
-                cell(item.get("type")),
-                cell(item.get("repo")),
-                cell(item.get("points")),
-                cell(item.get("priority")),
-                cell(item.get("status")),
-                cell(item.get("refs")),
-                cell(item.get("basis")),
-                CONFIRMED_MARK if item.get("confirmed") is True else "待确认",
-            ]
-            out.append("| " + " | ".join(row) + " |")
-        out.append("")
-
-    detailed = [item for _, item in iter_items(data) if item.get("detail")]
-    if detailed:
-        out.append("## 任务详情")
-        out.append("")
-        for item in detailed:
-            out.append(f"### {item.get('id')} {item.get('title', '')}")
-            out.append("")
-            for line in item["detail"]:
-                out.append(f"- {line}")
-            out.append("")
-
-    out.append("## 统计")
-    out.append("")
-    out.extend(render_stats_lines(compute_stats(data)))
-    return "\n".join(out) + "\n"
 
 
 # ── 跨文件读取（全部行扫描，不解析 Markdown 结构） ──────────────────────────
@@ -549,106 +484,6 @@ def check_done_files(root: Path, data: dict) -> list[str]:
 
 
 
-# ── 旧格式迁移（唯一需要读 Markdown 表格的地方，一次性） ─────────────────────
-def split_table_row(line: str) -> list[str]:
-    """按未转义的 `|` 切单元格。
-
-    `render_md` 把标题里的竖线写成 `\\|`。按裸 `|` 切会让该行后面每一列左移
-    一位：标题被截成两半、点数落进优先级、整条记录错得无声无息。
-    """
-    body = line.strip()
-    if body.startswith("|"):
-        body = body[1:]
-    if body.endswith("|") and not body.endswith("\\|"):
-        body = body[:-1]
-    cells: list[str] = []
-    buffer: list[str] = []
-    index = 0
-    while index < len(body):
-        char = body[index]
-        if char == "\\" and body[index + 1: index + 2] == "|":
-            buffer.append("|")
-            index += 2
-            continue
-        if char == "|":
-            cells.append("".join(buffer).strip())
-            buffer = []
-        else:
-            buffer.append(char)
-        index += 1
-    cells.append("".join(buffer).strip())
-    return cells
-
-
-def convert_legacy_md(text: str) -> dict:
-    phases: list[dict] = []
-    details: dict[str, list[str]] = {}
-    phase: dict | None = None
-    in_detail = False
-    detail_id: str | None = None
-
-    def clean(value: str) -> str:
-        return "" if value in ("—", "-", "无", "") else value
-
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("## "):
-            heading = stripped[3:].strip()
-            if heading.startswith("阶段"):
-                body = heading[2:].strip()
-                number, _, name = body.partition("·")
-                number = number.strip()
-                phase = {
-                    "id": int(number) if number.isdigit() else len(phases) + 1,
-                    "title": name.strip() or "未命名",
-                    "items": [],
-                }
-                phases.append(phase)
-                in_detail = False
-                detail_id = None
-            elif heading.startswith("任务详情"):
-                phase, in_detail, detail_id = None, True, None
-            else:
-                phase, in_detail, detail_id = None, False, None
-            continue
-
-        if in_detail:
-            if stripped.startswith("### "):
-                parts = stripped[4:].strip().split(None, 1)
-                detail_id = parts[0] if parts and is_item_id(parts[0]) else None
-                if detail_id:
-                    details.setdefault(detail_id, [])
-            elif detail_id and stripped.startswith("- "):
-                details[detail_id].append(stripped[2:].strip())
-            continue
-
-        if phase is None or not stripped.startswith("|"):
-            continue
-        cells = split_table_row(stripped)
-        if len(cells) < 10 or not is_item_id(cells[0]):
-            continue
-        points = int(cells[4]) if cells[4].isdigit() else 0
-        item = {
-            "id": cells[0],
-            "title": cells[1],
-            "type": cells[2],
-            "repo": clean(cells[3]),
-            "points": points,
-            "priority": cells[5],
-            "status": cells[6],
-            "refs": clean(cells[7]),
-            "basis": clean(cells[8]),
-            "confirmed": cells[9] == CONFIRMED_MARK,
-        }
-        phase["items"].append(item)
-
-    for phase in phases:
-        for item in phase["items"]:
-            if details.get(item["id"]):
-                item["detail"] = details[item["id"]]
-    return {"schema": SCHEMA, "phases": phases}
-
-
 # ── hook 入口 ───────────────────────────────────────────────────────────────
 def payload_root(payload: dict) -> Path:
     raw = payload.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
@@ -670,8 +505,6 @@ def hook_post_write() -> None:
 
     if path.name == BACKLOG_JSON:
         handle_json_write(path)
-    elif path.name == BACKLOG_MD:
-        handle_md_write(path)
     elif path.name.endswith(".done.yaml"):
         handle_done_write(path, root)
 
@@ -700,19 +533,13 @@ def handle_json_write(json_path: Path) -> None:
         )
         return
 
-    md_path = json_path.with_name(BACKLOG_MD)
-    try:
-        md_path.write_text(render_md(data), encoding="utf-8")
-    except Exception:
-        return
-
     notes = list(warnings)
     notes.extend(check_sprint_consistency(root_of(json_path), data))
     if notes:
         listed = "\n".join("  · " + line for line in notes)
         emit_context(
             "PostToolUse",
-            f"[agile] backlog.json 已通过结构校验并重新渲染 {BACKLOG_MD}，另有 {len(notes)} 处待处理：\n{listed}",
+            f"[agile] backlog.json 已通过结构校验，另有 {len(notes)} 处待处理：\n{listed}",
         )
 
 
@@ -738,31 +565,6 @@ def handle_done_write(done_path: Path, root: Path) -> None:
         "PostToolUse",
         f"[agile] 回填文件 {done_path.name} 有 {len(problems)} 处问题：\n{listed}\n"
         "  口径见 agile-docs/interfaces/sprint-schema.yaml 的 done_file 段。",
-    )
-
-
-def handle_md_write(md_path: Path) -> None:
-    json_path = md_path.with_name(BACKLOG_JSON)
-    if not json_path.exists():
-        return  # 未迁移的旧项目，不插手
-    data = load_json(json_path)
-    if data is None:
-        return  # json 本身坏了，交给 handle_json_write 报
-    expected = render_md(data)
-    actual = read_text(md_path)
-    if actual is None:
-        return
-    if actual.replace("\r\n", "\n") == expected.replace("\r\n", "\n"):
-        return
-
-    try:
-        md_path.write_text(expected, encoding="utf-8")
-    except Exception:
-        return
-    emit_block(
-        "[agile] PRODUCT-BACKLOG.md 是 backlog.json 的渲染产物，直接写它无效——已按当前 json 重新渲染。\n"
-        "  改条目：编辑 agile-docs/backlog.json，保存后自会重新渲染本文件。\n"
-        "  看统计：跑 `agile.py stats`，不需要改任何文件。"
     )
 
 
@@ -866,7 +668,6 @@ def describe_state(root: Path) -> list[str]:
     """Sprint / 回填 / Backlog / ADR 的一行式摘要，两个 hook 共用。"""
     docs = root / DOCS_DIR
     json_path = docs / BACKLOG_JSON
-    md_path = docs / BACKLOG_MD
     parts: list[str] = []
 
     sprints = scan_sprints(root)
@@ -892,9 +693,6 @@ def describe_state(root: Path) -> list[str]:
     if data is not None:
         stats = compute_stats(data)
         parts.append(f"Backlog {stats['total']} 条 / {stats['points']} 点（已确认 {stats['confirmed']}）")
-        actual = read_text(md_path) if md_path.exists() else None
-        if actual is not None and actual.replace("\r\n", "\n") != render_md(data):
-            parts.append(f"⚠ {BACKLOG_MD} 与 backlog.json 不同步——跑 `agile.py render` 重新生成")
 
     adr_text = read_text(docs / ADR_MD)
     if adr_text:
@@ -970,13 +768,11 @@ def hook_prompt() -> None:
 # ── 命令行 ──────────────────────────────────────────────────────────────────
 USAGE = """agile.py —— Backlog 机械操作（标准库 only，零正则）
 
-  render  [项目根]   从 agile-docs/backlog.json 渲染 PRODUCT-BACKLOG.md
-  stats   [项目根]   打印统计（每次全量重算，已撤回不计入）
-  check   [项目根]   结构校验 + Sprint 点数对账，有问题返回 1
-  migrate [项目根]   旧版 PRODUCT-BACKLOG.md → backlog.json（json 已存在则不动）
+  stats   [项目根]   打印统计（每次全量重算，已撤回不计入；backlog.json 是唯一 Backlog 文件）
+  check   [项目根]   结构校验 + Sprint 点数对账 + 回填内容，有问题返回 1
   brief   [项目根]   打印当前阶段与每轮将要注入的内容（排查 hook 用）
 
-  hook-post-write    hook 入口：写完文件后校验并渲染（decision:block = 需要模型处理）
+  hook-post-write    hook 入口：写完文件后校验（decision:block = 需要模型处理）
   hook-session       hook 入口：会话开始注入敏捷状态
   hook-prompt        hook 入口：每轮判断本轮要不要走敏捷流程
 """
@@ -991,32 +787,13 @@ def resolve(root_arg: str | None) -> tuple[Path, Path, Path]:
 def load_or_report(json_path: Path) -> dict | None:
     if not json_path.exists():
         print(f"找不到 {json_path}")
-        print(f"  旧项目改造：先跑 `agile.py migrate {json_path.parent.parent}`")
+        print("  旧表格格式：由 agent 按 agile-backlog/references/backlog-rules.md §七 一次性转写")
         return None
     data = load_json(json_path)
     if data is None:
         print(f"{json_path} 不是合法 JSON")
         return None
     return data
-
-
-def cli_render(root_arg: str | None) -> int:
-    _root, json_path, md_path = resolve(root_arg)
-    data = load_or_report(json_path)
-    if data is None:
-        return 1
-    errors, warnings = validate(data)
-    if errors:
-        for line in errors:
-            print("错误：" + line)
-        return 1
-    md_path.write_text(render_md(data), encoding="utf-8")
-    stats = compute_stats(data)
-    print(f"已渲染 {md_path}")
-    print(f"  {stats['total']} 条 / {stats['points']} 点，已确认 {stats['confirmed']}")
-    for line in warnings:
-        print("提示：" + line)
-    return 0
 
 
 def cli_stats(root_arg: str | None) -> int:
@@ -1041,49 +818,18 @@ def cli_check(root_arg: str | None) -> int:
     problems.extend("跨文件：" + line for line in check_sprint_consistency(root, data))
     problems.extend("回填：" + line for line in check_done_files(root, data))
 
-    actual = read_text(md_path) if md_path.exists() else None
-    if actual is None:
-        # 文件不存在 / 读不出来时不能说「不一致」——排查的人会被引去比对两份内容。
-        problems.append(f"同步：{md_path.name} 缺失或读不出来，跑 `agile.py render` 生成")
-    elif actual.replace("\r\n", "\n") != render_md(data):
-        problems.append(f"同步：{md_path.name} 与 backlog.json 不一致，跑 `agile.py render`")
+    if md_path.exists():
+        # PRODUCT-BACKLOG.md 已随 5.6.0 退役：不再生成、不再比对，只提醒清理。
+        print(f"提示：{md_path.name} 已不再生成（遗留产物，确认无自定义内容后可删除）")
 
     if not problems:
         stats = compute_stats(data)
-        print(f"通过：{stats['total']} 条 / {stats['points']} 点，Markdown 与 json 一致")
+        print(f"通过：{stats['total']} 条 / {stats['points']} 点，结构 / 对账 / 回填全过")
         return 0
     print(f"发现 {len(problems)} 处问题：")
     for line in problems:
         print("  · " + line)
     return 1
-
-
-def cli_migrate(root_arg: str | None) -> int:
-    _root, json_path, md_path = resolve(root_arg)
-    if json_path.exists():
-        print(f"{json_path} 已存在，不覆盖。要重新迁移请先自行移走它。")
-        return 1
-    text = read_text(md_path)
-    if text is None:
-        print(f"找不到 {md_path}，没有可迁移的旧格式")
-        return 1
-    data = convert_legacy_md(text)
-    if not data["phases"]:
-        print(f"{md_path} 里没有识别到「## 阶段 N」表格，未迁移")
-        return 1
-
-    json_path.write_text(dump_json(data), encoding="utf-8")
-    md_path.write_text(render_md(data), encoding="utf-8")
-
-    stats = compute_stats(data)
-    print(f"已迁移 {md_path.name} → {json_path.name}，并把 Markdown 重渲染为产物格式")
-    print(f"  {stats['total']} 条 / {stats['points']} 点，已确认 {stats['confirmed']}")
-    errors, warnings = validate(data)
-    for line in errors:
-        print("错误：" + line)
-    for line in warnings:
-        print("提示：" + line)
-    return 0 if not errors else 1
 
 
 def cli_brief(root_arg: str | None) -> int:
@@ -1103,10 +849,8 @@ def cli_brief(root_arg: str | None) -> int:
 
 
 COMMANDS = {
-    "render": cli_render,
     "stats": cli_stats,
     "check": cli_check,
-    "migrate": cli_migrate,
     "brief": cli_brief,
 }
 

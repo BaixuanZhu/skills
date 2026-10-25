@@ -17,8 +17,8 @@
 | `agile-docs/ADR.md` | ADR 决策已产出 | agile-strategic（阶段 B） |
 | `agile-docs/STRATEGY_CONFLICT.md` | 战略冲突待裁决 | using-agile（写前门禁生成，裁决后吸收可删） |
 | `agile-docs/backlog.json` | 待办池已产出（唯一真源） | agile-backlog |
-| `agile-docs/PRODUCT-BACKLOG.md`（无 `backlog.json` 时） | md 里还是表格 → 旧格式，待 `migrate` | agile-backlog（旧格式迁移） |
-| `agile-docs/PRODUCT-BACKLOG.yaml` / `PRODUCT-BACKLOG.json` | **v4.x 旧格式**（注意带名字前缀，与新的 `backlog.json` 不同名） | agile-backlog（旧格式迁移） |
+| `agile-docs/PRODUCT-BACKLOG.md`（无 `backlog.json` 时） | md 里还是表格 → 旧格式，待 agent 转写 | agile-backlog（旧格式转写，§七.4） |
+| `agile-docs/PRODUCT-BACKLOG.yaml` / `PRODUCT-BACKLOG.json` | **v4.x 旧格式**（注意带名字前缀，与新的 `backlog.json` 不同名） | agile-backlog（旧格式转写，§七.4） |
 | `agile-docs/DOD.md` | 完成定义已就绪 | using-agile（初始化） |
 | `sprints/*.done.yaml` | Sprint 执行结果已回传 | using-agile（本入口，默认执行回填闭环：agile-sprint 关闭 → agile-backlog 同步 + 反馈处理） |
 | `sprints/` 下含状态非"已关闭"的 `.md` | 活跃 Sprint | agile-sprint |
@@ -43,7 +43,7 @@
 
 > ⚠️ 若检测到 >1 个活跃 Sprint（状态非"已关闭"），警告并请用户选择关闭/合并其一后再继续。
 
-> ⚠️ 检测到 `backlog.json` 不存在、而 `PRODUCT-BACKLOG.md` 里还是「## 阶段 N」+ 表格（或存在 v4.x 的 `PRODUCT-BACKLOG.yaml` / `PRODUCT-BACKLOG.json`）：跑 `agile.py migrate`（脚本在插件 `scripts/` 下），它会把内容转成 `backlog.json` 并把 md 重渲染为产物格式（口径见 `agile-backlog/references/backlog-rules.md §七.4`）。
+> ⚠️ 检测到 `backlog.json` 不存在、而 `PRODUCT-BACKLOG.md` 里还是「## 阶段 N」+ 表格（或存在 v4.x 的 `PRODUCT-BACKLOG.yaml` / `PRODUCT-BACKLOG.json`）：由 agent 按字段规范一次性转写成 `backlog.json`（口径见 `agile-backlog/references/backlog-rules.md §七.4`）。
 
 ## 三、路由决策
 

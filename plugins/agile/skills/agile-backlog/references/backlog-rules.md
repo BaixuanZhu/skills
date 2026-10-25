@@ -99,14 +99,9 @@ Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改�
 
 ## 七、文件形态与命令（消费 Agent 读此文件）
 
-两个文件，**职责单向**：
+一个文件：`agile-docs/backlog.json` 是**唯一 Backlog 文件**（字段定义见 §二），人或 agent 直接编辑。人读概况 = 问 agent 或跑 `stats`。
 
-| 文件 | 角色 | 谁写 |
-|------|------|------|
-| `agile-docs/backlog.json` | **唯一真源**，字段定义见 §二 | 人或 agent 编辑 |
-| `agile-docs/PRODUCT-BACKLOG.md` | 渲染产物，供人读 | 只能由脚本生成 |
-
-改条目一律改 `backlog.json`。`.md` 是产物不是副本，不存在「两边保持一致」的问题——直接编辑它会被 hook 回滚。
+> 5.6.0 起 PRODUCT-BACKLOG.md 渲染产物退役：不再生成、不再比对。遗留的 md 不再被维护或覆盖，确认无自定义内容后可删。
 
 ### 7.1 结构
 
@@ -142,27 +137,25 @@ Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改�
 ### 7.2 命令
 
 ```bash
-python <插件根>/scripts/agile.py render  [项目根]   # json → md
 python <插件根>/scripts/agile.py stats   [项目根]   # 全量重算并打印
 python <插件根>/scripts/agile.py check   [项目根]   # 结构校验 + Sprint 点数对账 + 回填文件内容校验，有问题返回 1
 python <插件根>/scripts/agile.py brief   [项目根]   # 打印当前阶段与将要注入的原文
-python <插件根>/scripts/agile.py migrate [项目根]   # 旧版 md → json（一次性）
 ```
 
 `check` 的跨文件部分包括 `sprints/*.done.yaml` 的内容：引用了不存在的条目 ID、同一 ID 既在 `completed` 又在 `moved_next`、`feedback.type` 不是 `reason / issue / decision`、两个数组都空——这些在文件名层面看不出来，只能在内容层面报。
 
-脚本在**插件的 `scripts/` 下，不在项目里**。装插件时其中两个动作已挂到 hook 上（写完 json 自动校验并重渲染、会话开始注入状态），通常不需要手动执行。
+脚本在**插件的 `scripts/` 下，不在项目里**。装插件时其中两个动作已挂到 hook 上（写完 json 自动校验并对账、会话开始注入状态），通常不需要手动执行。
 
-用 `npx skills` 只装技能文件时没有脚本也没有 hook：按 §七.1 手写 json、按 §七.3 自己全量算即可。此时渲染出的 md 与脚本格式必然有出入——装上插件后会被覆盖成标准格式，**那是预期行为，不是数据丢失**（数据在 json 里）。
+用 `npx skills` 只装技能文件时没有脚本也没有 hook：按 §七.1 手写 json、按 §七.3 自己全量算即可。
 
 ### 7.3 统计
 
-统计由 `stats` 从 json 全量重算，渲染进 md 的「## 统计」段。**不要手改统计数字，也不要自己写一段脚本去算**——已撤回条目不计入任何统计这条规则，脚本里已经写了（`status == "已撤回"` 的条目被排除）。
+统计由 `stats` 从 json 全量重算并打印。**不要手改统计数字，也不要自己写一段脚本去算**——已撤回条目不计入任何统计这条规则，脚本里已经写了（`status == "已撤回"` 的条目被排除）。
 
 没有脚本可用时（无 python、非插件安装），按同一规则**覆盖式全量重算，禁止在旧数字上增量加减**；只有数字被改过而条目没动，就是漏算的信号。
 
-### 7.4 旧格式迁移
+### 7.4 旧格式转写（agent 一次性，脚本不再提供 migrate）
 
-检测到 `backlog.json` 不存在、而 `PRODUCT-BACKLOG.md` 里还是「## 阶段 N」+ 表格 → 跑 `migrate`。它把表格与「任务详情」段一起转成 json，再把 md 重渲染成产物格式，原表格里的 `—` 占位符转成缺省字段。
+检测到 `backlog.json` 不存在、而 `PRODUCT-BACKLOG.md` 里还是「## 阶段 N」+ 表格 → 由 agent 按 §二 字段定义一次性转写成 `backlog.json`：表格每行一个条目（`—` 占位符写成空缺省字段），「任务详情」段并入对应条目的 `detail`，标题里的 `\|` 还原为字面 `|`。写完 hook 立即做结构校验 + Sprint 点数对账兜底。md 不会被生成或覆盖，原文件核对后由项目自行处置（可删）。
 
 v4.x 的双文件（`PRODUCT-BACKLOG.yaml` / `.json`）同样处理：把其中仅机器侧持有的信息（adr_refs / confirmed / withdrawn）核对进新 json，删旧文件。

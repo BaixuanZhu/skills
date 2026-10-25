@@ -26,9 +26,7 @@ dependencies:
 前置条件缺失才回退；齐备时直接从 §2 开始，不必先经 `using-agile` 做状态检测。
 
 ## 1. 定位
-本技能是执行层中枢，产出 `agile-docs/backlog.json`——**唯一的机器真源**，字段定义见 `references/backlog-rules.md §二`。同目录的 `PRODUCT-BACKLOG.md` 由脚本从它渲染，供人读，不手写、不反向写。
-
-> **为什么不是单文件。** v5.0.0 曾规定「不另建机器侧副本」，那是针对 v4.x 的 `.yaml` + `.json` 双写——两份都手维护，必然漂移。这里的形态不同：**json 单向生成 md**，md 从不回写 json，不存在「保持一致」这件事，所以没有漂移可发生。人读视图和白纸黑字的结构化数据各归各位。
+本技能是执行层中枢，产出 `agile-docs/backlog.json`——**唯一的 Backlog 文件**，字段定义见 `references/backlog-rules.md §二`。人读概况 = 问 agent 或跑 `agile.py stats`（5.6.0 起 PRODUCT-BACKLOG.md 渲染产物退役，遗留文件不再维护，确认无自定义内容后可删）。
 
 它是**待办池**（to-do list）。技术任务（T-NNN）和功能需求（F-NNN）**平级**进入待办池。不强制 INVEST/Given-When-Then 仪式。
 
@@ -51,7 +49,7 @@ dependencies:
 - 用 VISION 的"核心原则 / 战略红线"校验每个条目的归属（不服务愿景的不进 Backlog）
 - 用 ADR.md 中的决策推导技术任务（T-NNN），每条 T-NNN 关联对应 ADR 章节
 - 确认优先级排序逻辑（见 `references/backlog-rules.md`）
-- **旧格式迁移检测**：`agile-docs/backlog.json` 不存在、而 `PRODUCT-BACKLOG.md` 里还是表格 → 跑 `agile.py migrate`（一次性，脚本在插件 `scripts/` 下）；v4.x 的 `.yaml` / `.json` 双文件把其中仅机器侧持有的信息（adr_refs / confirmed / withdrawn）核对进 json 后删除
+- **旧格式转写检测**：`agile-docs/backlog.json` 不存在、而 `PRODUCT-BACKLOG.md` 里还是表格 → 按字段规范由 agent 一次性转写（`references/backlog-rules.md §七.4`，写完 hook 校验兜底）；v4.x 的 `.yaml` / `.json` 双文件把其中仅机器侧持有的信息（adr_refs / confirmed / withdrawn）核对进 json 后删除
 - **统计不手算**：条目数 / 点数 / 分组统计由 `agile.py stats` 全量重算，命令见 `references/backlog-rules.md §七.3`。没有脚本时才自己按覆盖式重算，**禁止在旧数字上增量加减**
 
 ### 2b. 决策问询（写前必跑，`using-agile/references/interview-protocol.md`）
@@ -123,7 +121,7 @@ dependencies:
 - `basis` 承载两个标注：点的来源（`agent 推荐` / `用户确认`）+ 优先级依据（开发顺序 / MoSCoW / 依赖 / ADR 优先级，见 `references/backlog-rules.md §三`）。
 - `repo` 仅多仓库项目填（供 Sprint 识别跨仓库交接点），单仓库省略。
 - `confirmed`：`true` 已与用户确认，`false` agent 推荐待确认；Sprint 取用前必须显式转 `true`（否则 `agile-sprint` 跳过并告警）。
-- **统计不用自己算**：保存时 hook 会重渲染 `PRODUCT-BACKLOG.md` 并把统计写进去；没装插件就跑 `agile.py render`。写完停，结构化审阅后再进阶段 2。
+- **统计不用自己算**：`agile.py stats` 全量重算，hook 注入的状态行也带统计。写完停，结构化审阅后再进阶段 2。
 
 ### 阶段 2：任务详情展开 + 验收标准（仅非显然条目）
 
@@ -169,7 +167,7 @@ dependencies:
 每个产出阶段写完即停，按 `using-agile/references/probing-protocol.md §四` 输出决策点确认清单（重点列排序依据 / 优先级判断 / agent 自估点数及理由 × 来源；阶段 3 追加「下游影响评估」结论），问"**继续下一阶段 / 下一步**（agile-sprint）还是**更新**本层？"。
 
 ## 5. 硬约束
-- ✅ 产出 `agile-docs/backlog.json`（机器真源）；`PRODUCT-BACKLOG.md` 由脚本渲染，**不手写**；❌ **不顺手写** VISION / ARCHITECTURE / ADR / Sprint。
+- ✅ 产出 `agile-docs/backlog.json`（唯一 Backlog 文件）；❌ **不顺手写** VISION / ARCHITECTURE / ADR / Sprint / PRODUCT-BACKLOG.md。
 - ✅ **决策问询是产出前环节**（§2b，口径见 `using-agile/references/interview-protocol.md`），决策点未确认不落盘。
 - ✅ **产出分阶段**（排序+估点 → 详情+验收，§3），每阶段写完即停；❌ 禁止一次性出全部。
 - ✅ **`phases[]` 即唯一结构**（§3 阶段 1），**禁止**单独维护"优先级排序表 / 待办池"等平级结构；字段名与取值严格按 `references/backlog-rules.md §二`，不自由增删。
