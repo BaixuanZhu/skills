@@ -83,6 +83,125 @@ out=$( cd empty && printf '%s' "$P_PLAN" | PATH=/usr/bin sh "$PLUGIN/scripts/run
 code=$?
 if [ -z "$out" ] && [ "$code" -eq 0 ]; then PASS=$((PASS+1)); echo "ok    无 python 时静默 exit 0"; else echo "FAIL  无 python 降级: out=$out code=$code"; FAIL=$((FAIL+1)); fi
 
+# ── hooks.json 命令串直跑：宿主展开 ${CLAUDE_PLUGIN_ROOT} 后交给 shell 的就是它 ──
+# 5.5.5 在 ZCode 上三 hook 全灭的根因是 command 型带 args（ZCode 只执行字符串本体、
+# 静默丢弃 args），这里按两宿主的执行方式直跑命令串，并按 stdout 交集 schema 校验。
+HOOKS="$PLUGIN/hooks/hooks.json"
+
+hook_cmd() {  # hook_cmd <事件>：打印该事件 command 型条目的 command 串
+  $PY - "$HOOKS" "$1" <<'PYEOF'
+import json, sys
+for entry in json.load(open(sys.argv[1], encoding="utf-8"))["hooks"][sys.argv[2]]:
+    for hook in entry["hooks"]:
+        if hook.get("type") == "command":
+            print(hook["command"]); raise SystemExit(0)
+raise SystemExit(1)
+PYEOF
+}
+
+hooks_shape() {  # 形态守卫：args 复发 / timeout 不是秒 / 缺兜底都在这里拦
+  $PY - "$HOOKS" <<'PYEOF'
+import json, sys
+problems = []
+for event, entries in json.load(open(sys.argv[1], encoding="utf-8"))["hooks"].items():
+    for e in entries:
+        for h in e["hooks"]:
+            if h.get("type") != "command":
+                problems.append(f"{event}: type={h.get('type')} 不是 command")
+            if "args" in h:
+                problems.append(f"{event}: 带 args——ZCode 对 command 型静默丢弃 args（5.5.5 全灭根因）")
+            t = h.get("timeout")
+            if isinstance(t, bool) or not isinstance(t, int) or not 0 < t <= 60:
+                problems.append(f"{event}: timeout 应为秒数(1~60)，当前 {t!r}")
+            c = h.get("command", "")
+            if "${CLAUDE_PLUGIN_ROOT}" not in c or "agile.py" not in c:
+                problems.append(f"{event}: command 未指向插件内 agile.py")
+            if "||" not in c:
+                problems.append(f"{event}: 缺 python||python3 解释器兜底")
+print("\n".join(problems)); raise SystemExit(1 if problems else 0)
+PYEOF
+}
+
+hook_json_ok() {  # hook_json_ok <期望事件|->> <hook stdout>：按交集 schema 校验
+  $PY - "$1" "$2" <<'PYEOF'
+import json, sys
+want, raw = sys.argv[1], sys.argv[2]
+if want == "-":
+    sys.exit(0 if not raw.strip() else 1)
+if not raw.startswith("{"):  # ZCode：非 { 开头整段忽略 = 永不注入
+    sys.exit(1)
+obj = json.loads(raw)
+top = {"hookSpecificOutput", "decision", "reason", "stopReason",
+       "continue", "systemMessage", "suppressOutput", "additionalContext"}
+hso = obj.get("hookSpecificOutput")
+ok = set(obj) <= top and (
+    hso is None or (set(hso) <= {"hookEventName", "additionalContext", "permissionDecision",
+                                 "permissionDecisionReason", "updatedInput", "decision"}
+                    and hso.get("hookEventName") == want))
+sys.exit(0 if ok else 1)
+PYEOF
+}
+
+expand_for() {  # expand_for <posix|win> <模板>：模拟宿主展开插件根变量
+  local root
+  if [ "$1" = win ]; then root=$(w ../../plugins/agile); else root=$PLUGIN; fi
+  printf '%s' "$2" | sed "s|\${CLAUDE_PLUGIN_ROOT}|$root|g"
+}
+
+if hooks_shape; then PASS=$((PASS+1)); echo "ok    hooks.json 形态（无 args / 秒 timeout / 带兜底）"
+else FAIL=$((FAIL+1)); echo "FAIL  hooks.json 形态"; hooks_shape; fi
+
+S_SESSION=$(expand_for posix "$(hook_cmd SessionStart)")
+out=$( cd active && printf '%s' "$P_ACT" | sh -c "$S_SESSION" ); code=$?
+if [ "$code" -eq 0 ] && hook_json_ok SessionStart "$out" && printf '%s' "$out" | grep -q agile-state; then
+  PASS=$((PASS+1)); echo "ok    SessionStart 命令串（sh）注入状态块"
+else FAIL=$((FAIL+1)); echo "FAIL  SessionStart 命令串（sh）: code=$code out=$out"; fi
+
+# 静默用例的 payload 必须指向 empty 本身：脚本以 payload 的 cwd 为准（宿主同样传项目目录）
+P_SILENT='{"cwd":"'"$W_EMPTY"'","session_id":"s_silent"}'
+out=$( cd empty && printf '%s' "$P_SILENT" | sh -c "$S_SESSION" ); code=$?
+if [ "$code" -eq 0 ] && hook_json_ok - "$out"; then
+  PASS=$((PASS+1)); echo "ok    非 agile 项目命令串（sh）静默"
+else FAIL=$((FAIL+1)); echo "FAIL  非 agile 项目命令串（sh）: code=$code out=$out"; fi
+
+S_POST=$(expand_for posix "$(hook_cmd PostToolUse)")
+TP=$(mktemp -d); mkdir -p "$TP/agile-docs"
+printf '{oops' > "$TP/agile-docs/backlog.json"
+W_TP=$(w "$TP")
+out=$( cd "$TP" && printf '{"cwd":"%s","tool_input":{"file_path":"%s/agile-docs/backlog.json"}}' "$W_TP" "$W_TP" | sh -c "$S_POST" ); code=$?
+blocked=$(printf '%s' "$out" | $PY -c 'import json,sys; o=json.load(sys.stdin); print("yes" if o.get("decision")=="block" else "no")' 2>/dev/null)
+if [ "$code" -eq 0 ] && [ "$blocked" = yes ] && printf '%s' "$out" | grep -q '不是合法 JSON'; then
+  PASS=$((PASS+1)); echo "ok    坏 json 写入 → decision:block + exit 0（sh）"
+else FAIL=$((FAIL+1)); echo "FAIL  坏 json 写入（sh）: code=$code blocked=$blocked out=$out"; fi
+rm -rf "$TP"
+
+# Windows 宿主默认 cmd.exe，且以「单个 verbatim argv」直传命令串（cmd /d /s /c "…"）。
+# 从 Git Bash 直接调 cmd 会被 MSYS 把内层引号转义坏（假阳性），必须用 node 按宿主
+# 同款 spawn 复刻；命令串与 payload 走环境变量，不经过 argv。
+if command -v node >/dev/null 2>&1 && command -v cmd >/dev/null 2>&1; then
+  run_cmd_host() {  # run_cmd_host <命令串> <payload>：宿主同款执行，stdout 原样、退出码透传
+    AGILE_HOOK_CMD="$1" AGILE_HOOK_STDIN="$2" node -e '
+const { spawnSync } = require("child_process");
+const r = spawnSync(process.env.ComSpec || "cmd.exe",
+  ["/d", "/s", "/c", "\"" + process.env.AGILE_HOOK_CMD + "\""],
+  { input: process.env.AGILE_HOOK_STDIN, windowsVerbatimArguments: true });
+process.stdout.write(r.stdout || "");
+process.exit(r.status == null ? 1 : r.status);'
+  }
+
+  W_PROMPT=$(expand_for win "$(hook_cmd UserPromptSubmit)")
+  out=$( cd active && run_cmd_host "$W_PROMPT" "$P_ACT" ); code=$?
+  if [ "$code" -eq 0 ] && hook_json_ok UserPromptSubmit "$out" && printf '%s' "$out" | grep -q Backlog; then
+    PASS=$((PASS+1)); echo "ok    UserPromptSubmit 命令串（cmd/宿主形态）注入状态块"
+  else FAIL=$((FAIL+1)); echo "FAIL  UserPromptSubmit 命令串（cmd/宿主形态）: code=$code out=$out"; fi
+
+  W_SESSION=$(expand_for win "$(hook_cmd SessionStart)")
+  out=$( cd empty && run_cmd_host "$W_SESSION" "$P_SILENT" ); code=$?
+  if [ "$code" -eq 0 ] && hook_json_ok - "$out"; then
+    PASS=$((PASS+1)); echo "ok    非 agile 项目命令串（cmd/宿主形态）静默"
+  else FAIL=$((FAIL+1)); echo "FAIL  非 agile 项目命令串（cmd/宿主形态）: code=$code out=$out"; fi
+fi
+
 echo "--- 已启用项目的完整输出 ---"
 run active "$P_ACT"
 

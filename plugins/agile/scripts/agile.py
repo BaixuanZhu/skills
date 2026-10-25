@@ -9,8 +9,13 @@
 * **JSON 是真源，Markdown 是渲染产物。** 脚本从不需要解析 Markdown 表格，
   因此也不必写正则去容错列数漂移、全角空格、`\\|` 转义这些迟早会出问题的地方。
 * **标准库 only，零正则。** 结构化数据用 json 模块，行级判断用 startswith / split。
-* **fail-open。** 脚本随插件分发到别人机器上，任何未预期异常都变成沉默退出 0。
-  门禁自己挂掉，不能连带把用户的工作流挂掉。
+* **hook stdout 只说 JSON。** CC 与 ZCode 都从 stdout 解析 hook 结果，但 ZCode 对
+  不以 `{` 开头的输出**静默忽略**（= 永不注入），所以 hook 入口的 stdout 不许混任何
+  日志或纯文本；要注入就走 `hookSpecificOutput.additionalContext`，要阻断就走顶层
+  `decision: "block"` + `reason`（两家的交集形态）。
+* **fail-open，且有意退出码只有 0。** 脚本随插件分发到别人机器上，任何未预期异常
+  都变成沉默退出 0。hook 有意非零退出会破坏 hooks.json 里 `python || python3`
+  的兜底语义（`||` 只该在解释器缺失时轮到第二个），所以问题清单走 stdout JSON。
 """
 from __future__ import annotations
 
@@ -79,15 +84,26 @@ def read_stdin_json() -> dict:
 
 
 def emit_context(event: str, text: str) -> None:
-    """以 hook 协议回注上下文（exit 0，模型看得到但不算错误）。"""
+    """回注上下文（exit 0，模型看得到但不算错误）。
+
+    顶层只放 hookSpecificOutput，additionalContext 挂在里面：ZCode 对本事件
+    的 hookSpecificOutput 只认 additionalContext 这一个附加键，且 stdout 不以
+    `{` 开头就直接忽略，所以这里前后都不能再打印纯文本。
+    """
     payload = {"hookSpecificOutput": {"hookEventName": event, "additionalContext": text}}
     sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
 
-def fail(message: str) -> None:
-    """exit 2：PostToolUse 下把 stderr 递给模型，不撤销已写入的内容。"""
-    sys.stderr.write(message.rstrip() + "\n")
-    sys.exit(2)
+def emit_block(reason: str) -> None:
+    """阻断信号（exit 0）：CC 与 ZCode 都解析顶层 decision:block，reason 递给模型。
+
+    不撤销已写入的内容（PostToolUse 时写盘已发生），只宣告这次写入不被认可并
+    说明改哪里。不用 exit 2 + stderr：脚本有意退出码必须只有 0，否则 hooks.json
+    的 `python || python3` 会在规范错误时重跑脚本、并用第二个解释器的缺失码
+    掩盖信号。
+    """
+    payload = {"decision": "block", "reason": reason}
+    sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
 
 # ── 数据层 ──────────────────────────────────────────────────────────────────
@@ -667,7 +683,7 @@ def handle_json_write(json_path: Path) -> None:
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
-        fail(
+        emit_block(
             "[agile] backlog.json 不是合法 JSON，本文件必须机器可读。\n"
             f"  第 {exc.lineno} 行第 {exc.colno} 列：{exc.msg}\n"
             "  常见原因：写了注释、结尾多了逗号、用了中文引号、字符串里没转义换行。"
@@ -677,7 +693,7 @@ def handle_json_write(json_path: Path) -> None:
     errors, warnings = validate(data)
     if errors:
         listed = "\n".join("  · " + line for line in errors)
-        fail(
+        emit_block(
             f"[agile] backlog.json 结构不合规（{len(errors)} 处）：\n{listed}\n"
             "  字段说明见 agile-backlog/references/backlog-rules.md §七。"
             "改对之后会自动重新渲染 Markdown。"
@@ -703,8 +719,9 @@ def handle_json_write(json_path: Path) -> None:
 def handle_done_write(done_path: Path, root: Path) -> None:
     """回填写完立刻校验内容。
 
-    用提示而不是 exit 2：回填允许分次写，中途半成品不应该打断。真正强制在
-    `check` 与关闭 Sprint 之前——那时内容必须已经定型。
+    用 additionalContext 提示而不是 decision:block：回填允许分次写，中途
+    半成品不应该被打断。真正强制在 `check` 与关闭 Sprint 之前——那时内容
+    必须已经定型。
     """
     json_path = root / DOCS_DIR / BACKLOG_JSON
     if not json_path.exists():
@@ -742,7 +759,7 @@ def handle_md_write(md_path: Path) -> None:
         md_path.write_text(expected, encoding="utf-8")
     except Exception:
         return
-    fail(
+    emit_block(
         "[agile] PRODUCT-BACKLOG.md 是 backlog.json 的渲染产物，直接写它无效——已按当前 json 重新渲染。\n"
         "  改条目：编辑 agile-docs/backlog.json，保存后自会重新渲染本文件。\n"
         "  看统计：跑 `agile.py stats`，不需要改任何文件。"
@@ -959,7 +976,7 @@ USAGE = """agile.py —— Backlog 机械操作（标准库 only，零正则）
   migrate [项目根]   旧版 PRODUCT-BACKLOG.md → backlog.json（json 已存在则不动）
   brief   [项目根]   打印当前阶段与每轮将要注入的内容（排查 hook 用）
 
-  hook-post-write    hook 入口：写完文件后校验并渲染（exit 2 = 需要模型处理）
+  hook-post-write    hook 入口：写完文件后校验并渲染（decision:block = 需要模型处理）
   hook-session       hook 入口：会话开始注入敏捷状态
   hook-prompt        hook 入口：每轮判断本轮要不要走敏捷流程
 """
@@ -1121,11 +1138,11 @@ if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "help"
     if mode.startswith("hook-"):
         # fail-open：门禁脚本自己出错时沉默退出，不能让每次编辑都弹一条错误。
-        # 但 exit 2（明确的规范错误）必须原样传递，所以 SystemExit 放行。
+        # hook 的有意退出码只有 0（问题清单走 stdout JSON），所以任何异常——
+        # 包括 SystemExit——都吞掉换 0：hooks.json 的 `python || python3` 兜底
+        # 因此只在解释器缺失（127/9009）时才轮到第二个，不会重跑脚本或掩盖信号。
         try:
             main(sys.argv)
-        except SystemExit:
-            raise
         except BaseException:
             pass
         sys.exit(0)

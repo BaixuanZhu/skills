@@ -147,6 +147,6 @@ version: 5.5.2
 
 生效平台：Claude Code、ZCode（都自动加载插件标准位置的 `hooks/hooks.json`）。Codex 的 PostToolUse 只拦 shell 命令、写文件不触发，未适配——那边按 `backlog-rules.md §七` 手动跑 `agile.py check`。
 
-`hook-session` 与 `hook-post-write` 只在存在 `agile-docs/` 的项目上工作；`hook-prompt` 在没有的项目上也只发一次入口提示，不写任何文件。其余情况完全静默。插件内 `scripts/agile.py`（Python 3.9+，标准库 only，零正则）由 `scripts/run-python.sh` 探测可用解释器；没有 python 时 hook 静默退出，不影响任何操作，`UserPromptSubmit` 永不阻断输入。
+`hook-session` 与 `hook-post-write` 只在存在 `agile-docs/` 的项目上工作；`hook-prompt` 在没有的项目上也只发一次入口提示，不写任何文件。其余情况完全静默。插件内 `scripts/agile.py`（Python 3.9+，标准库 only，零正则）由 hooks.json 的命令串 `python … || python3 …` 兜底探测解释器（Claude Code 与 ZCode 对 command 型 hook 都只执行字符串本体，不认 `args` 字段）；没有 python 时 hook 静默退出，不影响任何操作，`UserPromptSubmit` 永不阻断输入。
 
-**hook 与 `check` 的分工**：hook 是即时的、只提示不阻断（回填可能分次写）；`agile.py check` 是全量出口检查，多查两项——`sprints/*.done.yaml` 的内容，以及 md 是否与 json 逐字同步。关闭 Sprint 前、以及 Codex 那边，都以 `check` 为准。
+**hook 与 `check` 的分工**：hook 是即时的、不撤销已写入的内容——`backlog.json` 结构错误与手改 md 以 `decision: block` 把问题清单递给模型；回填只提示（允许分次写）。`agile.py check` 是全量出口检查，多查两项——`sprints/*.done.yaml` 的内容，以及 md 是否与 json 逐字同步。关闭 Sprint 前、以及 Codex 那边，都以 `check` 为准。

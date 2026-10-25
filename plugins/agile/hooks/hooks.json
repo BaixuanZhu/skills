@@ -2,50 +2,20 @@
   "description": "敏捷状态门禁：① 会话开始时把 Sprint / Backlog / ADR 的当前状态注入上下文，避免「装了技能但没人读」；② 每轮用户发言判一次这轮要不要走敏捷流程——已有 agile-docs/ 的项目按当前阶段补一段「下一步 + 这一步最容易漏的铁律」（长会话 compact 后不丢），没有的项目在规划类提问上提示一次初始化入口，其余静默；③ 写完 backlog.json 校验结构并重新渲染 PRODUCT-BACKLOG.md，手改渲染产物会被回滚，写完 *.done.yaml 校验回填内容（引用不存在的条目、同一 ID 既完成又顺延、feedback.type 越界）——计算和格式不交给模型。只在存在 agile-docs/ 的项目上工作，其余项目完全静默。依赖本机 python（找不到解释器或脚本自身出错时静默退出，不影响任何操作）。",
   "hooks": {
     "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh",
-            "args": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/run-python.sh",
-              "hook-session"
-            ],
-            "timeout": 20
-          }
-        ]
-      }
+      { "hooks": [ { "type": "command",
+        "command": "python \"${CLAUDE_PLUGIN_ROOT}/scripts/agile.py\" hook-session || python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/agile.py\" hook-session",
+        "timeout": 20 } ] }
     ],
     "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh",
-            "args": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/run-python.sh",
-              "hook-prompt"
-            ],
-            "timeout": 5
-          }
-        ]
-      }
+      { "hooks": [ { "type": "command",
+        "command": "python \"${CLAUDE_PLUGIN_ROOT}/scripts/agile.py\" hook-prompt || python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/agile.py\" hook-prompt",
+        "timeout": 5 } ] }
     ],
     "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh",
-            "args": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/run-python.sh",
-              "hook-post-write"
-            ],
-            "timeout": 20
-          }
-        ]
-      }
+      { "matcher": "Write|Edit",
+        "hooks": [ { "type": "command",
+        "command": "python \"${CLAUDE_PLUGIN_ROOT}/scripts/agile.py\" hook-post-write || python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/agile.py\" hook-post-write",
+        "timeout": 20 } ] }
     ]
   }
 }
