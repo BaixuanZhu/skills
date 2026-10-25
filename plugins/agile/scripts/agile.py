@@ -40,6 +40,7 @@ TYPES = ("技术", "功能")
 PRIORITIES = ("Must", "Should", "Could", "Won't")
 STATUSES = ("待办", "已完成", "已撤回")
 FIB = (1, 2, 3, 5, 8, 13)
+TODO_STATUS = "待办"
 WITHDRAWN = "已撤回"
 CONFIRMED_MARK = "✓"
 EMPTY_MARK = "—"
@@ -351,7 +352,7 @@ def parse_sprint_meta(text: str) -> dict[str, str]:
     容忍手写的常见变体：全角冒号、`* ` 列表符、`**状态**:` 加粗键、值带引号。
     状态值带引号若不剥掉，`"已关闭"` 会被判成未关闭，阶段永远停在 active。
     """
-    wanted = ("状态", "周期", "目标")
+    wanted = ("状态", "周期")
     meta: dict[str, str] = {}
     for line in text.splitlines():
         stripped = line.strip()
@@ -771,7 +772,10 @@ def detect_stage(root: Path) -> str:
     """当前处在流程的哪一步。顺序即优先级。
 
     判据看重「最靠后的里程碑」，不是严格按层顺序：套件允许用户显式跳层
-    （agile-backlog §0），已有条目的项目不能被判回「战略层未起步」。
+    （agile-backlog §0），已有条目的项目不能被判回「战略层未起步」；
+    进行中的 Sprint 也比建池靠后，池耗尽仍判 active。
+    sprint 只认「待办」活条目（agile-sprint §0 的取条前置）——条目全部
+    完成/撤回的池子撑不起 Sprint，落回 backlog 段提示补池。
     与 turn-brief.md 的阶段表一一对应；改这里要同步改那张表。
     """
     docs = root / DOCS_DIR
@@ -787,10 +791,14 @@ def detect_stage(root: Path) -> str:
     has_adr = (docs / ADR_MD).exists()
     json_path = docs / BACKLOG_JSON
     data = load_json(json_path) if json_path.exists() else None
-    has_items = data is not None and any(True for _ in iter_items(data))
+    has_todo = data is not None and any(
+        item.get("status") == TODO_STATUS for _phase, item in iter_items(data)
+    )
 
-    if has_items:
-        return "sprint" if not active_sprints(root) else "active"
+    if active_sprints(root):
+        return "active"
+    if has_todo:
+        return "sprint"
     if not has_vision:
         return "init"
     if not (has_arch and has_adr):
