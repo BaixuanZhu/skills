@@ -1,0 +1,16 @@
+# agile 插件回归
+
+三套互相独立的脚本，只依赖 POSIX sh + Python（3.9+，标准库 only）。改
+`scripts/agile.py`、`hooks/hooks.json` 或 `skills/using-agile/references/turn-brief.md`
+之后跑全套（解释器叫 python3 的环境前置 `PY=python3`）：
+
+| 脚本 | 覆盖 | 条数 |
+|---|---|---|
+| `stage.sh` | 七阶段 + 池耗尽边界，每阶段独立 fixture，断言注入的是对应 brief 块 | 10 |
+| `suite.sh` | hook-prompt 行为矩阵：规划词命中 / 静默 / no-agile / 同会话去重 / 状态行有界 | 16 |
+| `regress.sh` | agile.py 历史真实 bug 逐条回归（两位数序号 / 竖线迁移 / 布尔点数 / 退出码） | 13 |
+
+- 阶段判定顺序、判据与 brief 块的对应关系真源在 `../skills/using-agile/references/turn-brief.md`
+  的阶段表；增删阶段要同步改 `agile.py` 与本目录（表自己也会这么提醒你）。
+- `ab/` 是注入文案 AB 实测的 fixture 生成器；结论与方法论见 `ab-notes.md`，
+  **改 brief 文案后按它复验**——注入的作用域严格等于写下的那句话。

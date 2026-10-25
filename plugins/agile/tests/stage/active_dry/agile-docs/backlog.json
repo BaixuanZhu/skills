@@ -1,0 +1,410 @@
+{
+  "schema": 1,
+  "phases": [
+    {
+      "id": 1,
+      "title": "止血：下单链路可信（建议 Sprint 001–005，27 点）",
+      "items": [
+        {
+          "id": "T-001",
+          "title": "下单入参与金额校验，错误响应不泄漏内部信息",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-007",
+          "basis": "agent 推荐 / 缺陷止血（README 已知问题 1）",
+          "confirmed": false
+        },
+        {
+          "id": "T-002",
+          "title": "下单返回体携带订单 id（插入回填主键）",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 1,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "",
+          "basis": "agent 推荐 / 缺陷止血（README 已知问题 2）",
+          "confirmed": false
+        },
+        {
+          "id": "T-003",
+          "title": "重复订单号改为幂等返回或明确冲突，移除先查后插",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 2,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-003",
+          "basis": "agent 推荐 / 缺陷止血（README 已知问题 3）",
+          "confirmed": false,
+          "detail": [
+            "验收: 同一 orderNo 并发提交 2 次，两次都得到同一笔订单的结果，库中只有 1 条；不出现 500。",
+            "验收: 真冲突（不同订单撞号）时返回可理解的业务错误并带订单号，响应体不含堆栈。",
+            "约束: 冲突判定不得依赖\"先查后插\"的窗口；不引入新中间件。（关联 ADR-003）"
+          ]
+        },
+        {
+          "id": "T-008",
+          "title": "数据库迁移纳入版本管理，生产 schema 可重建",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-009",
+          "basis": "agent 推荐 / 依赖优先（后续建表前置）",
+          "confirmed": false,
+          "detail": [
+            "验收: 空库执行迁移得到与生产一致的 schema；生产现有结构纳入基线版本并有对照说明。",
+            "约束: 迁移向后兼容（先加列、后删列）；每次发布前先备份。（关联 ADR-009）"
+          ]
+        },
+        {
+          "id": "T-015",
+          "title": "备份与恢复演练，记录实测 RTO/RPO",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-009",
+          "basis": "agent 推荐 / 风险优先（数据不可逆）",
+          "confirmed": false,
+          "detail": [
+            "验收: 从最近备份恢复到临时实例，记录实测 RTO/RPO；恢复后订单数与审计数一致。",
+            "约束: 演练脚本可重复执行，全程不触碰生产库。（关联 ADR-009）"
+          ]
+        },
+        {
+          "id": "T-005",
+          "title": "订单表补时间字段与查询索引",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 2,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-007、T-008",
+          "basis": "agent 推荐 / 依赖优先（查询与对账前置）",
+          "confirmed": false,
+          "detail": [
+            "验收: 任意订单可查到创建时间与最后更新时间（带时区）；按时间段查询不出现全表扫描。",
+            "约束: 存量数据回填需先说明来源，无法确认的标为\"未知\"而不是用当前时间填充。（关联 ADR-007、T-008）"
+          ]
+        },
+        {
+          "id": "T-007",
+          "title": "建立测试基线：真实 PG 集成测试覆盖下单主链路",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-008",
+          "basis": "agent 推荐 / 质量门禁前置",
+          "confirmed": false,
+          "detail": [
+            "验收: `mvn verify` 在本地 Docker 环境跑通，覆盖 4 个场景：下单成功、库存不足、订单号重复、审计必达。",
+            "约束: 使用真实 PG 而非 H2；主链路测试总耗时控制在分钟级。（关联 ADR-008）"
+          ]
+        },
+        {
+          "id": "T-004",
+          "title": "库存扣减死锁与瞬时失败有限重试",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-003",
+          "basis": "agent 推荐 / 缺陷止血（README 已知问题 4）",
+          "confirmed": false,
+          "detail": [
+            "验收: 同一 SKU 50 并发扣减，无死锁导致的 500；失败请求得到\"请重试\"或 429，而非系统错误。",
+            "验收: 发生重试时可从日志定位（订单号、重试次数、原始错误码）。",
+            "约束: 重试次数与单请求总时长有硬上限；业务错误（库存不足）不重试。（关联 ADR-003）"
+          ]
+        },
+        {
+          "id": "T-006",
+          "title": "审计改为事务内 outbox + 轮询投递",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 5,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-002",
+          "basis": "agent 推荐 / 缺陷止血（README 已知问题 5）",
+          "confirmed": false,
+          "detail": [
+            "验收: 下单成功后立即 kill -9 进程，重启 5 分钟内该订单的审计记录一定存在。",
+            "验收: 能按 orderNo 判定审计\"是否缺失\"（现状无法判定）。",
+            "约束: 副作用与订单主事务同生共死；重复投递不产生重复审计；不引入 MQ。（关联 ADR-002）"
+          ]
+        },
+        {
+          "id": "T-009",
+          "title": "最小 CI：push 触发构建与测试",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 2,
+          "priority": "Should",
+          "status": "已完成",
+          "refs": "ADR-009",
+          "basis": "agent 推荐 / 质量门禁前置",
+          "confirmed": false
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "可运营：退款与查单（建议 Sprint 006–009，24 点）",
+      "items": [
+        {
+          "id": "F-001",
+          "title": "退款：运营可发起全额/部分退款，状态可追踪",
+          "type": "功能",
+          "repo": "order-service",
+          "points": 8,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-006",
+          "basis": "运营+老板需求（README）/ MoSCoW",
+          "confirmed": false,
+          "detail": [
+            "验收: 运营对已支付订单发起全额或部分退款，5 分钟内可在系统内看到状态与失败原因。",
+            "验收: 退款成功后库存按规则回补，且只回补一次。",
+            "约束: 退款单是唯一事实源，订单状态由退款结果驱动；部分退款累计不得超过订单金额。",
+            "边界: 本期不做审批流、不做多级审核、不做非原路退回。（关联 ADR-006；渠道能力见 VISION 待确认 #1）"
+          ]
+        },
+        {
+          "id": "F-005",
+          "title": "运营侧查询与退款入口最小鉴权",
+          "type": "功能",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-010",
+          "basis": "agent 推荐 / 风险优先（退款裸奔不可接受）",
+          "confirmed": false,
+          "detail": [
+            "验收: 无凭据访问查询/退款接口返回 401/403，且不返回任何订单数据。",
+            "验收: 凭据轮换可通过改配置 + 重启完成，步骤写进发布手册。",
+            "约束: 不自建账号体系；用户侧下单接口不受影响。（关联 ADR-010）"
+          ]
+        },
+        {
+          "id": "F-003",
+          "title": "订单查询：按订单号/手机号/时间段分页",
+          "type": "功能",
+          "repo": "order-service",
+          "points": 5,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-007、T-005、T-010",
+          "basis": "运营需求（README）/ 依赖优先",
+          "confirmed": false,
+          "detail": [
+            "验收: 可按订单号、手机号、下单时间段组合查询，分页返回，单页 ≤ 100 条。",
+            "验收: 查 90 天数据 P95 < 1s，且下单接口延迟不受影响（同库场景需给出取舍说明）。",
+            "约束: 只读，不提供任何修改能力；手机号脱敏展示。（关联 T-005、T-010、ADR-007）"
+          ]
+        },
+        {
+          "id": "T-010",
+          "title": "订单手机号可用：补用户关联或订单冗余手机号",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 2,
+          "priority": "Should",
+          "status": "已完成",
+          "refs": "ADR-007",
+          "basis": "agent 推荐 / 依赖（F-003 手机号查询）",
+          "confirmed": false
+        },
+        {
+          "id": "F-002",
+          "title": "退款失败自动补偿与人工重试入口",
+          "type": "功能",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-006、F-001",
+          "basis": "agent 推断 / 依赖（退款必有失败）",
+          "confirmed": false,
+          "detail": [
+            "验收: 渠道超时/失败的退款在补偿周期内自动重试；超过阈值转\"待人工处理\"并出现在待办列表。",
+            "约束: 重试不得造成重复退款。（关联 ADR-006、F-001）"
+          ]
+        },
+        {
+          "id": "F-004",
+          "title": "查询结果导出 Excel（单次上限、异步生成）",
+          "type": "功能",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Should",
+          "status": "已完成",
+          "refs": "",
+          "basis": "运营需求（README）/ MoSCoW",
+          "confirmed": false
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "可度量：对账与高峰（建议 Sprint 010–014，27 点）",
+      "items": [
+        {
+          "id": "T-012",
+          "title": "连接池与超时基线 + 慢查询治理",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-004",
+          "basis": "agent 推荐 / 事故复盘（notes 2026-08）",
+          "confirmed": false
+        },
+        {
+          "id": "T-013",
+          "title": "可观测性基线：关键指标 + 告警 + 日志规范",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 5,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-011",
+          "basis": "agent 推荐 / 事故复盘（假死无人知）",
+          "confirmed": false,
+          "detail": [
+            "验收: 面板可看 5 项指标：下单成功率、P50/P99 延迟、连接池使用率、outbox 积压、对账差异数。",
+            "验收: 错误率或连接池超阈值，5 分钟内推送到工作群。",
+            "约束: 监控组件故障不影响下单；日志含订单号与 traceId。（关联 ADR-011）"
+          ]
+        },
+        {
+          "id": "T-011",
+          "title": "高峰准入控制：有界排队 + 超限快速失败",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 5,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-004",
+          "basis": "老板需求（README「限流」）/ 风险优先",
+          "confirmed": false,
+          "detail": [
+            "验收: 压测 30 QPS 持续 20 分钟，连接池使用率 ≤ 上限 90%，服务不假死；超限请求 1s 内返回 429 并带重试建议。",
+            "约束: 不引入外部限流组件；阈值可配置且开票前可调，不必发版。（关联 ADR-004）"
+          ]
+        },
+        {
+          "id": "F-006",
+          "title": "每日自动对账：订单/退款 vs 渠道流水，出差异清单",
+          "type": "功能",
+          "repo": "order-service",
+          "points": 8,
+          "priority": "Must",
+          "status": "已完成",
+          "refs": "ADR-006",
+          "basis": "用户需求（现在每周手工跑）/ MoSCoW",
+          "confirmed": false,
+          "detail": [
+            "验收: 每日固定时间产出结果，按\"仅本地有 / 仅渠道有 / 金额不一致\"三类输出差异清单。",
+            "验收: 差异清单可导出，运营能直接拿去处理，不需开发者临时写 SQL。",
+            "约束: 对账中断必须告警，不允许静默跳过；渠道流水获取方式待确认。（关联 ADR-006）"
+          ]
+        },
+        {
+          "id": "F-007",
+          "title": "对账差异处理：标记/挂账/补单，不再手工改库",
+          "type": "功能",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Should",
+          "status": "已完成",
+          "refs": "ADR-006、F-006",
+          "basis": "agent 推断 / 依赖（差异必有落地动作）",
+          "confirmed": false
+        },
+        {
+          "id": "F-008",
+          "title": "开票日容量演练与上线前 checklist",
+          "type": "功能",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Should",
+          "status": "已完成",
+          "refs": "ADR-004、T-013",
+          "basis": "agent 推荐 / 风险优先（下次开票前必做）",
+          "confirmed": false
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "可维护：隔离与运维（建议 Sprint 015–016，12 点）",
+      "items": [
+        {
+          "id": "T-014",
+          "title": "报表查询迁至独立实例，主库收回只读账号",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 5,
+          "priority": "Should",
+          "status": "已完成",
+          "refs": "ADR-005",
+          "basis": "notes 遗留判断 / 依赖（运营自助查询上线后）",
+          "confirmed": false
+        },
+        {
+          "id": "T-017",
+          "title": "发布与回滚手册固化（Compose + 健康检查 + 回滚步骤）",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Should",
+          "status": "已完成",
+          "refs": "ADR-009",
+          "basis": "agent 推荐 / 运维缺口",
+          "confirmed": false
+        },
+        {
+          "id": "T-016",
+          "title": "订单状态收敛为受控枚举 + 流转校验",
+          "type": "技术",
+          "repo": "order-service",
+          "points": 3,
+          "priority": "Should",
+          "status": "已完成",
+          "refs": "ADR-007",
+          "basis": "notes 2026 「事后觉得不太好查」",
+          "confirmed": false
+        },
+        {
+          "id": "F-009",
+          "title": "需求入口固化：口头需求当日进 Backlog",
+          "type": "功能",
+          "repo": "order-service",
+          "points": 1,
+          "priority": "Should",
+          "status": "已完成",
+          "refs": "",
+          "basis": "agent 推断 / 无 PM 的组织缺口",
+          "confirmed": false,
+          "detail": [
+            "验收: 群里的口头需求 24 小时内以条目形式进入本文件（含提出人、原话、期望时间），当周给出\"做/不做/何时做\"的答复。",
+            "边界: 只解决\"提了没人记\"，不解决\"老板越级提需求\"。"
+          ]
+        }
+      ]
+    }
+  ]
+}
