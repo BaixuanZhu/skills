@@ -69,8 +69,8 @@ dependencies:
 - 写完停，问"是否关闭本 Sprint？"
 
 ### 环节 C：关闭
-- 在文件头追加行标注执行结果来源（.done.yaml 文件路径 或 "人工确认"）
-- 将 Sprint 文件头"状态"改为"已关闭"
+- 改写文件头 `- 执行结果:` 行的值（`.done.yaml` 文件路径 或 "人工确认"）——模板已带此行，不新增行，也不把来源并入状态值
+- 将 Sprint 文件头 `- 状态:` 改为 `已关闭`，只写状态词（需要备注用全角括号另附，不夹带其它键值）
 - **统计快照重算**：跑 `agile.py stats`，输出附进本 Sprint 文件「变更记录」段（没有脚本时才自己全量重算，禁止在旧数字上增量加减）
 - 提示用户完整闭环：入口下次激活时检测到 `.done.yaml` 即**默认执行闭环**——Sprint 已由本环节关闭，剩下的「同步 backlog → 处理 feedback → 改后缀 `.done.processed.yaml`」由 agile-backlog 阶段 4 执行，**本技能不碰**。链路见 `using-agile/references/sprint-schema.yaml` 的 `lifecycle`
 
@@ -81,7 +81,7 @@ dependencies:
 ## 5. 硬约束
 - ✅ 单文件产出 `sprints/sprint-{序号:03d}-{日期}.md`（命名含序号+日期，不用 `current.md`）；❌ **不顺手写** VISION / ARCHITECTURE / ADR / backlog.json。
 - ✅ 写前问询遵循 `using-agile/references/probing-protocol.md`：容量参数（人数/工作日/专注系数）必经用户确认，禁止静默默认；Sprint 目标须可陈述（§2）。
-- ✅ 关闭 Sprint 前逐条过 DoD（独立出口门禁 ③）；关闭即标"已关闭"状态并记录执行结果来源（.done.yaml 或人工确认），不删除。
+- ✅ 关闭 Sprint 前逐条过 DoD（独立出口门禁 ③）；关闭即把 `- 状态:` 改为 `已关闭`（值只写状态词）、改写 `- 执行结果:` 行，不删除。
 - ❌ 不写 RETRO.md / RELEASE.md / FB-NNN.md，不创建 `sprints/archive/` 子目录。
 - ❌ 不在 Sprint 文件中设执行态追踪（任务清单与执行进度不写 checkbox、不记阻塞、不处理执行中变更——归消费 Agent）。
 - ✅ 「闭环检查」清单用 `- [ ]` checkbox，关闭前逐项核对（这是关闭核对清单，非执行态追踪）。

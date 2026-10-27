@@ -48,6 +48,10 @@ STATUSES = ("待办", "已完成", "已撤回")
 FIB = (1, 2, 3, 5, 8, 13)
 TODO_STATUS = "待办"
 WITHDRAWN = "已撤回"
+# Sprint 文件头只认这两个键、状态只认这个前缀（见 using-agile/sprint-schema.yaml）。
+# 收敛成常量是因为三处判定（解析白名单 / active 判定 / 状态行渲染）必须同步。
+SPRINT_META_KEYS = ("状态", "周期")
+SPRINT_CLOSED = "已关闭"
 ID_PREFIXES = ("T-", "F-")
 QUOTES = "\"'“”‘’"
 POINT_BRACKETS = (("(", ")"), ("（", "）"))
@@ -256,12 +260,19 @@ def unquote(value: str) -> str:
 
 
 def split_kv(line: str) -> tuple[str, str, str]:
-    """拆 `键: 值`，半角与全角冒号都认。返回值里的 sep 为空表示这行不是键值行。"""
-    for sep in ("：", ":"):
-        head, found, tail = line.partition(sep)
-        if found:
-            return head.strip().strip("*").strip(), found, tail.strip()
-    return line.strip(), "", ""
+    """拆 `键: 值`，半角与全角冒号都认。返回值里的 sep 为空表示这行不是键值行。
+
+    取行内**最先出现**的冒号做分隔，两种冒号比位置、不比固定优先级。按固定优先级
+    取全角会切坏「值内部带另一种冒号」的行：`状态: 已关闭（执行结果来源：…）`
+    曾被切成键 `状态: 已关闭（执行结果来源`，不在白名单内整行丢弃，Sprint 状态
+    随之丢失，已关闭 Sprint 全部被判 active。
+    """
+    positions = [(line.find(sep), sep) for sep in ("：", ":")]
+    positions = [(idx, sep) for idx, sep in positions if idx != -1]
+    if not positions:
+        return line.strip(), "", ""
+    idx, sep = min(positions)
+    return line[:idx].strip().strip("*").strip(), sep, line[idx + 1 :].strip()
 
 
 def parse_sprint_items(text: str) -> list[tuple[str, int | None]]:
@@ -303,7 +314,6 @@ def parse_sprint_meta(text: str) -> dict[str, str]:
     容忍手写的常见变体：全角冒号、`* ` 列表符、`**状态**:` 加粗键、值带引号。
     状态值带引号若不剥掉，`"已关闭"` 会被判成未关闭，阶段永远停在 active。
     """
-    wanted = ("状态", "周期")
     meta: dict[str, str] = {}
     for line in text.splitlines():
         stripped = line.strip()
@@ -311,7 +321,7 @@ def parse_sprint_meta(text: str) -> dict[str, str]:
             continue
         body = stripped[1:].strip()
         key, found, value = split_kv(body)
-        if found and key in wanted:
+        if found and key in SPRINT_META_KEYS:
             meta.setdefault(key, unquote(value))
     return meta
 
@@ -583,8 +593,16 @@ def pending_backfills(root: Path) -> list[str]:
 
 
 def active_sprints(root: Path) -> list[tuple[str, dict]]:
-    """状态不是「已关闭」的 Sprint。"""
-    return [(stem, meta) for _p, stem, meta, _items in scan_sprints(root) if meta.get("状态") != "已关闭"]
+    """状态不是「已关闭」的 Sprint。
+
+    判定用前缀匹配而不是整串相等：闭环注记会把状态行写成
+    「已关闭（执行结果来源：…）」，整串比对会让已关闭 Sprint 永远 active。
+    """
+    return [
+        (stem, meta)
+        for _p, stem, meta, _items in scan_sprints(root)
+        if not meta.get("状态", "").startswith(SPRINT_CLOSED)
+    ]
 
 
 def detect_stage(root: Path) -> str:
@@ -676,8 +694,16 @@ def describe_state(root: Path) -> list[str]:
         chunks = stem.split("-")
         seq = chunks[1] if len(chunks) > 1 else stem
         bits = [f"Sprint {seq}"]
-        if meta.get("状态"):
-            bits.append(meta["状态"])
+        status = meta.get("状态", "")
+        if status:
+            # 状态值可能带括号备注（「已关闭（执行结果来源：…）」）——这行每轮进上下文，
+            # 截到括号前就够；截空说明整值是备注，不占位。
+            for marker in ("（", "("):
+                if marker in status:
+                    status = status.split(marker, 1)[0].strip()
+                    break
+            if status:
+                bits.append(status)
         if meta.get("周期"):
             bits.append("(" + meta["周期"] + ")")
         parts.append(" ".join(bits))

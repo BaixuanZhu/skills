@@ -54,7 +54,7 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity",
-      "version": "5.6.3",
+      "version": "5.6.4",
       "description": "敏捷开发套件（4 技能合一）：入口路由 + 战略层（愿景/架构/ADR）+ 产品待办 + Sprint 规划，文件驱动地做项目规划与迭代管理。附带三个 hook：按当前阶段每轮注入「下一步该做什么与该步最容易漏的铁律」、会话开始注入状态、写 backlog.json 后校验与对账。"
     },
     {

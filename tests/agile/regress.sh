@@ -88,5 +88,62 @@ json.dump(d,open(p,'w',encoding='utf-8'),ensure_ascii=False)")
 check "points=true 被判错" "1" "$(run check >/dev/null 2>&1; echo $?)"
 check "报的是点数不是斐波那契" "1" "$(run check 2>&1 | grep -c 'points 必须是正整数')"
 
+# ⑨ 键值行拆分：两种冒号比位置、不比固定优先级。
+#    闭环注记把状态行写成 `- 状态: 已关闭（执行结果来源：…）`，旧实现先按全角
+#    partition，键被切成「状态: 已关闭（执行结果来源」，白名单拒收后整行丢弃。
+check "半角分隔 + 值内全角冒号" "状态|:|已关闭（执行结果来源：x）" \
+  "$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" -c "
+import agile; print('|'.join(agile.split_kv('状态: 已关闭（执行结果来源：x）')))")"
+check "全角分隔" "状态|：|已规划" \
+  "$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" -c "
+import agile; print('|'.join(agile.split_kv('状态：已规划')))")"
+check "周期行" "周期|:|2026-10-20 ~ 2026-10-27" \
+  "$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" -c "
+import agile; print('|'.join(agile.split_kv('周期: 2026-10-20 ~ 2026-10-27')))")"
+check "无冒号行 sep 为空" "说明||" \
+  "$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" -c "
+import agile; print('|'.join(agile.split_kv('说明')))")"
+
+# ⑩ split_kv 的另一个调用方：回填文件 feedback.note 值内含全角冒号时，
+#    旧实现把键切成 `note: "…需产品确认`，note 静默丢失且 inspect_done 不查它。
+check "feedback.note 值内全角冒号不丢" "配额不足，需产品确认：降级方案" \
+  "$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" -c "
+import agile
+t = 'feedback:\n  - item: T-001\n    type: reason\n    note: \"配额不足，需产品确认：降级方案\"\n'
+print(agile.parse_done(t)['feedback'][0].get('note', ''))")"
+
+# ⑪ 端到端：已闭环 Sprint 必须判「已关闭」——状态词丢掉会让 active 判定失效、
+#    brief 永远停在「Sprint 进行中」。两场景各验一次（有进行中 / 只剩已关闭）。
+CLOSED="$WORK/closed"
+mkdir -p "$CLOSED/sprints" "$CLOSED/agile-docs"
+cat > "$CLOSED/sprints/sprint-071-20261027.md" <<'MD'
+# Sprint: 已闭环
+
+- 文件名: sprint-071-20261027
+- 状态: 已关闭（执行结果来源：sprints/sprint-071-20261027.done.yaml，闭环同步后改名 .done.processed.yaml 留痕）
+- 周期: 2026-10-20 ~ 2026-10-27
+MD
+cat > "$CLOSED/sprints/sprint-072-20261028.md" <<'MD'
+# Sprint: 进行中
+
+- 文件名: sprint-072-20261028
+- 状态: 已规划
+- 周期: 2026-10-28 ~ 2026-11-03
+MD
+cp "$WORK/agile-docs/backlog.json" "$CLOSED/agile-docs/backlog.json"
+
+brief_at() { (cd "$1" && "$PY" "$PLUGIN/scripts/agile.py" brief . 2>&1); }
+
+WITH_OPEN="$(brief_at "$CLOSED")"
+check "有进行中 Sprint 时判 active" "1" "$(printf '%s' "$WITH_OPEN" | grep -c '^阶段：active')"
+check "取最新 Sprint 的状态" "1" "$(printf '%s' "$WITH_OPEN" | grep -cF 'Sprint 072 已规划 (2026-10-28 ~ 2026-11-03)')"
+
+mv "$CLOSED/sprints/sprint-072-20261028.md" "$CLOSED/sprint-072.moved"
+ONLY_CLOSED="$(brief_at "$CLOSED")"
+check "只剩已关闭 Sprint 时判 sprint" "1" "$(printf '%s' "$ONLY_CLOSED" | grep -c '^阶段：sprint')"
+check "已关闭 Sprint 显示状态词" "1" "$(printf '%s' "$ONLY_CLOSED" | grep -cF 'Sprint 071 已关闭 (2026-10-20 ~ 2026-10-27)')"
+check "状态行不带闭环注记" "0" "$(printf '%s' "$ONLY_CLOSED" | grep -c '执行结果来源')"
+mv "$CLOSED/sprint-072.moved" "$CLOSED/sprints/sprint-072-20261028.md"
+
 printf '\nPASS=%d FAIL=%d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
