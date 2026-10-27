@@ -5,7 +5,7 @@ displayName: Sprint规划
 description: |
   当用户说"开 Sprint""规划迭代""关闭 Sprint"或 using-agile 路由到此，且 backlog.json 已有条目时触发。
 agent_created: true
-version: 5.2.2
+version: 5.2.3
 dependencies:
   - skill: using-agile
     reason: 提供 DOD.md 模板
