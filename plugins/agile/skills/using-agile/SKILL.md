@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""架构决策""ADR""C4""需求变了""要改故事""依赖检查"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.6.0
+version: 5.6.2
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -19,9 +19,19 @@ version: 5.6.0
 
 | 本轮在做什么 | 走不走 | 入口 |
 |---|---|---|
-| 从零定方向：愿景、MVP 边界、架构、技术选型、里程碑 | 走 | §4 |
+| 从零定方向：愿景、MVP 边界、架构、技术选型、里程碑 | 走 | 有 `agile-docs/` → §3 检测路由；没有 → 先过下方初始化门槛 |
 | 改规划：加/改/删 backlog 条目、排 Sprint、关 Sprint | 走 | §6 |
 | 写代码、修 bug、查日志、跑测试、解释一段代码 | 不走 | 直接做；只有需要回写 backlog 状态时才回来 |
+
+**无 `agile-docs/` 的项目，初始化是推荐制——不默认建**（命中规划词 ≠ 要建套件）：
+
+| 用户这一轮 | 动作 |
+|---|---|
+| 明示建立（"初始化敏捷流程""建 backlog""以后用这个套件管"） | 直接进 §4 |
+| 体量到了但没明示——满足其一：单轮 ≥3 个需求/功能点；明确多轮迭代、排期或里程碑；存量项目要长期规划 | 推荐一次："这个体量建议建敏捷规划来管，要初始化吗？"同意才进 §4；被拒或没回应就按普通请求直接答 |
+| 小体量：单需求、一次性拆解、小改动 | 直接答，不建文档、不提套件 |
+
+推荐分支在用户拍板前**不问画像、不建任何文件**——画像采集是 §4 的第 1 步，进了 §4 才启动。
 
 插件装好时有机械兜底（见 §8）：有 `agile-docs/` 的项目每轮注入「当前处在哪一步 + 这一步最容易漏的铁律」，没有的项目在规划类提问上提示一次入口，用户打 `no-agile` 当轮静默。**兜底只负责提醒，判断仍按上面那条判据做。**
 
@@ -30,7 +40,7 @@ version: 5.6.0
 ## 1. 定位
 
 本技能是敏捷套件的**默认入口**——不知道现在该走哪一步、或要改已有规划时的落点。承担三件事：
-- **初始化**：项目无 `agile-docs/` 时，建空骨架 + `DOD.md` 模板 + `interfaces/sprint-schema.yaml`。
+- **初始化**：项目无 `agile-docs/` 且用户明示或拍板同意（§0 门槛）时，建空骨架 + `DOD.md` 模板 + `interfaces/sprint-schema.yaml`。
 - **检测路由**：项目有 `agile-docs/` 时，先做 .done.yaml 回填检测（存在即默认执行闭环），再扫描三层状态 → 输出状态表 → 逐层询问"更新 or 继续" → 路由到对应业务技能。
 - **变更协调**：当用户说"需求变了"时，引用 `references/change-matrix.md` 做变更分级 + 影响面评估 → 路由到对应业务技能就地更新。
 
@@ -81,7 +91,7 @@ version: 5.6.0
 4. **逐层询问**"更新 or 继续下一步"（话术见 reference）。
 5. 按用户选择路由到对应业务技能，**不自己写**。
 
-## 4. 初始化流程（无 agile-docs/ 时）
+## 4. 初始化流程（无 agile-docs/，且用户明示或已在 §0 门槛拍板同意）
 
 1. **最小项目画像采集**（下游三个业务技能问询的公共输入，用选择题问，节奏遵循 `references/probing-protocol.md §三`，分两轮）：
    - 第一轮：项目名称 / 一句话定位 / 项目类型（Web 应用、API 服务、工具库…）
@@ -146,6 +156,6 @@ version: 5.6.0
 
 生效平台：Claude Code、ZCode（都自动加载插件标准位置的 `hooks/hooks.json`）。Codex 的 PostToolUse 只拦 shell 命令、写文件不触发，未适配——那边按 `backlog-rules.md §七` 手动跑 `agile.py check`。
 
-`hook-session` 与 `hook-post-write` 只在存在 `agile-docs/` 的项目上工作；`hook-prompt` 在没有的项目上也只发一次入口提示，不写任何文件。其余情况完全静默。插件内 `scripts/agile.py`（Python 3.9+，标准库 only，零正则）由 hooks.json 的命令串 `python … || python3 …` 兜底探测解释器（Claude Code 与 ZCode 对 command 型 hook 都只执行字符串本体，不认 `args` 字段）；没有 python 时 hook 静默退出，不影响任何操作，`UserPromptSubmit` 永不阻断输入。
+`hook-session` 与 `hook-post-write` 只在存在 `agile-docs/` 的项目上工作——该目录由初始化流程创建，首次使用无需预建；`hook-prompt` 在没有的项目上也只发一次入口提示，不写任何文件。其余情况不注入任何内容。插件内 `scripts/agile.py`（Python 3.9+，标准库 only，零正则）由 hooks.json 的命令串 `python … || python3 …` 兜底探测解释器（Claude Code 与 ZCode 对 command 型 hook 都只执行字符串本体，不认 `args` 字段）；没有 python 时 hook 静默退出，不影响任何操作，`UserPromptSubmit` 永不阻断输入。
 
 **hook 与 `check` 的分工**：hook 是即时的、不撤销已写入的内容——`backlog.json` 结构错误以 `decision: block` 把问题清单递给模型；回填只提示（允许分次写）。`agile.py check` 是全量出口检查，另查 `sprints/*.done.yaml` 的内容。关闭 Sprint 前、以及 Codex 那边，都以 `check` 为准。
