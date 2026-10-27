@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""架构决策""ADR""C4""需求变了""要改故事""依赖检查"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.6.4
+version: 5.6.5
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -158,4 +158,4 @@ version: 5.6.4
 
 `hook-session` 与 `hook-post-write` 只在存在 `agile-docs/` 的项目上工作——该目录由初始化流程创建，首次使用无需预建；`hook-prompt` 在没有的项目上也只发一次入口提示，不写任何文件。其余情况不注入任何内容。插件内 `scripts/agile.py`（Python 3.9+，标准库 only，零正则）由 hooks.json 的命令串 `python … || python3 …` 兜底探测解释器（Claude Code 与 ZCode 对 command 型 hook 都只执行字符串本体，不认 `args` 字段）；没有 python 时 hook 静默退出，不影响任何操作，`UserPromptSubmit` 永不阻断输入。
 
-**hook 与 `check` 的分工**：hook 是即时的、不撤销已写入的内容——`backlog.json` 结构错误以 `decision: block` 把问题清单递给模型；回填只提示（允许分次写）。`agile.py check` 是全量出口检查，另查 `sprints/*.done.yaml` 的内容。关闭 Sprint 前、以及 Codex 那边，都以 `check` 为准。
+**hook 与 `check` 的分工**：hook 是即时的、不撤销已写入的内容——`backlog.json` 结构错误以 `decision: block` 把问题清单递给模型；回填与 Sprint 文件头只提示（都允许分次写，写一半不该被打断）。`agile.py check` 是全量出口检查，另查 `sprints/*.done.yaml` 的内容与每个 Sprint 文件头的状态词。关闭 Sprint 前、以及 Codex 那边，都以 `check` 为准。

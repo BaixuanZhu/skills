@@ -25,9 +25,9 @@ mkdir -p "$WORK/agile-docs/sprints"
 for n in 1 2 9 10; do
   printf -- '- **状态**: 已关闭\n- **周期**: 2026-W0%s\n' "$n" > "$WORK/agile-docs/sprints/sprint-$n.md"
 done
-printf -- '- **状态**: 进行中\n- **周期**: 2026-W99\n' > "$WORK/agile-docs/sprints/sprint-12.md"
+printf -- '- **状态**: 规划完成\n- **周期**: 2026-W99\n' > "$WORK/agile-docs/sprints/sprint-12.md"
 BRIEF="$(run brief)"
-check "两位数序号取到最后一个 Sprint" "1" "$(printf '%s' "$BRIEF" | grep -c 'Sprint 12 进行中')"
+check "两位数序号取到最后一个 Sprint" "1" "$(printf '%s' "$BRIEF" | grep -c 'Sprint 12 规划完成')"
 check "不会被 sprint-9 顶替" "0" "$(printf '%s' "$BRIEF" | grep -c 'Sprint 9 ')"
 
 # ② 合法 backlog.json 地基（migrate 已删，fixture 直接铺 json；标题带 | 验证竖线在 json 里天然无害）
@@ -127,7 +127,7 @@ cat > "$CLOSED/sprints/sprint-072-20261028.md" <<'MD'
 # Sprint: 进行中
 
 - 文件名: sprint-072-20261028
-- 状态: 已规划
+- 状态: 规划完成
 - 周期: 2026-10-28 ~ 2026-11-03
 MD
 cp "$WORK/agile-docs/backlog.json" "$CLOSED/agile-docs/backlog.json"
@@ -136,7 +136,7 @@ brief_at() { (cd "$1" && "$PY" "$PLUGIN/scripts/agile.py" brief . 2>&1); }
 
 WITH_OPEN="$(brief_at "$CLOSED")"
 check "有进行中 Sprint 时判 active" "1" "$(printf '%s' "$WITH_OPEN" | grep -c '^阶段：active')"
-check "取最新 Sprint 的状态" "1" "$(printf '%s' "$WITH_OPEN" | grep -cF 'Sprint 072 已规划 (2026-10-28 ~ 2026-11-03)')"
+check "取最新 Sprint 的状态" "1" "$(printf '%s' "$WITH_OPEN" | grep -cF 'Sprint 072 规划完成 (2026-10-28 ~ 2026-11-03)')"
 
 mv "$CLOSED/sprints/sprint-072-20261028.md" "$CLOSED/sprint-072.moved"
 ONLY_CLOSED="$(brief_at "$CLOSED")"
@@ -144,6 +144,49 @@ check "只剩已关闭 Sprint 时判 sprint" "1" "$(printf '%s' "$ONLY_CLOSED" |
 check "已关闭 Sprint 显示状态词" "1" "$(printf '%s' "$ONLY_CLOSED" | grep -cF 'Sprint 071 已关闭 (2026-10-20 ~ 2026-10-27)')"
 check "状态行不带闭环注记" "0" "$(printf '%s' "$ONLY_CLOSED" | grep -c '执行结果来源')"
 mv "$CLOSED/sprint-072.moved" "$CLOSED/sprints/sprint-072-20261028.md"
+
+# ⑫ 状态三态只在一处判定：closed / planned / unknown
+check "闭环注记判 closed" "closed" \
+  "$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" -c "
+import agile; print(agile.sprint_status({'状态': '已关闭（执行结果来源：x）'}))")"
+check "规划完成判 planned" "planned" \
+  "$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" -c "
+import agile; print(agile.sprint_status({'状态': '规划完成'}))")"
+check "写岔判 unknown" "unknown" \
+  "$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" -c "
+import agile; print(agile.sprint_status({'状态': '已完成'}))")"
+
+# ⑬ 文件头三种写法并存（schema 说 YAML-style / 模板写列表符 / 早期 fixture 写裸键值），
+#    只认列表符会让裸键值文件的状态从来没被读到——恰好「解析不到 → 默认 active」蒙对。
+check "裸键值也解析" "规划完成|2026-10-20 ~ 2026-11-02" \
+  "$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" -c "
+import agile
+m = agile.parse_sprint_meta('状态: 规划完成\n周期: 2026-10-20 ~ 2026-11-02\n')
+print(m.get('状态', '') + '|' + m.get('周期', ''))")"
+
+# ⑭ 序号只解析一次：排序按 NNN，不按末段日期。命名混用时 sprint-071-20261027 的
+#    末段（20261027）比 sprint-072 大，旧实现会把旧 Sprint 当成最新的。
+MIX="$WORK/mixed"; mkdir -p "$MIX/sprints" "$MIX/agile-docs"
+cp "$WORK/agile-docs/backlog.json" "$MIX/agile-docs/backlog.json"
+printf -- '- 状态: 已关闭\n- 周期: 2026-10-20 ~ 2026-10-27\n' > "$MIX/sprints/sprint-071-20261027.md"
+printf -- '- 状态: 规划完成\n- 周期: 2026-10-28 ~ 2026-11-03\n' > "$MIX/sprints/sprint-072.md"
+check "命名混用按序号取最新" "1" "$(brief_at "$MIX" | grep -cF 'Sprint 072 规划完成')"
+
+# ⑮ 未知状态不静默降级：仍按 active 计（保守，不误判关闭），但状态行必须显式标注
+UNK="$WORK/unknown"; mkdir -p "$UNK/sprints" "$UNK/agile-docs"
+cp "$WORK/agile-docs/backlog.json" "$UNK/agile-docs/backlog.json"
+printf -- '- 状态: 已完成\n- 周期: 2026-11-04 ~ 2026-11-10\n' > "$UNK/sprints/sprint-073-20261104.md"
+UNK_BRIEF="$(brief_at "$UNK")"
+check "未知状态仍判 active" "1" "$(printf '%s' "$UNK_BRIEF" | grep -c '^阶段：active')"
+check "未知状态显示状态未识别" "1" "$(printf '%s' "$UNK_BRIEF" | grep -cF 'Sprint 073 状态未识别')"
+
+# ⑯ 契约变成可执行断言：check 报出写岔的状态词，且不依赖 backlog.json 是否存在
+check "check 报 Sprint 头即退出 1" "1" "$(cd "$UNK" && "$PY" "$PLUGIN/scripts/agile.py" check . >/dev/null 2>&1; echo $?)"
+check "报文件名与实际取值" "1" \
+  "$(cd "$UNK" && PYTHONIOENCODING=utf-8 "$PY" "$PLUGIN/scripts/agile.py" check . 2>&1 | grep -cF 'sprint-073-20261104.md: 状态「已完成」')"
+rm "$UNK/agile-docs/backlog.json"
+check "backlog 缺失仍报 Sprint 头" "1" \
+  "$(cd "$UNK" && PYTHONIOENCODING=utf-8 "$PY" "$PLUGIN/scripts/agile.py" check . 2>&1 | grep -cF 'sprint-073-20261104.md')"
 
 printf '\nPASS=%d FAIL=%d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

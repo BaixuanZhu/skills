@@ -1,6 +1,7 @@
 # Sprint 文件接口契约
 # 消费 Agent 读此文件了解 Sprint 规划文件的格式
 # using-agile 初始化时将此文件复制到 agile-docs/interfaces/
+# 本文件须能被 YAML 解析器读取（仓库 CI 校验，与在项目里的副本无关）：含 ": " 的值一律加引号。
 version: "1.5"
 sprint_file:
   naming: "sprint-{序号:03d}-{日期}.md"
@@ -9,7 +10,7 @@ sprint_file:
     - header: 文件头信息（状态/周期/目标/容量）
       format: YAML-style key-value
     - header: 任务清单
-      format: plain list, no checkboxes；多仓库项目条目标注 [repo: {仓库名}]
+      format: "plain list, no checkboxes；多仓库项目条目标注 [repo: {仓库名}]"
     - header: 交接契约（跨仓库依赖任务组存在时生成）
       format: 交接点表格 + 交接文档命名/位置 + 下游任务读取要求；单仓库 Sprint 无此段
     - header: 回填要求（消费 Agent 必读）
@@ -18,11 +19,14 @@ sprint_file:
       format: checklist (`- [ ]`)；关闭前逐项核对，全部通过方可关闭
     - header: 条目状态建议
       format: plain list; 由 agile-sprint 在 DoD 关闭环节追加，规划交付时不存在，消费 Agent 无需读取
-  # 文件头 `状态` 字段：值是状态词，消费方按**前缀**判定（startswith("已关闭")），不按整串相等。
+  # 文件头 `状态` 字段：值是状态词，消费方按**前缀**判定（startswith），不按整串相等。
   # 备注只允许全角括号跟在状态词后；执行结果来源写同级的 `执行结果:` 行，不并入状态值。
+  # 写法：模板用 `- 状态: 规划完成`；解析层另认裸键值 `状态: 规划完成` 与加粗 `**状态**:`，
+  # 冒号半角全角都行——宽松是为了容下存量文件，不是新写法许可。
   status:
     key: "状态"
     values: ["规划完成", "已关闭"]
+    on_unknown: "缺状态行或不在枚举内：按「进行中」保守处理（不误判为已关闭），但状态行显示「状态未识别」、agile.py check 报出文件名与实际取值"
 
 # 执行结果回传：消费 Agent 执行完 Sprint 任务后写入此文件（回填是硬性义务，见 sprint 文件内「回填要求」段）
 # agile-sprint DoD 关闭时以此为依据；using-agile 检测到 .done.yaml → 默认执行回填闭环（关闭+同步+反馈处理）

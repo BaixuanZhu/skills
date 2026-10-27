@@ -175,6 +175,17 @@ if [ "$code" -eq 0 ] && [ "$blocked" = yes ] && printf '%s' "$out" | grep -q '�
 else FAIL=$((FAIL+1)); echo "FAIL  坏 json 写入（sh）: code=$code blocked=$blocked out=$out"; fi
 rm -rf "$TP"
 
+# Sprint 文件写坏状态词 → additionalContext 提示（不 block：规划 Sprint 允许分次写，
+# 中途还没写到文件头不该被打断）。这条补的是「状态词写岔只在下游表现成阶段判错」。
+TP2=$(mktemp -d); mkdir -p "$TP2/agile-docs" "$TP2/sprints"
+printf '# Sprint\n\n- 状态: 已完成\n' > "$TP2/sprints/sprint-001-2026-10-20.md"
+W_TP2=$(w "$TP2")
+out=$( cd "$TP2" && printf '{"cwd":"%s","tool_input":{"file_path":"%s/sprints/sprint-001-2026-10-20.md"}}' "$W_TP2" "$W_TP2" | sh -c "$S_POST" ); code=$?
+if [ "$code" -eq 0 ] && hook_json_ok PostToolUse "$out" && printf '%s' "$out" | grep -q '状态「已完成」'; then
+  PASS=$((PASS+1)); echo "ok    Sprint 状态写岔 → additionalContext"
+else FAIL=$((FAIL+1)); echo "FAIL  Sprint 状态写岔: code=$code out=$out"; fi
+rm -rf "$TP2"
+
 # Windows 宿主默认 cmd.exe，且以「单个 verbatim argv」直传命令串（cmd /d /s /c "…"）。
 # 从 Git Bash 直接调 cmd 会被 MSYS 把内层引号转义坏（假阳性），必须用 node 按宿主
 # 同款 spawn 复刻；命令串与 payload 走环境变量，不经过 argv。

@@ -27,6 +27,7 @@ import os
 import sys
 import tempfile
 import time
+import traceback
 from pathlib import Path
 
 # ── 约定 ────────────────────────────────────────────────────────────────────
@@ -48,10 +49,14 @@ STATUSES = ("待办", "已完成", "已撤回")
 FIB = (1, 2, 3, 5, 8, 13)
 TODO_STATUS = "待办"
 WITHDRAWN = "已撤回"
-# Sprint 文件头只认这两个键、状态只认这个前缀（见 using-agile/sprint-schema.yaml）。
+# Sprint 文件头只认这两个键、状态只认这两个词（见 using-agile/sprint-schema.yaml）。
 # 收敛成常量是因为三处判定（解析白名单 / active 判定 / 状态行渲染）必须同步。
 SPRINT_META_KEYS = ("状态", "周期")
+SPRINT_STATUSES = ("规划完成", "已关闭")
 SPRINT_CLOSED = "已关闭"
+SPRINT_STATUS_UNKNOWN = "状态未识别"
+# 三态 → 状态行显示词。unknown 显式显示，不照抄原值、更不静默当成进行中。
+SPRINT_LABELS = {"closed": SPRINT_CLOSED, "planned": SPRINT_STATUSES[0], "unknown": SPRINT_STATUS_UNKNOWN}
 ID_PREFIXES = ("T-", "F-")
 QUOTES = "\"'“”‘’"
 POINT_BRACKETS = (("(", ")"), ("（", "）"))
@@ -311,19 +316,61 @@ def parse_sprint_items(text: str) -> list[tuple[str, int | None]]:
 def parse_sprint_meta(text: str) -> dict[str, str]:
     """只取白名单键，避免把任务清单行也读成字段。
 
-    容忍手写的常见变体：全角冒号、`* ` 列表符、`**状态**:` 加粗键、值带引号。
-    状态值带引号若不剥掉，`"已关闭"` 会被判成未关闭，阶段永远停在 active。
+    三种写法都认：`- 状态: x`（模板）、`状态: x`（裸键值，早期手写与部分 fixture）、
+    `**状态**: x`（加粗键）；分隔符半角全角都行；值带引号会剥掉（`"已关闭"` 不剥
+    会被判成未关闭，阶段永远停在 active）。
     """
     meta: dict[str, str] = {}
     for line in text.splitlines():
         stripped = line.strip()
-        if not stripped or stripped[0] not in "-*":
+        if not stripped:
             continue
-        body = stripped[1:].strip()
+        body = stripped[1:].strip() if stripped[0] in "-*" else stripped
         key, found, value = split_kv(body)
         if found and key in SPRINT_META_KEYS:
             meta.setdefault(key, unquote(value))
     return meta
+
+
+def sprint_status(meta: dict[str, str]) -> str:
+    """Sprint 状态归一成 `closed` / `planned` / `unknown`。
+
+    「状态」只在这里解释一次：active 判定、状态行渲染、文件头校验都消费返回值，
+    免得同一个概念在三处各写一遍判定、各自漂移。
+    比对用前缀而不是整串：闭环注记会把状态行写成「已关闭（执行结果来源：…）」，
+    整串相等会让已关闭 Sprint 永远 active（5.6.4 修的正是这个）。
+    """
+    status = meta.get("状态", "")
+    if status.startswith(SPRINT_CLOSED):
+        return "closed"
+    if status.startswith(SPRINT_STATUSES[0]):
+        return "planned"
+    return "unknown"
+
+
+def sprint_number(stem: str) -> str:
+    """`sprint-<序号>-<日期>` 里的序号段，原样字符串（保留前导零：`071` 不是 `71`）。
+
+    取不到返回空串。序号只在这里解析一次——排序与显示各解析一遍曾导致
+    「排序按日期、显示按序号」，命名混用时 `[-1]` 取到的是旧 Sprint。
+    """
+    chunks = stem.split("-")
+    return chunks[1] if len(chunks) > 1 and chunks[1].isdigit() else ""
+
+
+def sprint_header_problems(name: str, meta: dict[str, str]) -> list[str]:
+    """文件头状态行的可执行断言，`check` 与写后 hook 共用。
+
+    解析层宽容（认三种写法、两种冒号），取值不放宽：状态词写岔时下游只会
+    「静默当成进行中」，正是 5.6.4 那类故障的上游。
+    """
+    status = meta.get("状态", "")
+    legal = "/".join(SPRINT_STATUSES)
+    if not status:
+        return [f"{name}: 缺状态行（合法值 {legal}）"]
+    if sprint_status(meta) == "unknown":
+        return [f"{name}: 状态「{status}」不在枚举 {legal} 内，当前按「进行中」处理"]
+    return []
 
 
 def parse_adr(text: str) -> tuple[int, int]:
@@ -348,12 +395,16 @@ def parse_adr(text: str) -> tuple[int, int]:
 def sprint_seq(stem: str) -> tuple[int, int, str]:
     """按序号排序，不按字符串——`sprint-10` 排到 `sprint-2` 前面，
     于是「当前 Sprint」取 `[-1]` 永远拿到 sprint-9，注入的状态是错的。"""
-    tail = stem.rsplit("-", 1)[-1]
-    return (0, int(tail), stem) if tail.isdigit() else (1, 0, stem)
+    number = sprint_number(stem)
+    return (0, int(number), stem) if number else (1, 0, stem)
 
 
 def scan_sprints(root: Path):
-    """返回 [(文件路径, 文件主名, 元信息, 任务清单)]，按序号升序。"""
+    """返回 [(文件路径, 文件主名, 元信息, 任务清单)]，按序号升序。
+
+    每次调用读全部 Sprint 文件。两个 hook 每轮各调一次，Sprint 数到 50 上下
+    才开始有可感知延迟——现在不值得加缓存，真到那一步再说。
+    """
     found = []
     for rel in SPRINT_DIRS:
         directory = root / rel
@@ -373,6 +424,19 @@ def scan_sprints(root: Path):
             found.append((path, path.stem, parse_sprint_meta(text), parse_sprint_items(text)))
     found.sort(key=lambda row: sprint_seq(row[1]))
     return found
+
+
+def check_sprint_headers(root: Path) -> list[str]:
+    """所有 Sprint 文件头的状态行必须是枚举词。
+
+    `check` 里没有这条时，状态词写岔只会在下游表现成「阶段永远 active」，
+    没人能顺着报错找到那一行——把契约从文档约定变成可执行断言。
+    """
+    return [
+        line
+        for _p, stem, meta, _items in scan_sprints(root)
+        for line in sprint_header_problems(stem + ".md", meta)
+    ]
 
 
 def check_sprint_consistency(root: Path, data: dict) -> list[str]:
@@ -517,6 +581,10 @@ def hook_post_write() -> None:
         handle_json_write(path)
     elif path.name.endswith(".done.yaml"):
         handle_done_write(path, root)
+    elif path.suffix == ".md" and path.name.startswith("sprint-") and path.parent.name == "sprints":
+        # 只认 sprints/ 下的 sprint-*.md：项目根放一份 sprint-notes.md 不该被当成
+        # Sprint 文件质问，这也是 scan_sprints 的扫描范围。
+        handle_sprint_write(path)
 
 
 def handle_json_write(json_path: Path) -> None:
@@ -578,6 +646,27 @@ def handle_done_write(done_path: Path, root: Path) -> None:
     )
 
 
+def handle_sprint_write(sprint_path: Path) -> None:
+    """Sprint 文件头写完立刻校验状态行。
+
+    用 additionalContext 而不是 decision:block：规划 Sprint 允许分次写，
+    中途还没写到文件头不该被打断。强制在 `check` 与关闭 Sprint 之前。
+    只查状态行——其余段落齐不齐由闭环检查清单负责，脚本不越位。
+    """
+    text = read_text(sprint_path)
+    if text is None:
+        return
+    problems = sprint_header_problems(sprint_path.name, parse_sprint_meta(text))
+    if not problems:
+        return
+    listed = "\n".join("  · " + line for line in problems)
+    emit_context(
+        "PostToolUse",
+        f"[agile] Sprint 文件头状态行有问题：\n{listed}\n"
+        "  合法值：规划完成 / 已关闭（状态词后可跟全角括号备注），见 sprint-schema.yaml 的 sprint_file.status。",
+    )
+
+
 def pending_backfills(root: Path) -> list[str]:
     """未闭环的回填文件名（`sprints/*.done.yaml`）。"""
     pending: list[str] = []
@@ -593,15 +682,16 @@ def pending_backfills(root: Path) -> list[str]:
 
 
 def active_sprints(root: Path) -> list[tuple[str, dict]]:
-    """状态不是「已关闭」的 Sprint。
+    """状态不是「已关闭」的 Sprint，包括状态缺失或写岔（unknown）的。
 
-    判定用前缀匹配而不是整串相等：闭环注记会把状态行写成
-    「已关闭（执行结果来源：…）」，整串比对会让已关闭 Sprint 永远 active。
+    未知状态按 active 计是保守方向：把可能还开着的 Sprint 判成关闭，
+    会让待办条目被重复规划一遍。unknown 的显式暴露交给 describe_state
+    与 check，不靠这里静默降级。
     """
     return [
         (stem, meta)
         for _p, stem, meta, _items in scan_sprints(root)
-        if not meta.get("状态", "").startswith(SPRINT_CLOSED)
+        if sprint_status(meta) != "closed"
     ]
 
 
@@ -691,19 +781,11 @@ def describe_state(root: Path) -> list[str]:
     sprints = scan_sprints(root)
     if sprints:
         _path, stem, meta, _items = sprints[-1]
-        chunks = stem.split("-")
-        seq = chunks[1] if len(chunks) > 1 else stem
-        bits = [f"Sprint {seq}"]
-        status = meta.get("状态", "")
-        if status:
-            # 状态值可能带括号备注（「已关闭（执行结果来源：…）」）——这行每轮进上下文，
-            # 截到括号前就够；截空说明整值是备注，不占位。
-            for marker in ("（", "("):
-                if marker in status:
-                    status = status.split(marker, 1)[0].strip()
-                    break
-            if status:
-                bits.append(status)
+        seq = sprint_number(stem) or stem
+        # 状态只显示状态词：闭环注记「（执行结果来源：…）」不进这行（每轮都注入，
+        # 不能随备注长度膨胀）。写岔的状态显示成「状态未识别」而不是照抄原文——
+        # 静默降级成进行中，正是这类故障活了 9 个 Sprint 的原因。
+        bits = [f"Sprint {seq}", SPRINT_LABELS[sprint_status(meta)]]
         if meta.get("周期"):
             bits.append("(" + meta["周期"] + ")")
         parts.append(" ".join(bits))
@@ -812,22 +894,20 @@ def resolve(root_arg: str | None) -> tuple[Path, Path, Path]:
     return root, docs / BACKLOG_JSON, docs / BACKLOG_MD
 
 
-def load_or_report(json_path: Path) -> dict | None:
+def read_backlog(json_path: Path) -> tuple[dict | None, str]:
+    """读 backlog.json，返回 (数据, 问题描述)。问题为空串表示读到了。"""
     if not json_path.exists():
-        print(f"找不到 {json_path}")
-        print("  旧表格格式：由 agent 按 agile-backlog/references/backlog-rules.md §七 一次性转写")
-        return None
+        return None, f"找不到 {json_path}"
     data = load_json(json_path)
-    if data is None:
-        print(f"{json_path} 不是合法 JSON")
-        return None
-    return data
+    return (data, "") if data is not None else (None, f"{json_path} 不是合法 JSON")
 
 
 def cli_stats(root_arg: str | None) -> int:
     _root, json_path, _md_path = resolve(root_arg)
-    data = load_or_report(json_path)
+    data, problem = read_backlog(json_path)
     if data is None:
+        print(problem)
+        print("  旧表格格式：由 agent 按 agile-backlog/references/backlog-rules.md §七 一次性转写")
         return 1
     print("\n".join(render_stats_lines(compute_stats(data))))
     return 0
@@ -835,16 +915,20 @@ def cli_stats(root_arg: str | None) -> int:
 
 def cli_check(root_arg: str | None) -> int:
     root, json_path, md_path = resolve(root_arg)
-    data = load_or_report(json_path)
-    if data is None:
-        return 1
+    # Sprint 头单独先查：它和 backlog.json 无关，backlog 缺失或写坏时这条
+    # 照样要报出来——状态词写岔正是「阶段判错」的上游，不该被另一个文件的
+    # 错误挡住。
+    problems: list[str] = ["Sprint 头：" + line for line in check_sprint_headers(root)]
 
-    errors, warnings = validate(data)
-    problems: list[str] = []
-    problems.extend("结构：" + line for line in errors)
-    problems.extend("规范：" + line for line in warnings)
-    problems.extend("跨文件：" + line for line in check_sprint_consistency(root, data))
-    problems.extend("回填：" + line for line in check_done_files(root, data))
+    data, problem = read_backlog(json_path)
+    if data is None:
+        problems.append("结构：" + problem)
+    else:
+        errors, warnings = validate(data)
+        problems.extend("结构：" + line for line in errors)
+        problems.extend("规范：" + line for line in warnings)
+        problems.extend("跨文件：" + line for line in check_sprint_consistency(root, data))
+        problems.extend("回填：" + line for line in check_done_files(root, data))
 
     if md_path.exists():
         # PRODUCT-BACKLOG.md 已随 5.6.0 退役：不再生成、不再比对，只提醒清理。
@@ -852,7 +936,7 @@ def cli_check(root_arg: str | None) -> int:
 
     if not problems:
         stats = compute_stats(data)
-        print(f"通过：{stats['total']} 条 / {stats['points']} 点，结构 / 对账 / 回填全过")
+        print(f"通过：{stats['total']} 条 / {stats['points']} 点，结构 / 对账 / 回填 / Sprint 头全过")
         return 0
     print(f"发现 {len(problems)} 处问题：")
     for line in problems:
@@ -881,6 +965,24 @@ COMMANDS = {
     "check": cli_check,
     "brief": cli_brief,
 }
+
+
+def log_hook_error() -> None:
+    """把当前异常追加到临时日志。只在 AGILE_DEBUG 非空时动手。
+
+    靠环境变量开关而不是配置文件：排查是一次性的，不需要一份要维护的设置。
+    写日志本身再出错也吞掉——这条路径上任何非零退出都会破坏 hooks.json 的
+    `python || python3` 兜底。
+    """
+    if not os.environ.get("AGILE_DEBUG"):
+        return
+    try:
+        stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        with (Path(tempfile.gettempdir()) / "agile-hook.log").open("a", encoding="utf-8") as fh:
+            fh.write(f"--- {stamp} {sys.argv[1] if len(sys.argv) > 1 else ''}\n")
+            traceback.print_exc(file=fh)
+    except BaseException:
+        pass
 
 
 def main(argv: list[str]) -> int:
@@ -916,6 +1018,8 @@ if __name__ == "__main__":
         try:
             main(sys.argv)
         except BaseException:
-            pass
+            # 静默是设计（见模块 docstring），但完全不可观测会让这类故障查不动：
+            # AGILE_DEBUG 非空时把 traceback 落到临时日志，平时仍然一声不响。
+            log_hook_error()
         sys.exit(0)
     sys.exit(main(sys.argv))

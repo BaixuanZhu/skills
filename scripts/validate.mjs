@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 // validate.mjs —— 技能内容静态校验(只读,不写任何文件)
 //
-// 校验四块:
+// 仓库级脚本:只在开发机与 CI 跑,**不随插件分发**(marketplace 的 source 只指
+// ./plugins/<name>/,本文件在仓库根 scripts/ 下)。因此这里的 Node 依赖与插件
+// 运行时无关——插件侧只用 Python 标准库,那边不能要求用户装 node。
+//
+// 校验五块:
 //   ① frontmatter 规范: name 匹配目录名 / description≤1024 / version semver /
 //      slug+displayName(SkillHub 发布前置) / dependencies 引用真实存在
 //   ② 引用完整性: SKILL.md 与 references 里引用的 references/<file> 实际存在
@@ -10,6 +14,8 @@
 //   ③ references 可达性(防孤儿/防漂移,源自敏捷套件历轮评估根因):
 //      孤儿 error  —— references/ 下文件在 skills/ 树内零引用(完整名或缩写,跨技能合法)
 //      可达 warning —— 从本技能 SKILL.md 沿指针图走不到的自身 reference
+//   ④ YAML 契约可解析性: references/*.yaml 必须能被 js-yaml 解析
+//      (后缀叫 .yaml 却解析不了 = 只被人当文档读,agent 按它写、脚本按另一套读)
 //
 // 用法:
 //   node scripts/validate.mjs            # 有错误则退出码 1,否则 0
@@ -199,6 +205,31 @@ function validateReachability(name, allFiles) {
   }
 }
 
+// ── ④ YAML 契约可解析性 ───────────────────────────────────
+
+// references/*.yaml 是给 agent 读的契约，但后缀是 .yaml 就得真能被解析器读。
+// 「看起来像 YAML、实际解析不了」等于没有契约：agent 按它写，脚本按另一套读，
+// 漂移没人发现。sprint-schema.yaml 曾因 [repo: {仓库名}] 未加引号长期解析失败。
+function validateYamlContracts(skillDirs) {
+  let checked = 0;
+  for (const name of skillDirs) {
+    const refDir = join(SKILLS_DIR, name, 'references');
+    if (!existsSync(refDir)) continue;
+    for (const entry of readdirSync(refDir)) {
+      if (!/\.ya?ml$/.test(entry)) continue;
+      checked += 1;
+      try {
+        yaml.load(readFileSync(join(refDir, entry), 'utf8'));
+      } catch (e) {
+        const line = e.mark ? ` 第 ${e.mark.line + 1} 行` : '';
+        const why = (e.reason || e.message || '').split('\n')[0];
+        err(`${name}/${entry}`, `YAML 解析失败${line}: ${why}`);
+      }
+    }
+  }
+  return checked;
+}
+
 // ── ② plugin-map 映射完整性 ──────────────────────────────
 
 function validatePluginMap() {
@@ -239,6 +270,7 @@ function main() {
     validateReachability(name, allFiles);
   }
   validatePluginMap();
+  const yamlCount = validateYamlContracts(skillDirs);
 
   if (asJson) {
     console.log(JSON.stringify({ errors, warnings, ok: errors.length === 0 }, null, 2));
@@ -246,7 +278,7 @@ function main() {
     for (const w of warnings) console.log(`⚠ ${w}`);
     for (const e of errors) console.log(`✗ ${e}`);
     if (errors.length === 0) {
-      console.log(`✓ 校验通过: ${skillDirs.length} 个技能 frontmatter + 引用 + 可达性 + 映射均合规`);
+      console.log(`✓ 校验通过: ${skillDirs.length} 个技能 frontmatter + 引用 + 可达性 + ${yamlCount} 个 YAML 契约 + 映射均合规`);
     } else {
       console.log(`\n共 ${errors.length} 个错误`);
     }

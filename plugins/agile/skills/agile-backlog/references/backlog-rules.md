@@ -138,7 +138,7 @@ Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改�
 
 ```bash
 python <插件根>/scripts/agile.py stats   [项目根]   # 全量重算并打印
-python <插件根>/scripts/agile.py check   [项目根]   # 结构校验 + Sprint 点数对账 + 回填文件内容校验，有问题返回 1
+python <插件根>/scripts/agile.py check   [项目根]   # 结构校验 + Sprint 点数对账 + 回填内容校验 + Sprint 头状态词校验，有问题返回 1
 python <插件根>/scripts/agile.py brief   [项目根]   # 打印当前阶段与将要注入的原文
 ```
 
