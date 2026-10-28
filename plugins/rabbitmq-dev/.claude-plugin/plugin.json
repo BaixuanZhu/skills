@@ -1,0 +1,9 @@
+{
+  "name": "rabbitmq-dev",
+  "version": "1.0.0",
+  "description": "MQ 可靠性契约：用五个入口问题定下消息可靠性级别、幂等策略、重试与死信、顺序保障、积压预案，避开测试全绿但线上丢消息 / 重复执行 / 积压的假绿陷阱。不含 RabbitMQ 安装运维与其他 MQ 的 API 用法。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com"
+  }
+}

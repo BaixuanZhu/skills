@@ -45,6 +45,26 @@
       ]
     },
     {
+      "name": "rabbitmq-dev",
+      "version": "1.0.0",
+      "author": {
+        "name": "BaixuanZhu",
+        "email": "66127517+BaixuanZhu@users.noreply.github.com"
+      },
+      "source": "./plugins/rabbitmq-dev",
+      "description": "MQ 可靠性契约：五个入口问题定下可靠性级别、幂等策略、重试与死信、顺序保障、积压预案；避开测试全绿但线上丢消息 / 重复执行 / 积压的假绿陷阱。不含安装运维与其他 MQ API。",
+      "category": "engineering",
+      "keywords": [
+        "rabbitmq",
+        "amqp",
+        "mq",
+        "message-queue",
+        "reliability",
+        "idempotency",
+        "dead-letter"
+      ]
+    },
+    {
       "name": "mybatis-plus-dev",
       "version": "3.0.0",
       "author": {

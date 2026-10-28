@@ -19,6 +19,7 @@
     }
   },
   "aliases": {
-    "java-contract": "java-standard"
+    "java-contract": "java-standard",
+    "mq-reliability": "rabbitmq-dev"
   }
 }

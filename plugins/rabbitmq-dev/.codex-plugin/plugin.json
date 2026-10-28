@@ -1,0 +1,40 @@
+{
+  "name": "rabbitmq-dev",
+  "version": "1.0.0",
+  "description": "MQ 可靠性契约：用五个入口问题定下消息可靠性级别、幂等策略、重试与死信、顺序保障、积压预案，避开测试全绿但线上丢消息 / 重复执行 / 积压的假绿陷阱。不含 RabbitMQ 安装运维与其他 MQ 的 API 用法。",
+  "author": {
+    "name": "BaixuanZhu",
+    "email": "66127517+BaixuanZhu@users.noreply.github.com",
+    "url": "https://github.com/BaixuanZhu"
+  },
+  "homepage": "https://github.com/BaixuanZhu/skills",
+  "repository": "https://github.com/BaixuanZhu/skills",
+  "license": "MIT",
+  "keywords": [
+    "rabbitmq",
+    "amqp",
+    "mq",
+    "message-queue",
+    "reliability",
+    "idempotency",
+    "dead-letter"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "MQ 可靠性契约",
+    "shortDescription": "消息可靠性决策与假绿陷阱防护",
+    "longDescription": "不教 RabbitMQ API 怎么写（模型本来就会），只做三件事：一、写生产者/消费者前用五个入口问题定下可靠性级别（丢了会怎样）、幂等策略（处理两次会怎样）、重试与死信（失败去哪、DLQ 谁来看）、顺序保障（要顺序吗）、积压预案（生产快过消费怎么办）；二、契约落盘到 .claude/rules/mq-reliability.md，动消息代码前先读；三、写完用假绿元判据自查——测试环境不杀 broker、只投一次、消息量小，把 broker 停掉 / 同条消息投两次 / 投 10 万条会出什么问题。附 10 条假绿陷阱（DLQ 无人看管、累加型假幂等、AUTO ack crash 重投、积压无监控等）与 Spring AMQP 默认值速查。不含安装部署、集群运维与其他 MQ 的 API 用法。",
+    "developerName": "BaixuanZhu",
+    "category": "Engineering",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "给这个项目建立消息可靠性契约",
+      "这个消费者要做幂等吗，怎么做",
+      "消息进死信队列了怎么办",
+      "按假绿陷阱清单审查这段消息代码"
+    ]
+  }
+}
