@@ -18,6 +18,12 @@
 * **fail-open，且有意退出码只有 0。** 脚本随插件分发到别人机器上，任何未预期异常
   都变成沉默退出 0。hook 有意非零退出会破坏 hooks.json 里 `python || python3`
   的兜底语义（`||` 只该在解释器缺失时轮到第二个），所以问题清单走 stdout JSON。
+* **长期待办按日缓存，缓存与提醒额度互不失效。** 年龄快照（汇总行 + 至多 3 条
+  提醒明细）按「自然日 + backlog/Sprint 文件指纹（mtime_ns / size）」落在临时
+  目录：同日同文件不再重算，PostToolUse 写盘后主动删，外部改动靠指纹兜底；
+  mtime 只判缓存新鲜度，绝不参与年龄计算（年龄唯一来源是 created_at）。缓存
+  失效不删当日提醒 marker——文件怎么变，同日最多展开一次。review/stats/check
+  永远读实时文件，不走这份缓存。
 """
 from __future__ import annotations
 
@@ -64,6 +70,8 @@ POINT_BRACKETS = (("(", ")"), ("（", "）"))
 FEEDBACK_TYPES = ("reason", "issue", "decision")
 REVIEW_AGE_DAYS = 30
 DATE_FIELDS = ("created_at", "last_reviewed_at")
+# 年龄快照缓存的结构版本：快照字段语义变化时递增，旧缓存整体作废重算。
+AGE_CACHE_VERSION = 1
 
 
 # ── 输入输出（Windows 控制台默认 GBK，显式切 utf-8） ────────────────────────
@@ -529,8 +537,9 @@ def sprint_seq(stem: str) -> tuple[int, int, str]:
 def scan_sprints(root: Path):
     """返回 [(文件路径, 文件主名, 元信息, 任务清单)]，按序号升序。
 
-    每次调用读全部 Sprint 文件。两个 hook 每轮各调一次，Sprint 数到 50 上下
-    才开始有可感知延迟——现在不值得加缓存，真到那一步再说。
+    每次调用读全部 Sprint 文件。长期待办的年龄快照已按日缓存（见 age_snapshot），
+    这里剩下的调用方是状态摘要与阶段判定；Sprint 数到 50 上下才开始有可感知
+    延迟，先不为它们再加一层缓存。
     """
     found = []
     for rel in SPRINT_DIRS:
@@ -705,12 +714,16 @@ def hook_post_write() -> None:
     path = Path(raw) if os.path.isabs(raw) else root / raw
 
     if path.name == BACKLOG_JSON:
+        # 失效先于校验：写盘那一刻快照就旧了，校验是否通过不影响这个事实。
+        invalidate_age_cache(root_of(path))
         handle_json_write(path)
     elif path.name.endswith(".done.yaml"):
         handle_done_write(path, root)
     elif path.suffix == ".md" and path.name.startswith("sprint-") and path.parent.name == "sprints":
         # 只认 sprints/ 下的 sprint-*.md：项目根放一份 sprint-notes.md 不该被当成
         # Sprint 文件质问，这也是 scan_sprints 的扫描范围。
+        base = path.parent.parent
+        invalidate_age_cache(base.parent if base.name == DOCS_DIR else base)
         handle_sprint_write(path)
 
 
@@ -887,9 +900,131 @@ def load_briefs() -> dict[str, str]:
     return parse_briefs(text) if text else {}
 
 
+# ── 长期待办当日快照（日缓存，只省重复计算、不改任何口径） ──────────────────────
+def age_cache_path(root: Path) -> Path:
+    """快照按项目根分文件，放临时目录；与提醒 marker 同目录但互不影响。"""
+    digest = hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:16]
+    return Path(tempfile.gettempdir()) / f"agile-age-{digest}.json"
+
+
+def age_fingerprint(root: Path) -> list[list] | None:
+    """缓存新鲜度指纹：backlog.json 与全部 Sprint md 的 (相对名, mtime_ns, size)。
+
+    mtime 只回答「缓存还新鲜吗」，绝不参与年龄计算——立项年龄的唯一来源是
+    created_at（backlog-rules §五），mtime 会随任何一次无关写动跳动。列表结构
+    与 JSON 往返后的形态一致，相等比较才有意义。backlog.json 不在 → None。
+    """
+    files: list[list] = []
+    json_path = root / DOCS_DIR / BACKLOG_JSON
+    try:
+        stat = json_path.stat()
+    except OSError:
+        return None
+    files.append([BACKLOG_JSON, stat.st_mtime_ns, stat.st_size])
+    for rel in SPRINT_DIRS:
+        directory = root / rel
+        if not directory.is_dir():
+            continue
+        try:
+            entries = sorted(directory.iterdir())
+        except OSError:
+            continue
+        for path in entries:
+            if not (path.name.startswith("sprint-") and path.name.endswith(".md")):
+                continue
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
+            files.append([f"{rel}/{path.name}", stat.st_mtime_ns, stat.st_size])
+    return files
+
+
+def load_age_cache(root: Path, today: date, fingerprint: list) -> dict | None:
+    """读当日快照；文件缺失、损坏、跨日、版本不符或指纹变化都返回 None（= 重算）。"""
+    try:
+        raw = json.loads(age_cache_path(root).read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(raw, dict) or raw.get("version") != AGE_CACHE_VERSION:
+        return None
+    if raw.get("day") != today.isoformat() or raw.get("fingerprint") != fingerprint:
+        return None
+    summary = raw.get("summary")
+    items = raw.get("notice_items")
+    due_count = raw.get("due_count")
+    if not isinstance(summary, list) or not all(isinstance(line, str) for line in summary):
+        return None
+    if not isinstance(items, list) or not all(isinstance(line, str) for line in items):
+        return None
+    if not is_int(due_count) or due_count < 0:
+        return None
+    return {"summary": summary, "due_count": due_count, "notice_items": items}
+
+
+def save_age_cache(root: Path, today: date, fingerprint: list, payload: dict) -> None:
+    """写快照（没有待复核也写负缓存）；失败静默——缓存只是加速器，不是事实源。"""
+    target = age_cache_path(root)
+    scratch = target.with_name(f"{target.name}.{os.getpid()}.tmp")
+    try:
+        body = {"version": AGE_CACHE_VERSION, "day": today.isoformat(),
+                "fingerprint": fingerprint, **payload}
+        scratch.write_text(json.dumps(body, ensure_ascii=False), encoding="utf-8")
+        os.replace(scratch, target)
+    except Exception:
+        try:
+            scratch.unlink()
+        except OSError:
+            pass
+
+
+def invalidate_age_cache(root: Path) -> None:
+    """PostToolUse 写盘后主动失效。删不掉也由指纹兜底；绝不碰提醒 marker。"""
+    try:
+        age_cache_path(root).unlink()
+    except OSError:
+        pass
+
+
+def render_notice_items(due: list[dict]) -> list[str]:
+    """复核提醒的至多 3 条明细，与 review 清单同一种行格式。"""
+    lines = []
+    for row in due[:3]:
+        history = "曾纳入 Sprint" if row["ever_planned"] else "从未纳入 Sprint"
+        lines.append(f"- {row['id']} {row['title']}｜{row['priority']}｜立项 {row['age']} 天｜{history}")
+    return lines
+
+
+def age_snapshot(root: Path, today: date) -> dict | None:
+    """当日长期待办快照：汇总行 / 待复核数 / 提醒明细，两个 hook 路径共用。
+
+    每天首次或文件指纹变化时重算一次并写缓存，其余轮次直接命中——状态摘要与
+    复核提醒从此共用这一份，不再各自 load + scan + 计算。backlog 缺失或读不出
+    → None（与 describe_state 原行为一致：没有年龄行可注入）。
+    """
+    fingerprint = age_fingerprint(root)
+    if fingerprint is None:
+        return None
+    cached = load_age_cache(root, today, fingerprint)
+    if cached is not None:
+        return cached
+    data = load_json(root / DOCS_DIR / BACKLOG_JSON)
+    if data is None:
+        return None
+    report = collect_backlog_age(data, scan_sprints(root), today)
+    payload = {
+        "summary": backlog_age_summary(report),
+        "due_count": len(report["due"]),
+        "notice_items": render_notice_items(report["due"]),
+    }
+    save_age_cache(root, today, fingerprint, payload)
+    return payload
+
+
 def build_state_block(root: Path, notify_review: bool = False) -> str:
     """每轮 / 每次会话注入状态；只有用户发言时才展开当日首次复核提醒。"""
-    parts = describe_state(root)
+    snapshot = age_snapshot(root, date.today())
+    parts = describe_state(root, snapshot)
     body = "｜".join(parts) if parts else "agile-docs/ 已存在"
     stage = detect_stage(root)
     briefs = load_briefs()
@@ -899,15 +1034,19 @@ def build_state_block(root: Path, notify_review: bool = False) -> str:
         brief = f"阶段说明缺失（{BRIEF_REL} 里没有 [{stage or '?'}] 块），按 `using-agile` 自行判断该走哪一步。"
     lines = ["<agile-state>", body, brief]
     if notify_review:
-        notice = claim_review_notice(root, briefs)
+        notice = claim_review_notice(root, briefs, snapshot)
         if notice:
             lines.append(notice)
     lines.extend([ROUTING_LINE, "</agile-state>"])
     return "\n".join(lines)
 
 
-def describe_state(root: Path) -> list[str]:
-    """Sprint / 回填 / Backlog / ADR 的一行式摘要，两个 hook 共用。"""
+def describe_state(root: Path, snapshot: dict | None = None) -> list[str]:
+    """Sprint / 回填 / Backlog / ADR 的一行式摘要，两个 hook 共用。
+
+    长期待办汇总行来自当日快照（age_snapshot，可能直接命中缓存），这里不再
+    重复计算——原先状态摘要与复核提醒各算一遍年龄，是每轮三趟扫描的来源之一。
+    """
     docs = root / DOCS_DIR
     json_path = docs / BACKLOG_JSON
     parts: list[str] = []
@@ -935,7 +1074,8 @@ def describe_state(root: Path) -> list[str]:
     if data is not None:
         stats = compute_stats(data)
         parts.append(f"Backlog {stats['total']} 条 / {stats['points']} 点（已确认 {stats['confirmed']}）")
-        parts.extend(backlog_age_summary(collect_backlog_age(data, sprints, date.today())))
+        if snapshot:
+            parts.extend(snapshot["summary"])
 
     adr_text = read_text(docs / ADR_MD)
     if adr_text:
@@ -980,33 +1120,39 @@ def review_marker(root: Path) -> Path:
     return Path(tempfile.gettempdir()) / f"agile-review-{digest}.marker"
 
 
-def claim_review_notice(root: Path, briefs: dict[str, str]) -> str:
-    """有待复核条目时领取当日提醒额度，并返回至多三条明细；否则为空。"""
-    json_path = root / DOCS_DIR / BACKLOG_JSON
-    data = load_json(json_path) if json_path.exists() else None
-    if data is None:
-        return ""
-    report = collect_backlog_age(data, scan_sprints(root), date.today())
-    due = report["due"]
-    if not due:
-        return ""
-    marker = review_marker(root)
-    if marker.exists():
-        return ""
+def claim_day_marker(marker: Path) -> bool:
+    """原子领取当日额度：O_CREAT|O_EXCL 由系统保证唯一，并发会话只有一个成功。
+
+    建不了文件（临时目录不可写等）也返回 False——宁可漏一次提醒，不重复打扰。
+    """
     try:
-        marker.write_text("1", encoding="utf-8")
-    except Exception:
+        fd = os.open(str(marker), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    except OSError:
+        return False
+    try:
+        os.write(fd, b"1")
+    except OSError:
+        pass
+    finally:
+        os.close(fd)
+    return True
+
+
+def claim_review_notice(root: Path, briefs: dict[str, str], snapshot: dict | None) -> str:
+    """领取当日提醒额度并展开至多三条明细；年龄快照由 build_state_block 共享传入。"""
+    if not snapshot or not snapshot["due_count"]:
+        return ""
+    if not claim_day_marker(review_marker(root)):
         return ""
 
     brief = briefs.get("review", "")
     if not brief:
         brief = f"长期待办提醒说明缺失（{BRIEF_REL} 里没有 [review] 块），按 agile-backlog 的长期待办复核流程处理。"
     lines = ["<agile-review>", brief, "待复核条目（至多 3 条）："]
-    for row in due[:3]:
-        history = "曾纳入 Sprint" if row["ever_planned"] else "从未纳入 Sprint"
-        lines.append(f"- {row['id']} {row['title']}｜{row['priority']}｜立项 {row['age']} 天｜{history}")
-    if len(due) > 3:
-        lines.append(f"其余 {len(due) - 3} 条见 `agile.py review`")
+    lines.extend(snapshot["notice_items"])
+    rest = snapshot["due_count"] - len(snapshot["notice_items"])
+    if rest > 0:
+        lines.append(f"其余 {rest} 条见 `agile.py review`")
     lines.append("</agile-review>")
     return "\n".join(lines)
 
