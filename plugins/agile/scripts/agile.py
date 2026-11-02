@@ -28,6 +28,7 @@ import sys
 import tempfile
 import time
 import traceback
+from datetime import date
 from pathlib import Path
 
 # ── 约定 ────────────────────────────────────────────────────────────────────
@@ -61,6 +62,8 @@ ID_PREFIXES = ("T-", "F-")
 QUOTES = "\"'“”‘’"
 POINT_BRACKETS = (("(", ")"), ("（", "）"))
 FEEDBACK_TYPES = ("reason", "issue", "decision")
+REVIEW_AGE_DAYS = 30
+DATE_FIELDS = ("created_at", "last_reviewed_at")
 
 
 # ── 输入输出（Windows 控制台默认 GBK，显式切 utf-8） ────────────────────────
@@ -135,8 +138,21 @@ def is_int(value) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def validate(data: dict) -> tuple[list[str], list[str]]:
-    """返回 (errors, warnings)。errors 是结构性问题，warnings 是规范问题。"""
+def parse_iso_date(value) -> date | None:
+    """只接受跨 Python 版本行为一致的 YYYY-MM-DD，其它值交给校验层报出。"""
+    if not isinstance(value, str) or len(value) != 10:
+        return None
+    if value[4] != "-" or value[7] != "-":
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def validate(data: dict, today: date | None = None) -> tuple[list[str], list[str]]:
+    """返回 (errors, warnings)。缺失日期兼容存量，写错的日期仍是结构错误。"""
+    today = today or date.today()
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -176,6 +192,23 @@ def validate(data: dict) -> tuple[list[str], list[str]]:
                 errors.append(f"{ident} 的 points 必须是正整数，当前是 {points!r}")
             if not isinstance(item.get("confirmed"), bool):
                 errors.append(f"{ident} 的 confirmed 必须是 true/false，当前是 {item.get('confirmed')!r}")
+
+            parsed_dates: dict[str, date] = {}
+            for field in DATE_FIELDS:
+                raw_date = item.get(field)
+                if raw_date is None:
+                    continue
+                parsed = parse_iso_date(raw_date)
+                if parsed is None:
+                    errors.append(f"{ident} 的 {field} 必须是 YYYY-MM-DD，当前是 {raw_date!r}")
+                    continue
+                parsed_dates[field] = parsed
+                if parsed > today:
+                    errors.append(f"{ident} 的 {field} 不能晚于今天（{today.isoformat()}）")
+            created = parsed_dates.get("created_at")
+            reviewed = parsed_dates.get("last_reviewed_at")
+            if created and reviewed and reviewed < created:
+                errors.append(f"{ident} 的 last_reviewed_at 不能早于 created_at")
 
             if item.get("type") and item["type"] not in TYPES:
                 warnings.append(f"{ident} 类型「{item['type']}」不在 {'/'.join(TYPES)}")
@@ -220,6 +253,100 @@ def compute_stats(data: dict) -> dict:
         "by_priority": group(lambda _p, item: item.get("priority") or "未标"),
         "by_status": group(lambda _p, item: item.get("status") or "未标"),
     }
+
+
+def collect_backlog_age(data: dict, sprints, today: date) -> dict:
+    """统一计算长期未完成与待复核；活跃 Sprint 条目排除，日期未知单列。"""
+    planned_ids = {ident for _p, _stem, _meta, items in sprints for ident, _points in items}
+    active_ids = {
+        ident
+        for _p, _stem, meta, items in sprints
+        if sprint_status(meta) != "closed"
+        for ident, _points in items
+    }
+    aged: list[dict] = []
+    due: list[dict] = []
+    unknown: list[dict] = []
+
+    for _phase, item in iter_items(data):
+        if item.get("status") != TODO_STATUS:
+            continue
+        ident = str(item.get("id") or "?")
+        if ident in active_ids:
+            continue
+        base = {
+            "id": ident,
+            "title": str(item.get("title") or ""),
+            "priority": str(item.get("priority") or "未标"),
+            "ever_planned": ident in planned_ids,
+        }
+        created = parse_iso_date(item.get("created_at"))
+        if created is None:
+            unknown.append(base)
+            continue
+        age = (today - created).days
+        if age < 0:
+            unknown.append(base)
+            continue
+        if age < REVIEW_AGE_DAYS:
+            continue
+        reviewed = parse_iso_date(item.get("last_reviewed_at"))
+        review_valid = reviewed is not None and created <= reviewed <= today
+        needs_review = not review_valid or (today - reviewed).days >= REVIEW_AGE_DAYS
+        row = {
+            **base,
+            "age": age,
+            "created_at": created.isoformat(),
+            "last_reviewed_at": reviewed.isoformat() if reviewed else None,
+            "due": needs_review,
+        }
+        aged.append(row)
+        if needs_review:
+            due.append(row)
+
+    sort_key = lambda row: (-row["age"], row["id"])
+    aged.sort(key=sort_key)
+    due.sort(key=sort_key)
+    unknown.sort(key=lambda row: row["id"])
+    return {"aged": aged, "due": due, "unknown": unknown}
+
+
+def backlog_age_summary(report: dict) -> list[str]:
+    """把年龄报告压成有界状态行；条目明细只进 review 或当日首次提醒。"""
+    lines: list[str] = []
+    aged = report["aged"]
+    if aged:
+        lines.append(
+            f"长期未完成 {len(aged)} 条（≥{REVIEW_AGE_DAYS} 天，最久 {aged[0]['age']} 天；"
+            f"待复核 {len(report['due'])} 条）"
+        )
+    if report["unknown"]:
+        lines.append(f"创建时间未知或非法 {len(report['unknown'])} 条（review 查看）")
+    return lines
+
+
+def render_review_lines(report: dict) -> list[str]:
+    """渲染完整只读复核清单，不改变任何条目状态。"""
+    aged = report["aged"]
+    lines = [
+        f"长期未完成：{len(aged)} 条（≥{REVIEW_AGE_DAYS} 天，不含活跃 Sprint；待复核 {len(report['due'])} 条）"
+    ]
+    for row in aged:
+        history = "曾纳入 Sprint" if row["ever_planned"] else "从未纳入 Sprint"
+        reviewed = row["last_reviewed_at"] or "从未复核"
+        due = "待复核" if row["due"] else "近期已复核"
+        lines.append(
+            f"- {row['id']} {row['title']}｜{row['priority']}｜立项 {row['age']} 天｜"
+            f"{history}｜{reviewed}｜{due}"
+        )
+
+    unknown = report["unknown"]
+    if unknown:
+        lines.append(f"创建时间未知或非法：{len(unknown)} 条（不参与年龄判定）")
+        for row in unknown:
+            lines.append(f"- {row['id']} {row['title']}｜{row['priority']}")
+    lines.append("提示：年龄只是复核信号；保留、调整或撤回均由用户裁决。")
+    return lines
 
 
 # ── 统计输出 ────────────────────────────────────────────────────────────────
@@ -760,16 +887,23 @@ def load_briefs() -> dict[str, str]:
     return parse_briefs(text) if text else {}
 
 
-def build_state_block(root: Path) -> str:
-    """每轮 / 每次会话注入的 `<agile-state>` 块：状态快照 + 本阶段该做什么。"""
+def build_state_block(root: Path, notify_review: bool = False) -> str:
+    """每轮 / 每次会话注入状态；只有用户发言时才展开当日首次复核提醒。"""
     parts = describe_state(root)
     body = "｜".join(parts) if parts else "agile-docs/ 已存在"
     stage = detect_stage(root)
-    brief = load_briefs().get(stage, "") if stage else ""
+    briefs = load_briefs()
+    brief = briefs.get(stage, "") if stage else ""
     if not brief:
         # 故意显眼：文案文件缺失或被改名时，要让模型知道自己在裸奔，而不是静默降级。
         brief = f"阶段说明缺失（{BRIEF_REL} 里没有 [{stage or '?'}] 块），按 `using-agile` 自行判断该走哪一步。"
-    return "\n".join(["<agile-state>", body, brief, ROUTING_LINE, "</agile-state>"])
+    lines = ["<agile-state>", body, brief]
+    if notify_review:
+        notice = claim_review_notice(root, briefs)
+        if notice:
+            lines.append(notice)
+    lines.extend([ROUTING_LINE, "</agile-state>"])
+    return "\n".join(lines)
 
 
 def describe_state(root: Path) -> list[str]:
@@ -801,6 +935,7 @@ def describe_state(root: Path) -> list[str]:
     if data is not None:
         stats = compute_stats(data)
         parts.append(f"Backlog {stats['total']} 条 / {stats['points']} 点（已确认 {stats['confirmed']}）")
+        parts.extend(backlog_age_summary(collect_backlog_age(data, sprints, date.today())))
 
     adr_text = read_text(docs / ADR_MD)
     if adr_text:
@@ -838,6 +973,44 @@ def hint_marker(root: Path, session: str) -> Path:
     return Path(tempfile.gettempdir()) / f"agile-hint-{digest}.marker"
 
 
+def review_marker(root: Path) -> Path:
+    """长期待办按项目 + 本地日期去重，避免换会话在同一天反复提醒。"""
+    key = str(root) + time.strftime("%Y-%m-%d")
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+    return Path(tempfile.gettempdir()) / f"agile-review-{digest}.marker"
+
+
+def claim_review_notice(root: Path, briefs: dict[str, str]) -> str:
+    """有待复核条目时领取当日提醒额度，并返回至多三条明细；否则为空。"""
+    json_path = root / DOCS_DIR / BACKLOG_JSON
+    data = load_json(json_path) if json_path.exists() else None
+    if data is None:
+        return ""
+    report = collect_backlog_age(data, scan_sprints(root), date.today())
+    due = report["due"]
+    if not due:
+        return ""
+    marker = review_marker(root)
+    if marker.exists():
+        return ""
+    try:
+        marker.write_text("1", encoding="utf-8")
+    except Exception:
+        return ""
+
+    brief = briefs.get("review", "")
+    if not brief:
+        brief = f"长期待办提醒说明缺失（{BRIEF_REL} 里没有 [review] 块），按 agile-backlog 的长期待办复核流程处理。"
+    lines = ["<agile-review>", brief, "待复核条目（至多 3 条）："]
+    for row in due[:3]:
+        history = "曾纳入 Sprint" if row["ever_planned"] else "从未纳入 Sprint"
+        lines.append(f"- {row['id']} {row['title']}｜{row['priority']}｜立项 {row['age']} 天｜{history}")
+    if len(due) > 3:
+        lines.append(f"其余 {len(due) - 3} 条见 `agile.py review`")
+    lines.append("</agile-review>")
+    return "\n".join(lines)
+
+
 def hook_prompt() -> None:
     payload = read_stdin_json()
     prompt = payload.get("prompt")
@@ -851,7 +1024,8 @@ def hook_prompt() -> None:
     if (root / DOCS_DIR).is_dir():
         # 长会话被 compact 后 SessionStart 的内容会丢，这里每轮补：状态 + 本阶段该做什么。
         # 只要 agile-docs/ 存在就注入，哪怕 backlog.json 还没建——战略层做到一半才最需要。
-        emit_context("UserPromptSubmit", build_state_block(root))
+        # 长期待办明细只在用户发言时展开，避免 SessionStart 提前消耗当日提醒额度。
+        emit_context("UserPromptSubmit", build_state_block(root, notify_review=True))
         return
 
     hits = [word for word in PLANNING_SIGNALS if word in lowered]
@@ -879,8 +1053,9 @@ def hook_prompt() -> None:
 USAGE = """agile.py —— Backlog 机械操作（标准库 only，零正则）
 
   stats   [项目根]   打印统计（每次全量重算，已撤回不计入；backlog.json 是唯一 Backlog 文件）
+  review  [项目根]   只读列出长期未完成、Sprint 历史与复核状态
   check   [项目根]   结构校验 + Sprint 点数对账 + 回填内容，有问题返回 1
-  brief   [项目根]   打印当前阶段与每轮将要注入的内容（排查 hook 用）
+  brief   [项目根]   打印当前阶段与每轮基础注入原文（排查 hook 用）
 
   hook-post-write    hook 入口：写完文件后校验（decision:block = 需要模型处理）
   hook-session       hook 入口：会话开始注入敏捷状态
@@ -903,13 +1078,29 @@ def read_backlog(json_path: Path) -> tuple[dict | None, str]:
 
 
 def cli_stats(root_arg: str | None) -> int:
-    _root, json_path, _md_path = resolve(root_arg)
+    root, json_path, _md_path = resolve(root_arg)
     data, problem = read_backlog(json_path)
     if data is None:
         print(problem)
         print("  旧表格格式：由 agent 按 agile-backlog/references/backlog-rules.md §七 一次性转写")
         return 1
     print("\n".join(render_stats_lines(compute_stats(data))))
+    report = collect_backlog_age(data, scan_sprints(root), date.today())
+    for line in backlog_age_summary(report):
+        print("- " + line)
+    return 0
+
+
+def cli_review(root_arg: str | None) -> int:
+    """打印长期待办完整清单；只读，有待复核条目也不返回失败。"""
+    root, json_path, _md_path = resolve(root_arg)
+    data, problem = read_backlog(json_path)
+    if data is None:
+        print(problem)
+        print("  旧表格格式：由 agent 按 agile-backlog/references/backlog-rules.md §七 一次性转写")
+        return 1
+    report = collect_backlog_age(data, scan_sprints(root), date.today())
+    print("\n".join(render_review_lines(report)))
     return 0
 
 
@@ -962,6 +1153,7 @@ def cli_brief(root_arg: str | None) -> int:
 
 COMMANDS = {
     "stats": cli_stats,
+    "review": cli_review,
     "check": cli_check,
     "brief": cli_brief,
 }

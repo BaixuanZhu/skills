@@ -3,9 +3,9 @@ name: agile-backlog
 slug: agile-backlog
 displayName: 敏捷产品待办
 description: |
-  当用户说"写待办""拆任务""Backlog""Product Backlog""使能项""优先级排序""排迭代"或 using-agile 路由到此，且战略层（VISION + ARCHITECTURE/ADR）已确认时触发。
+  当用户说"写待办""拆任务""Backlog""Product Backlog""使能项""优先级排序""排迭代""长期待办""待办复核""梳理积压"或 using-agile 路由到此，且战略层（VISION + ARCHITECTURE/ADR）已确认时触发。
 agent_created: true
-version: 5.3.2
+version: 5.4.0
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架与路由
@@ -39,6 +39,8 @@ dependencies:
 | 阶段 2 | 任务详情展开 + 验收标准（§3 阶段 2） | 阶段 1 确认 |
 | 阶段 3 | 下游影响评估（§3 阶段 3，仅更新已有 Backlog 时） | 阶段 2 确认 |
 | 阶段 4 | 接受 .done 同步（§3 阶段 4，仅 .done.yaml 回传时） | `.done.yaml` 存在（入口闭环路由；Sprint 未关闭时先经 agile-sprint 关闭） |
+
+「长期待办复核」是独立入口，不是阶段 5：hook 报告待复核条目，或用户主动说「梳理长期待办」时，直接走 §3 的对应小节，不重访创建流程。
 
 **决策用选择题问**（问询纪律见 `using-agile/references/probing-protocol.md`）：只把真决策（范围/优先级/估点/验收）喂给用户，事实先读 VISION/ADR。变更时先分级（`using-agile/references/change-matrix.md §二`），禁止整层重访。
 
@@ -110,7 +112,8 @@ dependencies:
           "status": "待办",
           "refs": "ADR-001、ADR-005",
           "basis": "用户确认 / 依赖优先",
-          "confirmed": true
+          "confirmed": true,
+          "created_at": "2026-11-02"
         }
       ]
     }
@@ -121,6 +124,7 @@ dependencies:
 - `basis` 承载两个标注：点的来源（`agent 推荐` / `用户确认`）+ 优先级依据（开发顺序 / MoSCoW / 依赖 / ADR 优先级，见 `references/backlog-rules.md §三`）。
 - `repo` 仅多仓库项目填（供 Sprint 识别跨仓库交接点），单仓库省略。
 - `confirmed`：`true` 已与用户确认，`false` agent 推荐待确认；Sprint 取用前必须显式转 `true`（否则 `agile-sprint` 跳过并告警）。
+- `created_at`：新条目写真实立项日期（`YYYY-MM-DD`）；更新旧条目时不得把当天倒填成立项日期。`last_reviewed_at` 只在长期待办复核后写，创建时不预填。
 - **统计不用自己算**：`agile.py stats` 全量重算，hook 注入的状态行也带统计。写完停，结构化审阅后再进阶段 2。
 
 ### 阶段 2：任务详情展开 + 验收标准（仅非显然条目）
@@ -162,6 +166,21 @@ dependencies:
 3. 将 `.done.yaml` 文件后缀改为 `.done.processed.yaml`（留痕，不删除）
 4. 完成后停下，报告同步结果 + 反馈处理结果
 
+### 长期待办复核（独立入口）
+
+当 hook 报告待复核条目，或用户主动要求梳理长期待办时：
+
+1. 跑 `agile.py review` 获取完整清单；机械口径见 `references/backlog-rules.md §五.长期待办复核`，不根据标题或优先级猜测条目是否已失效
+2. 向用户展示 ID / 标题 / 优先级 / 立项年龄 / 最近复核 / 从未纳入或曾纳入 Sprint，明确「年龄只是复核信号，不代表应该撤回」
+3. 用户按 ID 选择处置，可一批多项：
+   - **保留** → 仅把当天写入这些条目的 `last_reviewed_at`，年龄仍从 `created_at` 算
+   - **调整优先级 / 范围** → 按 `using-agile/references/change-matrix.md` 分级更新，并写本次复核日期；不得因年龄自动升级 Could
+   - **拆分** → 按边界异常 ⑤（过大拆分）重新估点；原条目按本次用户裁决走撤回留痕（原因注明替代条目 ID），新条目继承原 `created_at` 并写本次复核日期，不因拆分重置年龄
+   - **撤回** → 用户明确确认后走 `references/backlog-rules.md §五` 撤回流程，记录时间 / 原因 / 决策来源
+   - **只是知道了 / 本次不处理** → 不改 `last_reviewed_at`，不伪造复核记录
+4. 创建时间未知的存量条目单独列出；能从 Git 历史确认才回填，不能确认则保留未知，不用迁移当天冒充
+5. 写完即停，报告本次保留 / 调整 / 拆分 / 撤回结果；不顺势开 Sprint
+
 ## 4. 写完即停（结构化审阅，每阶段都走）
 
 每个产出阶段写完即停：按 `using-agile/references/probing-protocol.md §四` 结构化审阅（重点列：排序依据 / 优先级判断 / agent 自估点数及理由 × 来源，阶段 3 追加「下游影响评估」结论；去向问下一阶段 / agile-sprint 还是更新本层）。
@@ -178,6 +197,7 @@ dependencies:
 - ✅ **Backlog 条目只写范围**（可观察验收行为 / 业务与非功能约束 / 边界 / 依赖关联），❌ **不写实现**（技术方案 / 框架选型 / 代码结构 / SQL / 伪代码）——技术决策由 ADR 承载，实现归消费 Agent 判断（细则见 `references/backlog-rules.md §四`）。
 - ✅ **统计不手算**：条目数 / 点数 / 分组统计交给 `agile.py stats`（§2a），禁止在旧数字上加减。
 - ✅ **未确认条目 Sprint 取用前必须显式 confirm**：`confirmed: false` 的「待办」条目，`agile-sprint` 取用时跳过并告警；不私自默认成 `true`（agent 推荐 ≠ 用户确认）。
+- ✅ **长期待办只提示、不自动处置**：复核口径见 `references/backlog-rules.md §五.长期待办复核`；只有用户明确保留 / 调整后才写 `last_reviewed_at`，禁止按年龄自动改优先级、开 Sprint 或撤回。
 
 ## 6. 门禁
 - **T-NNN 无 ADR**：停下，回 agile-strategic 阶段 B 补章节后再填关联；「待 ADR-NNN 确认」这类占位关联不算数。判定细则（什么算架构决策、F-NNN 何时该改判 T-NNN）见 `using-agile/references/gate-protocol.md §二 ①`。

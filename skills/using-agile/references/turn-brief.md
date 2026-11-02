@@ -1,13 +1,13 @@
 # 每轮提示文本（hook 的真源）
 
-`agile.py` 的 `hook-prompt` / `hook-session` 按当前阶段读这里的一段注入上下文。脚本只判断阶段、不内置文案：改提示词改这个文件即可，不用动代码。
+`agile.py` 的 `hook-prompt` / `hook-session` 按当前阶段读这里的一段注入上下文；`hook-prompt` 在当日首次发现待复核条目时另读 `review` 辅助块。脚本只判断阶段与提醒条件、不内置文案：改提示词改这个文件即可，不用动代码。
 
 **只被读取的块**：`[agile-brief:阶段]` … `[/agile-brief:阶段]`，其它内容不会进上下文，可以随意写给人看的说明。
 
 ## 编写规则
 
 1. **一段只给下一步 + 这一步最容易漏的那条铁律。** 提示是每轮通道，不是技能摘要——把 SKILL.md 抄进来就没人看了。
-2. **长度上限约 200 字**。这一行每轮都进上下文，累积成本按轮数线性增长。
+2. **阶段块长度上限约 200 字**。这些文本每轮都进上下文，累积成本按轮数线性增长；`review` 是低频辅助块，只在有待复核条目且当日未展开时附加，条目明细至多 3 条。
 3. **必须带来源指针**（`→ 技能 §节`）。技能改了要回来对账，指针是唯一能让你发现漂移的东西。
 4. 阶段名与 `agile.py` 的 `detect_stage()` 一一对应，增删阶段要同步改代码与 `tests/`。
 
@@ -22,6 +22,8 @@
 | `init` | 无 `VISION.md` | agile-strategic §2 |
 | `architecture` | 有 VISION，缺 ARCHITECTURE 或 ADR | agile-strategic §3 |
 | `backlog` | 战略齐、`backlog.json` 不存在或没有「待办」活条目（池耗尽回这里补池） | agile-backlog §2b / agile-backlog §3 |
+
+`review` 是长期待办辅助提醒块，不是第八个路由阶段：它只附加到当前阶段之后，不改变上表任何判据或优先级。长期待办计算真源是 `agile-backlog/references/backlog-rules.md §五.长期待办复核`。
 
 **看最靠后的里程碑，不按层顺序。** 套件允许显式跳层（`agile-backlog §0`），所以「已有条目」优先于「VISION 在不在」——否则跳层项目会被判回「战略层未起步」；进行中的 Sprint 同理，优先于建池判定。
 
@@ -52,3 +54,7 @@ Backlog 已就绪、无进行中 Sprint：走 agile-sprint。取条前先反问 
 [agile-brief:active]
 Sprint 进行中：执行归消费 Agent，本套件不追 checkbox。新需求先比对 backlog 已有条目（已覆盖就补记来源，别另立重复条目），**不改进当前 Sprint**；要关 Sprint 先逐条过 DoD。→ agile-sprint §3 环节 B；新需求比对规则 → using-agile/references/gate-protocol.md §三 ④
 [/agile-brief:active]
+
+[agile-brief:review]
+本轮把下列长期待办简要报告一次：年龄只是复核信号，不代表应撤回；完整清单用 `agile.py review`。用户明确保留 / 调整后才路由 agile-backlog 写 `last_reviewed_at`，只说「知道了」不写；不自动改优先级、开 Sprint 或撤回。→ agile-backlog §3 长期待办复核
+[/agile-brief:review]

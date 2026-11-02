@@ -62,9 +62,10 @@ defs={n.name for n in ast.walk(tree) if isinstance(n,ast.FunctionDef)}
 used=collections.Counter(n.id for n in ast.walk(tree) if isinstance(n,ast.Name))
 print(', '.join(sorted(d for d in defs if used[d]==0)) or '无')")"
 
-# ⑤ CLI 冒烟：合规项目两个命令都要 exit 0
+# ⑤ CLI 冒烟：合规项目三个命令都要 exit 0
 check "check  退出码" "0" "$(run check >/dev/null 2>&1; echo $?)"
 check "stats  退出码" "0" "$(run stats >/dev/null 2>&1; echo $?)"
+check "review 退出码（存量无日期也正常）" "0" "$(run review >/dev/null 2>&1; echo $?)"
 
 # ⑥ 渲染退役后：遗留 md 只提示可删，不算 problem（check 仍 exit 0）
 printf '旧渲染产物残留\n' > "$WORK/agile-docs/PRODUCT-BACKLOG.md"
@@ -187,6 +188,77 @@ check "报文件名与实际取值" "1" \
 rm "$UNK/agile-docs/backlog.json"
 check "backlog 缺失仍报 Sprint 头" "1" \
   "$(cd "$UNK" && PYTHONIOENCODING=utf-8 "$PY" "$PLUGIN/scripts/agile.py" check . 2>&1 | grep -cF 'sprint-073-20261104.md')"
+
+# ⑰ 长期待办：固定 today 验证 29/30/31 天、Could 两月、复核间隔、活跃 Sprint 排除。
+AGING_RESULT="$(cd "$PLUGIN/scripts" && "$PY" - <<'PY'
+from datetime import date
+import agile
+
+def item(ident, created=None, status="待办", priority="Could", reviewed=None):
+    row = {"id": ident, "title": ident, "type": "功能", "points": 1,
+           "priority": priority, "status": status, "confirmed": True}
+    if created is not None:
+        row["created_at"] = created
+    if reviewed is not None:
+        row["last_reviewed_at"] = reviewed
+    return row
+
+items = [
+    item("F-001", "2026-08-03"),
+    item("F-002", "2026-10-03", priority="Must"),
+    item("F-003", "2026-10-04", priority="Should"),
+    item("F-004", "2026-08-01", reviewed="2026-10-15"),
+    item("F-005", "2026-08-01", reviewed="2026-10-03"),
+    item("F-006", "2026-08-01", status="已完成"),
+    item("F-007", "2026-08-01", status="已撤回"),
+    item("F-008", "2026-08-01"),
+    item("F-009"),
+    item("F-010", "2026/08/01"),
+    item("F-011", "2026-11-03"),
+    item("F-013", "2026-10-02"),
+]
+data = {"phases": [{"id": 1, "title": "测试", "items": items}]}
+sprints = [
+    (None, "sprint-001", {"状态": "已关闭"}, [("F-002", 1)]),
+    (None, "sprint-002", {"状态": "规划完成"}, [("F-008", 1)]),
+]
+today = date(2026, 11, 2)
+report = agile.collect_backlog_age(data, sprints, today)
+print("aged=" + ",".join(row["id"] for row in report["aged"])
+      + " due=" + ",".join(row["id"] for row in report["due"])
+      + " unknown=" + ",".join(row["id"] for row in report["unknown"]))
+by_id = {row["id"]: row for row in report["aged"]}
+print("flags=" + "|".join([
+    str(by_id["F-004"]["age"] == 93 and not by_id["F-004"]["due"]),
+    str(by_id["F-005"]["due"]),
+    str(by_id["F-001"]["age"] == 91 and by_id["F-001"]["due"]),
+    str(by_id["F-002"]["ever_planned"] and not by_id["F-001"]["ever_planned"]),
+]))
+errors, _warnings = agile.validate(data, today)
+bad = item("F-012", "2026-10-01", reviewed="2026-09-01")
+bad_errors, _ = agile.validate({"phases": [{"id": 1, "title": "测试", "items": [bad]}]}, today)
+future_review = item("F-014", "2026-08-01", reviewed="2026-11-03")
+future_report = agile.collect_backlog_age(
+    {"phases": [{"id": 1, "title": "测试", "items": [future_review]}]}, [], today)
+print("validation=" + "|".join([
+    str(any("F-010" in line and "YYYY-MM-DD" in line for line in errors)),
+    str(any("F-011" in line and "不能晚于今天" in line for line in errors)),
+    str(not any(line.startswith("F-009") for line in errors)),
+    str(any("不能早于 created_at" in line for line in bad_errors)),
+    str(len(future_report["due"]) == 1),
+]))
+rendered = "\n".join(agile.render_review_lines(report))
+print("render=" + str("2026-10-15｜近期已复核" in rendered and "年龄只是复核信号" in rendered))
+PY
+)"
+check "长期待办筛选、排序与未知日期分组" \
+  "aged=F-004,F-005,F-001,F-013,F-002 due=F-005,F-001,F-013,F-002 unknown=F-009,F-010,F-011" \
+  "$(printf '%s\n' "$AGING_RESULT" | grep '^aged=')"
+check "复核不改年龄且 Sprint 历史只作标注" \
+  "flags=True|True|True|True" "$(printf '%s\n' "$AGING_RESULT" | grep '^flags=')"
+check "日期非法报错且不能抑制复核提醒" \
+  "validation=True|True|True|True|True" "$(printf '%s\n' "$AGING_RESULT" | grep '^validation=')"
+check "review 完整清单保留复核语义" "render=True" "$(printf '%s\n' "$AGING_RESULT" | grep '^render=')"
 
 printf '\nPASS=%d FAIL=%d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

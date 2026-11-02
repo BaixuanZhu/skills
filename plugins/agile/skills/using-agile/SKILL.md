@@ -3,9 +3,9 @@ name: using-agile
 slug: using-agile
 displayName: 敏捷管理入口
 description: |
-  当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""架构决策""ADR""C4""需求变了""要改故事""依赖检查"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
+  当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""长期待办""待办复核""架构决策""ADR""C4""需求变了""要改故事""依赖检查"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.6.5
+version: 5.7.0
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -87,6 +87,7 @@ version: 5.6.5
    - `backlog.json` 不存在但旧 `PRODUCT-BACKLOG.md` 里还是表格 → 旧格式，由 agent 按字段规范一次性转写（见 `agile-backlog/references/backlog-rules.md §七.4`）
    - `DOD.md` → 完成定义
    - `sprints/` 下未关闭的 `.md` → 活跃 Sprint（若检测到 >1 个活跃 Sprint，警告并请用户选择关闭/合并其一后再继续，见 `references/status-routing.md`）
+   - `backlog.json` 的条目日期与 Sprint 任务清单 → 长期未完成 / 待复核汇总（机械口径见 `agile-backlog/references/backlog-rules.md §五.长期待办复核`）；完整清单跑 `agile.py review`，需要处置时路由 agile-backlog 的独立复核入口
 3. 输出三层状态表（见 `references/status-routing.md`）。
 4. **逐层询问**"更新 or 继续下一步"（话术见 reference）。
 5. 按用户选择路由到对应业务技能，**不自己写**。
@@ -144,15 +145,15 @@ version: 5.6.5
 
 | 入口 | 触发 | 作用 |
 |---|---|---|
-| `hook-session` | 会话开始 | 注入状态快照 + 本阶段该做什么 |
-| `hook-prompt` | 每轮用户发言 | 同上（长会话被 compact 后 SessionStart 的内容会丢，这行不会）；没有 `agile-docs/` 的项目，在提问命中规划类词时提示一次入口，同一会话只提一次；其余静默。prompt 含 `no-agile` 当轮静默 |
+| `hook-session` | 会话开始 | 注入状态快照（含长期待办有界汇总）+ 本阶段该做什么 |
+| `hook-prompt` | 每轮用户发言 | 同上（长会话被 compact 后 SessionStart 的内容会丢，这行不会）；有待复核条目时，同项目同日最多展开提醒一次，其余轮次只留汇总。没有 `agile-docs/` 的项目，在提问命中规划类词时提示一次入口，同一会话只提一次；其余静默。prompt 含 `no-agile` 当轮静默 |
 | `hook-post-write` | 写 `backlog.json` / `*.done.yaml` 后 | json：结构校验 → Sprint 点数对账；回填：校验内容（引用不存在的条目 ID、同一 ID 既 completed 又 moved_next、feedback.type 越界、两个数组都空），只提示不阻断——回填允许分次写 |
 
-**「本阶段该做什么」不是脚本里的字符串**，而是 `references/turn-brief.md` 里按阶段分块的文本：脚本只判断阶段，文案在 markdown 里改。七个阶段是 `conflict` / `backfill` / `sprint` / `active` / `init` / `architecture` / `backlog`，判据与每段对应的技能章节都写在该文件里。
+**「本阶段该做什么」不是脚本里的字符串**，而是 `references/turn-brief.md` 里按阶段分块的文本：脚本只判断阶段，文案在 markdown 里改。七个阶段是 `conflict` / `backfill` / `sprint` / `active` / `init` / `architecture` / `backlog`，判据与每段对应的技能章节都写在该文件里。另有 `review` 辅助块用于长期待办低频提醒，**不是第八个路由阶段**，也不改变回填 / 冲突 / 活跃 Sprint 的优先级。
 
 - 改提示词 → 改那个 md，不动代码。
 - 那段文本缺失或阶段名对不上 → 注入会显式写「阶段说明缺失」，**故意不静默降级**，否则你会以为兜底还在。
-- 排查「hook 为什么没说话」→ `agile.py brief [项目根]` 打印当前阶段与将要注入的原文。
+- 排查「hook 为什么没说话」→ `agile.py brief [项目根]` 打印当前阶段与每轮基础注入原文；长期待办完整清单用 `agile.py review`，当日展开提醒以 `hook-prompt` 实际输出为准。
 
 生效平台：Claude Code、ZCode（都自动加载插件标准位置的 `hooks/hooks.json`）。Codex 的 PostToolUse 只拦 shell 命令、写文件不触发，未适配——那边按 `backlog-rules.md §七` 手动跑 `agile.py check`。
 

@@ -25,6 +25,8 @@
 | refs | — | ADR 编号（如 `ADR-006`）或依赖条目 ID；无则省略 |
 | basis | — | 点的来源（agent 推荐 / 用户确认）+ 优先级依据（开发顺序 / MoSCoW / 依赖 / ADR 优先级） |
 | confirmed | ✅ | `true`（优先级/点数/验收已与用户确认）/ `false`（agent 推荐，Sprint 取用前必须显式转 true，见 §五） |
+| created_at | 新条目 ✅ | 立项日期，ISO `YYYY-MM-DD`；存量条目无法确认时留空，不用文件修改时间或迁移日期冒充 |
+| last_reviewed_at | — | 最近一次长期待办复核日期，ISO `YYYY-MM-DD`；仅在用户明确保留 / 调整后填写，不得早于 `created_at` |
 | detail | — | 字符串数组，收 §四 判定「非显然」的展开内容；渲染成 bullets |
 
 ## 三、优先级排序逻辑
@@ -83,6 +85,17 @@ Backlog 是给消费 Agent 定**范围**（做什么），不是定**实现**（
 
 Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改优先级，自然回到取用顺序前列），**不设「移至下个Sprint」状态**——该表述只出现在 Sprint 文件的「条目状态建议」里，不进 Backlog。
 
+### 长期待办复核（派生信号，不是第四态）
+
+**长期未完成**：`status == 待办`、不属于任何活跃 Sprint、`created_at` 距今 ≥30 天。曾进入历史 Sprint 但目前仍是待办的条目也算，展示时区分「从未纳入 / 曾纳入 Sprint」；活跃 Sprint 条目由 Sprint 闭环负责，这里不重复提醒。
+
+**待复核**：长期未完成条目中，`last_reviewed_at` 缺失或距今 ≥30 天。年龄始终从 `created_at` 计算，复核不会重置立项年龄；Could / Should / Must 同一口径，优先级不影响是否可见。
+
+- `agile.py review` 展示全部长期未完成条目及待复核标记；创建时间未知或非法的待办单列，不参与年龄判定
+- hook 只注入有界汇总，同项目同日最多展开提醒一次；年龄只是复核信号，**不是逾期、错误或撤回理由**
+- 用户明确保留 / 调整 → 写入当天 `last_reviewed_at`；拆分出的条目继承原 `created_at`，原条目按用户裁决撤回并注明替代 ID；撤回 → 走本节现有撤回流程；只说「知道了」→ 不写复核日期
+- ❌ 禁止因年龄自动改优先级、自动开 Sprint、自动撤回；✅ 由用户裁决后更新对应字段
+
 ### 已完成条目：「可注记、不可改写」
 
 **已完成条目的事实不可变**（验收行为 / 关联 ADR / 当时决策内容）。后续需要修订时：
@@ -124,6 +137,7 @@ Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改�
           "refs": "ADR-007",
           "basis": "agent 推荐 / 缺陷止血",
           "confirmed": false,
+          "created_at": "2026-11-02",
           "detail": ["验收：错误响应不含堆栈与 SQL", "约束：金额统一用分"]
         }
       ]
@@ -137,9 +151,10 @@ Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改�
 ### 7.2 命令
 
 ```bash
-python <插件根>/scripts/agile.py stats   [项目根]   # 全量重算并打印
-python <插件根>/scripts/agile.py check   [项目根]   # 结构校验 + Sprint 点数对账 + 回填内容校验 + Sprint 头状态词校验，有问题返回 1
-python <插件根>/scripts/agile.py brief   [项目根]   # 打印当前阶段与将要注入的原文
+python <插件根>/scripts/agile.py stats   [项目根]   # 全量重算并打印，附长期未完成 / 待复核汇总
+python <插件根>/scripts/agile.py review  [项目根]   # 只读列出长期未完成、Sprint 历史与复核状态
+python <插件根>/scripts/agile.py check   [项目根]   # 结构校验 + 日期合法性 + Sprint 点数对账 + 回填内容校验 + Sprint 头状态词校验，有问题返回 1
+python <插件根>/scripts/agile.py brief   [项目根]   # 打印当前阶段与每轮基础注入原文（当日 review 展开提醒以 hook-prompt 为准）
 ```
 
 `check` 的跨文件部分包括 `sprints/*.done.yaml` 的内容：引用了不存在的条目 ID、同一 ID 既在 `completed` 又在 `moved_next`、`feedback.type` 不是 `reason / issue / decision`、两个数组都空——这些在文件名层面看不出来，只能在内容层面报。
@@ -150,12 +165,12 @@ python <插件根>/scripts/agile.py brief   [项目根]   # 打印当前阶段�
 
 ### 7.3 统计
 
-统计由 `stats` 从 json 全量重算并打印。**不要手改统计数字，也不要自己写一段脚本去算**——已撤回条目不计入任何统计这条规则，脚本里已经写了（`status == "已撤回"` 的条目被排除）。
+统计由 `stats` 从 json 全量重算并打印。**不要手改统计数字，也不要自己写一段脚本去算**——已撤回条目不计入任何统计这条规则，脚本里已经写了（`status == "已撤回"` 的条目被排除）。长期未完成与待复核汇总也由脚本按 §五统一计算；条目级清单用 `review`，不要在状态快照里展开全部条目。
 
-没有脚本可用时（无 python、非插件安装），按同一规则**覆盖式全量重算，禁止在旧数字上增量加减**；只有数字被改过而条目没动，就是漏算的信号。
+没有脚本可用时（无 python、非插件安装），按同一规则**覆盖式全量重算，禁止在旧数字上增量加减**；只有数字被改过而条目没动，就是漏算的信号。此时人工按 §五筛选长期待办，不得根据文件修改时间推测条目年龄。
 
 ### 7.4 旧格式转写（agent 一次性，脚本不再提供 migrate）
 
 检测到 `backlog.json` 不存在、而 `PRODUCT-BACKLOG.md` 里还是「## 阶段 N」+ 表格 → 由 agent 按 §二 字段定义一次性转写成 `backlog.json`：表格每行一个条目（`—` 占位符写成空缺省字段），「任务详情」段并入对应条目的 `detail`，标题里的 `\|` 还原为字面 `|`。写完 hook 立即做结构校验 + Sprint 点数对账兜底。md 不会被生成或覆盖，原文件核对后由项目自行处置（可删）。
 
-v4.x 的双文件（`PRODUCT-BACKLOG.yaml` / `.json`）同样处理：把其中仅机器侧持有的信息（adr_refs / confirmed / withdrawn）核对进新 json，删旧文件。
+v4.x 的双文件（`PRODUCT-BACKLOG.yaml` / `.json`）同样处理：把其中仅机器侧持有的信息（adr_refs / confirmed / withdrawn）核对进新 json，删旧文件。旧格式没有 `created_at` 时，能从 Git 历史确认具体条目立项日期的才回填；无法确认的留空并进入 `review` 的「创建时间未知或非法」分组，**禁止统一写成迁移当天**。

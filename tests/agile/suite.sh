@@ -28,11 +28,22 @@ check() {  # check <名称> <期望:yes|no> <子串> <cwd> <payload>
   PASS=$((PASS+1)); echo "ok    $name"
 }
 
-rm -f "${TMPDIR:-/tmp}"/agile-hint-*.marker 2>/dev/null
+check_without() {  # check_without <名称> <不应出现的子串> <cwd> <payload>：仍须有状态输出
+  local name="$1" needle="$2" cwd="$3" payload="$4"
+  local out; out=$(run "$cwd" "$payload" 2>&1)
+  if [ -z "$out" ]; then
+    echo "FAIL  $name  没有状态输出"; FAIL=$((FAIL+1)); return
+  fi
+  case "$out" in *"$needle"*) echo "FAIL  $name  不应出现「$needle」"; echo "      $out"; FAIL=$((FAIL+1)); return;; esac
+  PASS=$((PASS+1)); echo "ok    $name"
+}
+
+rm -f "${TMPDIR:-/tmp}"/agile-hint-*.marker "${TMPDIR:-/tmp}"/agile-review-*.marker 2>/dev/null
 
 W_EMPTY=$(w empty)
 W_ACTIVE=$(w active)
 W_BIG=$(w big)
+W_AGE=$(w aging)
 
 P_PLAN='{"cwd":"'"$W_EMPTY"'","session_id":"s_plan","prompt":"帮我规划一下订单服务的模块划分"}'
 P_CODE='{"cwd":"'"$W_EMPTY"'","session_id":"s_code","prompt":"这个空指针是哪里来的"}'
@@ -41,6 +52,9 @@ P_EMPTY='{"cwd":"'"$W_EMPTY"'","session_id":"s_empty","prompt":"   "}'
 P_DUP='{"cwd":"'"$W_EMPTY"'","session_id":"s_dup","prompt":"帮我规划一下订单服务"}'
 P_ACT='{"cwd":"'"$W_ACTIVE"'","session_id":"s1","prompt":"随便说点什么"}'
 P_ACT_SKIP='{"cwd":"'"$W_ACTIVE"'","session_id":"s1","prompt":"no-agile 随便说点什么"}'
+P_AGE='{"cwd":"'"$W_AGE"'","session_id":"age1","prompt":"继续"}'
+P_AGE_OTHER='{"cwd":"'"$W_AGE"'","session_id":"age2","prompt":"继续"}'
+P_AGE_SKIP='{"cwd":"'"$W_AGE"'","session_id":"age-skip","prompt":"no-agile 继续"}'
 
 check "新项目 + 规划类 → 提示"        yes "这轮命中"      empty  "$P_PLAN"
 check "新项目 + 执行类 → 静默"        no  ""              empty  "$P_CODE"
@@ -51,6 +65,23 @@ check "同 session 第二轮静默"          no  ""              empty  "$P_DUP"
 
 check "已启用项目 → 每轮状态"          yes "Backlog"      active "$P_ACT"
 check "已启用项目 + skip → 静默"       no  ""             active "$P_ACT_SKIP"
+check_without "日期未知不伪造年龄提醒"     "<agile-review>" active "$P_ACT"
+
+# ── 长期待办：skip 不领取额度；SessionStart 只有汇总；首次发言才展开，同日换会话不重复 ──
+check "长期待办 + no-agile → 静默"      no  ""             aging  "$P_AGE_SKIP"
+out=$( cd aging && printf '%s' "$P_AGE" | $PY "$AG" hook-session )
+case "$out" in *长期未完成*'<agile-review>'*) echo "FAIL  SessionStart 展开了复核明细"; FAIL=$((FAIL+1));;
+  *长期未完成*) PASS=$((PASS+1)); echo "ok    SessionStart 只有长期待办汇总";;
+  *) echo "FAIL  SessionStart 缺长期待办汇总: $out"; FAIL=$((FAIL+1));; esac
+check "首次发言展开 Could 长期待办"     yes "F-060"        aging  "$P_AGE"
+check_without "同会话第二轮只留汇总"       "<agile-review>" aging  "$P_AGE"
+check_without "同日换会话仍不重复展开"     "<agile-review>" aging  "$P_AGE_OTHER"
+out=$(cd aging && $PY "$AG" review . 2>&1); code=$?
+if [ "$code" -eq 0 ] && printf '%s' "$out" | grep -q 'F-060' && ! printf '%s' "$out" | grep -q 'F-061' && ! printf '%s' "$out" | grep -q 'F-062'; then
+  PASS=$((PASS+1)); echo "ok    review 全量清单排除已完成与活跃 Sprint"
+else
+  FAIL=$((FAIL+1)); echo "FAIL  review 清单边界: code=$code out=$out"
+fi
 
 # ── 边界：大小写、无 session_id、换会话、状态行有界 ──────────────────────────
 P_UPPER='{"cwd":"'"$W_EMPTY"'","session_id":"s2","prompt":"SPRINT 怎么排"}'
@@ -215,6 +246,8 @@ fi
 
 echo "--- 已启用项目的完整输出 ---"
 run active "$P_ACT"
+
+rm -f "${TMPDIR:-/tmp}"/agile-review-*.marker 2>/dev/null
 
 echo
 echo "PASS=$PASS FAIL=$FAIL"

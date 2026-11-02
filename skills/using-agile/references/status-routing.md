@@ -36,10 +36,13 @@
 | 战略 | 冲突待裁决 | {STRATEGY_CONFLICT.md: 有（待裁决）/无} |
 | 执行 | DoD | {DOD.md: ✅/❌} |
 | 执行 | Backlog | {backlog.json: ✅/❌，N 条} |
+| 执行 | 长期待办 | {长期未完成 N 条 / 最久 N 天 / 待复核 N 条；创建时间未知 N 条；没有则「无」} |
 | 执行 | 活跃 Sprint | {有/无，文件名} |
 | 执行 | Sprint 回填 | {sprints/*.done.yaml: N 个待闭环处理（闭环后为 .done.processed.yaml）} |
 | 执行 | 执行反馈 | {.done.yaml feedback: N 条待处理（issue/decision）} |
 ```
+
+> 长期待办是附加提醒，不是新路由阶段，也不覆盖 `.done.yaml` 回填 / 冲突 / 活跃 Sprint 的优先级。机械口径见 `agile-backlog/references/backlog-rules.md §五.长期待办复核`；完整清单跑 `agile.py review`，创建时间未知的条目不用文件修改时间猜年龄。
 
 > ⚠️ 若检测到 >1 个活跃 Sprint（状态非"已关闭"），警告并请用户选择关闭/合并其一后再继续。
 
@@ -53,6 +56,7 @@
 | VISION ❌ | agile-strategic 阶段 A |
 | VISION ✅ 但 ARCHITECTURE 或 ADR ❌ | agile-strategic 阶段 B |
 | 战略层已就绪 + 想拆待办 | agile-backlog |
+| 想梳理长期待办 / hook 报告待复核 | agile-backlog「长期待办复核」独立入口；只报告与按用户裁决更新，不自动撤回或开 Sprint |
 | Backlog 非空 + 想开冲刺 | agile-sprint |
 | 想改已有文档（任意类型） | using-agile §6 变更协调（按 change-matrix 路由到对应业务技能） |
 | .done.yaml 存在（任意 Sprint 状态） | **默认执行回填闭环**：agile-sprint 环节 B/C 关闭（如未关闭）→ agile-backlog 阶段 4 同步 + 反馈处理 → `.done.processed.yaml` 留痕；机械步骤自动，裁决点停下 |
