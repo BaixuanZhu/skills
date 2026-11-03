@@ -536,14 +536,12 @@ def sprint_seq(stem: str) -> tuple[int, int, str]:
     return (0, int(number), stem) if number else (1, 0, stem)
 
 
-def scan_sprints(root: Path):
-    """返回 [(文件路径, 文件主名, 元信息, 任务清单)]，按序号升序。
+def iter_sprint_files(root: Path):
+    """SPRINT_DIRS 下平铺的 sprint-*.md，按（目录顺序, 文件名）稳定产出。
 
-    每次调用读全部 Sprint 文件。长期待办的年龄快照已按日缓存（见 age_snapshot），
-    这里剩下的调用方是状态摘要与阶段判定；Sprint 数到 50 上下才开始有可感知
-    延迟，先不为它们再加一层缓存。
+    只扫一层、不进子目录：`archive/`（闭环归档位）必须对状态检测、点数对账、
+    指纹全部不可见。这个平铺契约由全部调用方共享，只在这里定义一次。
     """
-    found = []
     for rel in SPRINT_DIRS:
         directory = root / rel
         if not directory.is_dir():
@@ -553,13 +551,38 @@ def scan_sprints(root: Path):
         except Exception:
             continue
         for path in entries:
-            name = path.name
-            if not name.startswith("sprint-") or not name.endswith(".md"):
-                continue
-            text = read_text(path)
-            if text is None:
-                continue
-            found.append((path, path.stem, parse_sprint_meta(text), parse_sprint_items(text)))
+            if path.name.startswith("sprint-") and path.name.endswith(".md"):
+                yield path
+
+
+def iter_done_files(root: Path):
+    """SPRINT_DIRS 下平铺的 *.done.yaml；`.done.processed.yaml` 后缀不同，天然不含。"""
+    for rel in SPRINT_DIRS:
+        directory = root / rel
+        if not directory.is_dir():
+            continue
+        try:
+            entries = sorted(directory.iterdir())
+        except Exception:
+            continue
+        for path in entries:
+            if path.name.endswith(".done.yaml"):
+                yield path
+
+
+def scan_sprints(root: Path):
+    """返回 [(文件路径, 文件主名, 元信息, 任务清单)]，按序号升序。
+
+    每次调用读全部 Sprint 文件。长期待办的年龄快照已按日缓存（见 age_snapshot），
+    这里剩下的调用方是状态摘要与阶段判定；Sprint 数到 50 上下才开始有可感知
+    延迟，先不为它们再加一层缓存。
+    """
+    found = []
+    for path in iter_sprint_files(root):
+        text = read_text(path)
+        if text is None:
+            continue
+        found.append((path, path.stem, parse_sprint_meta(text), parse_sprint_items(text)))
     found.sort(key=lambda row: sprint_seq(row[1]))
     return found
 
@@ -682,16 +705,8 @@ def check_done_files(root: Path, data: dict) -> list[str]:
     """
     known = {item["id"] for _phase, item in iter_items(data) if item.get("id")}
     problems: list[str] = []
-    for rel in SPRINT_DIRS:
-        directory = root / rel
-        if not directory.is_dir():
-            continue
-        try:
-            files = sorted(p for p in directory.iterdir() if p.name.endswith(".done.yaml"))
-        except Exception:
-            continue
-        for path in files:
-            problems.extend(inspect_done(path, known))
+    for path in iter_done_files(root):
+        problems.extend(inspect_done(path, known))
     return problems
 
 
@@ -811,16 +826,7 @@ def handle_sprint_write(sprint_path: Path) -> None:
 
 def pending_backfills(root: Path) -> list[str]:
     """未闭环的回填文件名（`sprints/*.done.yaml`）。"""
-    pending: list[str] = []
-    for rel in SPRINT_DIRS:
-        directory = root / rel
-        if not directory.is_dir():
-            continue
-        try:
-            pending.extend(p.name[: -len(".done.yaml")] for p in directory.iterdir() if p.name.endswith(".done.yaml"))
-        except Exception:
-            continue
-    return pending
+    return [p.name[: -len(".done.yaml")] for p in iter_done_files(root)]
 
 
 def active_sprints(root: Path) -> list[tuple[str, dict]]:
@@ -923,22 +929,12 @@ def age_fingerprint(root: Path) -> list[list] | None:
     except OSError:
         return None
     files.append([BACKLOG_JSON, stat.st_mtime_ns, stat.st_size])
-    for rel in SPRINT_DIRS:
-        directory = root / rel
-        if not directory.is_dir():
-            continue
+    for path in iter_sprint_files(root):
         try:
-            entries = sorted(directory.iterdir())
+            stat = path.stat()
         except OSError:
             continue
-        for path in entries:
-            if not (path.name.startswith("sprint-") and path.name.endswith(".md")):
-                continue
-            try:
-                stat = path.stat()
-            except OSError:
-                continue
-            files.append([f"{rel}/{path.name}", stat.st_mtime_ns, stat.st_size])
+        files.append([path.relative_to(root).as_posix(), stat.st_mtime_ns, stat.st_size])
     return files
 
 
