@@ -27,6 +27,7 @@
 | confirmed | ✅ | `true`（优先级/点数/验收已与用户确认）/ `false`（agent 推荐，Sprint 取用前必须显式转 true，见 §五） |
 | created_at | 新条目 ✅ | 立项日期，ISO `YYYY-MM-DD`；存量条目无法确认时留空，不用文件修改时间或迁移日期冒充 |
 | last_reviewed_at | — | 最近一次长期待办复核日期，ISO `YYYY-MM-DD`；仅在用户明确保留 / 调整后填写，不得早于 `created_at` |
+| planned_sprints | — | 曾纳入的 Sprint 序号列表（如 `["001","003"]`），阶段 4 闭环同步时对 completed 与 moved_next 条目追加；Sprint 文件归档后「曾纳入」判定只剩这条戳记 |
 | detail | — | 字符串数组，收 §四 判定「非显然」的展开内容；渲染成 bullets |
 
 ## 三、优先级排序逻辑
@@ -87,7 +88,7 @@ Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改�
 
 ### 长期待办复核（派生信号，不是第四态）
 
-**长期未完成**：`status == 待办`、不属于任何活跃 Sprint、`created_at` 距今 ≥30 天。曾进入历史 Sprint 但目前仍是待办的条目也算，展示时区分「从未纳入 / 曾纳入 Sprint」；活跃 Sprint 条目由 Sprint 闭环负责，这里不重复提醒。
+**长期未完成**：`status == 待办`、不属于任何活跃 Sprint、`created_at` 距今 ≥30 天。曾进入历史 Sprint 但目前仍是待办的条目也算，展示时区分「从未纳入 / 曾纳入 Sprint」（判定 = 条目出现在未归档 Sprint 文件的任务清单，或条目带 `planned_sprints` 戳记——Sprint 归档后只剩后者）；活跃 Sprint 条目由 Sprint 闭环负责，这里不重复提醒。
 
 **待复核**：长期未完成条目中，`last_reviewed_at` 缺失或距今 ≥30 天。年龄始终从 `created_at` 计算，复核不会重置立项年龄；Could / Should / Must 同一口径，优先级不影响是否可见。
 

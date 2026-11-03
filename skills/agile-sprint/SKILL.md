@@ -5,7 +5,7 @@ displayName: Sprint规划
 description: |
   当用户说"开 Sprint""规划迭代""关闭 Sprint"或 using-agile 路由到此，且 backlog.json 已有条目时触发。
 agent_created: true
-version: 5.2.3
+version: 5.2.4
 dependencies:
   - skill: using-agile
     reason: 提供 DOD.md 模板
@@ -72,7 +72,8 @@ dependencies:
 - 改写文件头 `- 执行结果:` 行的值（`.done.yaml` 文件路径 或 "人工确认"）——模板已带此行，不新增行，也不把来源并入状态值
 - 将 Sprint 文件头 `- 状态:` 改为 `已关闭`，只写状态词（需要备注用全角括号另附，不夹带其它键值）
 - **统计快照重算**：跑 `agile.py stats`，输出附进本 Sprint 文件「变更记录」段（没有脚本时才自己全量重算，禁止在旧数字上增量加减）
-- 提示用户完整闭环：入口下次激活时检测到 `.done.yaml` 即**默认执行闭环**——Sprint 已由本环节关闭，剩下的「同步 backlog → 处理 feedback → 改后缀 `.done.processed.yaml`」由 agile-backlog 阶段 4 执行，**本技能不碰**。链路见 `using-agile/references/sprint-schema.yaml` 的 `lifecycle`
+- 提示用户完整闭环：入口下次激活时检测到 `.done.yaml` 即**默认执行闭环**——Sprint 已由本环节关闭，剩下的「同步 backlog → 处理 feedback → 改后缀 `.done.processed.yaml` → 移入 `archive/` 归档」由 agile-backlog 阶段 4 执行，**本技能不碰**。链路见 `using-agile/references/sprint-schema.yaml` 的 `lifecycle`
+- 无 `.done.yaml` 的人工确认关闭：闭环没有 `.done.yaml` 可触发，由本环节提示用户路由 agile-backlog 阶段 4，按文件内「条目状态建议」做同步（含 `planned_sprints` 戳记）与归档，步骤相同、不由本技能代劳
 
 ## 4. 写完即停（结构化审阅）
 
@@ -82,7 +83,7 @@ dependencies:
 - ✅ 单文件产出 `sprints/sprint-{序号:03d}-{日期}.md`（命名含序号+日期，不用 `current.md`）；❌ **不顺手写** VISION / ARCHITECTURE / ADR / backlog.json。
 - ✅ 写前问询遵循 `using-agile/references/probing-protocol.md`：容量参数（人数/工作日/专注系数）必经用户确认，禁止静默默认；Sprint 目标须可陈述（§2）。
 - ✅ 关闭 Sprint 前逐条过 DoD（独立出口门禁 ③）；关闭即把 `- 状态:` 改为 `已关闭`（值只写状态词）、改写 `- 执行结果:` 行，不删除。
-- ❌ 不写 RETRO.md / RELEASE.md / FB-NNN.md，不创建 `sprints/archive/` 子目录。
+- ❌ 不写 RETRO.md / RELEASE.md / FB-NNN.md。`archive/` 子目录（Sprint 归档位）由 agile-backlog 阶段 4 在闭环归档时创建，规划期不预建、也不在它之外发明别的目录。
 - ❌ 不在 Sprint 文件中设执行态追踪（任务清单与执行进度不写 checkbox、不记阻塞、不处理执行中变更——归消费 Agent）。
 - ✅ 「闭环检查」清单用 `- [ ]` checkbox，关闭前逐项核对（这是关闭核对清单，非执行态追踪）。
 - ❌ 不直接修改 `backlog.json` 的 `status`（所有权属 agile-backlog，由入口检测 .done.yaml 默认闭环时路由同步）。

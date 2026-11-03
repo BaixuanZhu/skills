@@ -2,10 +2,12 @@
 # 消费 Agent 读此文件了解 Sprint 规划文件的格式
 # using-agile 初始化时将此文件复制到 agile-docs/interfaces/
 # 本文件须能被 YAML 解析器读取（仓库 CI 校验，与在项目里的副本无关）：含 ": " 的值一律加引号。
-version: "1.5"
+version: "1.6"
 sprint_file:
   naming: "sprint-{序号:03d}-{日期}.md"
   location: "sprints/"
+  # 关闭且闭环完成后，本文件随 .done.processed.yaml 一并移入 archive/ 子目录（agile-backlog 阶段 4）。
+  # sprints/ 只留未闭环文件；状态检测与每轮扫描不进 archive/。
   sections:
     - header: 文件头信息（状态/周期/目标/容量）
       format: YAML-style key-value
@@ -30,7 +32,7 @@ sprint_file:
 
 # 执行结果回传：消费 Agent 执行完 Sprint 任务后写入此文件（回填是硬性义务，见 sprint 文件内「回填要求」段）
 # agile-sprint DoD 关闭时以此为依据；using-agile 检测到 .done.yaml → 默认执行回填闭环（关闭+同步+反馈处理）
-# 同步完成后改后缀 .done.processed.yaml 留痕，不删除
+# 同步完成后改后缀 .done.processed.yaml 留痕，不删除；随后与 Sprint 文件一并移入 archive/ 归档
 done_file:
   filename: "sprint-{序号:03d}-{日期}.done.yaml"
   location: "sprints/"
@@ -52,5 +54,5 @@ done_file:
   validation: "agile.py check 会读本文件内容，报出「引用不存在的条目 ID」「同一 ID 既在 completed 又在 moved_next」「feedback.type 不在枚举内」「两个数组都空」。注意 check 只做这几项——type 与 note 的内容是否说得通仍由人判断。"
   mandatory: true  # 回填是硬性义务：消费 Agent 执行完毕必须生成，否则 Sprint 无法关闭、Backlog 无法同步
   timing: 消费 Agent 执行完毕后生成（含部分完成）
-  lifecycle: 写入（消费 Agent）→ 读取（agile-sprint DoD 检查，含 feedback）→ 检测（using-agile 默认闭环）→ 消费（agile-backlog 同步到 backlog.json + 反馈处理）→ 改后缀 .done.processed.yaml（留痕，不删除）
+  lifecycle: 写入（消费 Agent）→ 读取（agile-sprint DoD 检查，含 feedback）→ 检测（using-agile 默认闭环）→ 消费（agile-backlog 同步到 backlog.json + 反馈处理）→ 改后缀 .done.processed.yaml（留痕，不删除）→ 留痕与 Sprint 文件移入 archive/ 归档（agile-backlog 阶段 4）
 

@@ -260,5 +260,90 @@ check "日期非法报错且不能抑制复核提醒" \
   "validation=True|True|True|True|True" "$(printf '%s\n' "$AGING_RESULT" | grep '^validation=')"
 check "review 完整清单保留复核语义" "render=True" "$(printf '%s\n' "$AGING_RESULT" | grep '^render=')"
 
+# ⑱ Sprint 归档：archive/ 不进任何扫描（状态行/active/指纹全看不见），「曾纳入」
+#     只剩 planned_sprints 戳记兜底；移动改指纹强制重算；迟到的 .done.yaml 对已
+#     归档 Sprint 仍能进 backfill 闭环。固定 today，全部进程内断言 + 两条 CLI 断言。
+ARCH_OUT="$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" - <<'PY' | tr -d '\r'
+import json, shutil, tempfile
+from datetime import date
+from pathlib import Path
+import agile
+
+root = Path(tempfile.mkdtemp())
+docs = root / "agile-docs"
+live = root / "sprints"
+docs.mkdir()
+(live / "archive").mkdir(parents=True)
+backlog = {"schema": 1, "phases": [{"id": 1, "title": "归档", "items": [
+    {"id": "T-100", "title": "曾纳入已归档 Sprint", "type": "技术", "points": 2,
+     "priority": "Should", "status": "待办", "confirmed": True,
+     "created_at": "2026-01-01", "planned_sprints": ["005"]},
+    {"id": "T-101", "title": "从未纳入", "type": "功能", "points": 1,
+     "priority": "Could", "status": "待办", "confirmed": True, "created_at": "2026-01-01"},
+]}]}
+(docs / "backlog.json").write_text(json.dumps(backlog, ensure_ascii=False), encoding="utf-8")
+closed = live / "sprint-005-20260901.md"
+closed.write_text("- 状态: 已关闭\n- 周期: 2026-W36\n\n## 任务清单\n- T-100 [2]\n", encoding="utf-8")
+today = date(2026, 11, 2)
+
+results = []
+def case(name, ok):
+    results.append(f"{name}={ok!s}")
+
+case("scan_live", len(agile.scan_sprints(root)) == 1)
+data = json.loads((docs / "backlog.json").read_text(encoding="utf-8"))
+flags = {r["id"]: r["ever_planned"] for r in agile.collect_backlog_age(data, [], today)["aged"]}
+case("stamp_union", flags["T-100"] is True and flags["T-101"] is False)
+scanned = {r["id"]: r["ever_planned"] for r in
+           agile.collect_backlog_age(data, agile.scan_sprints(root), today)["aged"]}
+case("scan_covers_history", scanned["T-100"] is True and scanned["T-101"] is False)
+
+calls = []
+real = agile.collect_backlog_age
+def counting(*args, **kwargs):
+    calls.append(1)
+    return real(*args, **kwargs)
+agile.collect_backlog_age = counting
+fp_before = agile.age_fingerprint(root)
+agile.age_snapshot(root, today)
+agile.age_snapshot(root, today)                        # 第二次命中缓存，不重算
+shutil.move(str(closed), str(live / "archive" / closed.name))
+snap = agile.age_snapshot(root, today)                 # 指纹变化 → 强制重算
+lines = {line.split()[1]: line for line in snap["notice_items"]}
+case("move_invalidates", len(calls) == 2 and agile.scan_sprints(root) == []
+     and agile.age_fingerprint(root) != fp_before)
+case("stamp_survives_archive", "曾纳入 Sprint" in lines["T-100"]
+     and "从未纳入 Sprint" in lines["T-101"])
+
+backlog["phases"][0]["items"][0]["planned_sprints"] = []   # 拿掉戳记：标签必然翻谎
+(docs / "backlog.json").write_text(json.dumps(backlog, ensure_ascii=False), encoding="utf-8")
+snap4 = agile.age_snapshot(root, today)
+case("stamp_is_the_source", "从未纳入" in snap4["notice_items"][0] and len(calls) == 3)
+
+state = " | ".join(agile.describe_state(root))
+case("desc_no_sprint", "Sprint" not in state and "Backlog 2 条" in state)
+(live / "sprint-005-20260901.done.yaml").write_text(
+    "completed:\n- T-101\nmoved_next: []\n", encoding="utf-8")   # 迟到的回填
+state2 = " | ".join(agile.describe_state(root))
+case("late_backfill", agile.detect_stage(root) == "backfill"
+     and "待回填 1 个" in state2 and "Sprint" not in state2)
+agile.age_cache_path(root).unlink(missing_ok=True)     # 不在临时目录留探针残渣
+
+print("\n".join(results))
+print("ROOT=" + root.as_posix())
+PY
+)"
+for line in $ARCH_OUT; do
+  case "$line" in ROOT=*) continue ;; esac
+  key="${line%%=*}"; val="${line#*=}"
+  check "归档·$key" "True" "$val"
+done
+ARCH_ROOT="$(printf '%s\n' "$ARCH_OUT" | grep '^ROOT=' | cut -d= -f2-)"
+check "归档后迟到回填仍判 backfill" "1" \
+  "$(cd "$ARCH_ROOT" && "$PY" "$PLUGIN/scripts/agile.py" brief . 2>&1 | grep -c '^阶段：backfill')"
+out=$(printf '{"tool_input":{"file_path":"%s/sprints/archive/sprint-005-20260901.md"}}' "$ARCH_ROOT" \
+      | "$PY" "$PLUGIN/scripts/agile.py" hook-post-write)
+check "写 archive 路径 hook 无输出" "" "$out"
+
 printf '\nPASS=%d FAIL=%d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

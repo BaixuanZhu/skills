@@ -5,7 +5,7 @@ displayName: 敏捷产品待办
 description: |
   当用户说"写待办""拆任务""Backlog""Product Backlog""使能项""优先级排序""排迭代""长期待办""待办复核""梳理积压"或 using-agile 路由到此，且战略层（VISION + ARCHITECTURE/ADR）已确认时触发。
 agent_created: true
-version: 5.4.0
+version: 5.4.1
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架与路由
@@ -154,17 +154,19 @@ dependencies:
 
 ### 阶段 4：接受 .done 同步
 
-当 using-agile 检测到 `sprints/*.done.yaml`（默认执行回填闭环）并路由到本技能：
+当 using-agile 检测到 `sprints/*.done.yaml`（默认执行回填闭环）并路由到本技能；人工确认关闭的 Sprint（无 `.done.yaml`）由 agile-sprint 环节 C 路由到本阶段，按 Sprint 文件内「条目状态建议」走同样的同步与归档：
 
 1. 读取 `.done.yaml`，按 completed / moved_next 批量更新 `backlog.json` 里对应条目的 `status`
    - completed 条目 → `已完成`
    - moved_next 条目 → `待办`，**仅改状态，`priority` 保持原值不动**（原属顶部条目，状态复位后自然回到取用顺序前列；禁止为"保回顶部"擅自调高优先级）
+   - 两组条目都在 `planned_sprints` 追加本 Sprint 序号——「曾纳入」戳记：Sprint 文件归档后扫描看不见任务清单，长期待办复核靠它区分「从未纳入 / 曾纳入」（见 `references/backlog-rules.md §二`）
 2. **处理 feedback**（`.done.yaml` 的 feedback 列表）：
    - `reason`（未完成原因）→ 已由 agile-sprint 在关闭环节展示，此处无需处理
    - `issue`（执行中发现的新问题）→ 转为 Backlog **新条目候选**：列出建议条目（标题 / 类型 / 优先级建议 / 来源标注"消费 Agent 反馈"），请用户确认后新增进 `backlog.json`
    - `decision`（需产品层裁决）→ 停下请用户裁决；裁决结果落盘为条目或明确忽略
 3. 将 `.done.yaml` 文件后缀改为 `.done.processed.yaml`（留痕，不删除）
-4. 完成后停下，报告同步结果 + 反馈处理结果
+4. **归档**：把留痕文件与对应 Sprint 文件一并移入 Sprint 所在目录的 `archive/` 子目录（如 `sprints/archive/`，目录不存在则创建）——`sprints/` 只留未闭环文件，状态检测与每轮扫描不进 `archive/`
+5. 完成后停下，报告同步结果 + 反馈处理结果
 
 ### 长期待办复核（独立入口）
 

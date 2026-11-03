@@ -32,7 +32,7 @@
 [/agile-brief:conflict]
 
 [agile-brief:backfill]
-有未闭环回填：过 DoD 关闭 Sprint → 同步 backlog 状态与 feedback → 文件改后缀 `.done.processed.yaml` 留痕。机械步骤直接做，只在 issue / decision 处停下请用户裁决。→ using-agile §3
+有未闭环回填：过 DoD 关闭 Sprint → 同步 backlog 状态与 feedback → 文件改后缀 `.done.processed.yaml` 留痕 → Sprint 文件与留痕移入 `archive/` 归档。机械步骤直接做，只在 issue / decision 处停下请用户裁决。→ using-agile §3
 [/agile-brief:backfill]
 
 [agile-brief:init]

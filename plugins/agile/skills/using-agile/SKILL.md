@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""长期待办""待办复核""架构决策""ADR""C4""需求变了""要改故事""依赖检查"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.7.1
+version: 5.7.2
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -78,7 +78,7 @@ version: 5.7.1
    - 对应 Sprint 非"已关闭" → 路由 `agile-sprint` 环节 B/C 做 DoD 关闭（含 feedback 读取）
    - Sprint 已关闭 → 跳过关闭，直接进入同步
    - 路由 `agile-backlog` 阶段 4 同步 Backlog（更新状态列；`issue` 转新条目候选、`decision` 停下请用户裁决）
-   - 闭环完成 → `.done.yaml` 改后缀 `.done.processed.yaml` 留痕（不删除）
+   - 闭环完成 → `.done.yaml` 改后缀 `.done.processed.yaml` 留痕（不删除），连同 Sprint 文件移入 Sprint 所在目录的 `archive/` 子目录（如 `sprints/archive/`）归档——`sprints/` 只留未闭环文件，状态检测与每轮扫描不进 `archive/`
    - **机械步骤（DoD 核对 / 关闭 / 同步 / 改名）自动执行，仅裁决点停下确认**；多个 `.done.yaml` 逐个处理；完成输出结果报告，再回到第 2 步
    - 无 `.done.yaml` → 直接进入第 2 步
 2. 检测 `agile-docs/` 下各文件存在性：

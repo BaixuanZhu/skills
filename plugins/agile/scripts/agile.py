@@ -286,7 +286,9 @@ def collect_backlog_age(data: dict, sprints, today: date) -> dict:
             "id": ident,
             "title": str(item.get("title") or ""),
             "priority": str(item.get("priority") or "未标"),
-            "ever_planned": ident in planned_ids,
+            # Sprint 归档后活扫描看不见它的任务清单，「曾纳入」靠闭环同步时
+            # 落在条目上的 planned_sprints 戳记兜底（backlog-rules §二）。
+            "ever_planned": ident in planned_ids or bool(item.get("planned_sprints")),
         }
         created = parse_iso_date(item.get("created_at"))
         if created is None:
