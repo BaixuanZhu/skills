@@ -5,7 +5,7 @@ displayName: 敏捷产品待办
 description: |
   当用户说"写待办""拆任务""Backlog""Product Backlog""使能项""优先级排序""排迭代""长期待办""待办复核""梳理积压"或 using-agile 路由到此，且战略层（VISION + ARCHITECTURE/ADR）已确认时触发。
 agent_created: true
-version: 5.4.1
+version: 5.4.2
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架与路由
@@ -164,7 +164,7 @@ dependencies:
    - `reason`（未完成原因）→ 已由 agile-sprint 在关闭环节展示，此处无需处理
    - `issue`（执行中发现的新问题）→ 转为 Backlog **新条目候选**：列出建议条目（标题 / 类型 / 优先级建议 / 来源标注"消费 Agent 反馈"），请用户确认后新增进 `backlog.json`
    - `decision`（需产品层裁决）→ 停下请用户裁决；裁决结果落盘为条目或明确忽略
-3. 将 `.done.yaml` 文件后缀改为 `.done.processed.yaml`（留痕，不删除）
+3. 将 `.done.yaml` 文件后缀改为 `.done.processed.yaml`（留痕，不删除）。**必须排在第 1 步同步之后**——后缀一改，回填检测即视为已闭环；若中断在同步之前，会留下「留痕在、状态没同步」的假闭环，且没有任何机制会再触发补同步
 4. **归档**：把留痕文件与对应 Sprint 文件一并移入 Sprint 所在目录的 `archive/` 子目录（如 `sprints/archive/`，目录不存在则创建）——`sprints/` 只留未闭环文件，状态检测与每轮扫描不进 `archive/`
 5. 完成后停下，报告同步结果 + 反馈处理结果
 

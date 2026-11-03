@@ -5,7 +5,7 @@ displayName: Sprint规划
 description: |
   当用户说"开 Sprint""规划迭代""关闭 Sprint"或 using-agile 路由到此，且 backlog.json 已有条目时触发。
 agent_created: true
-version: 5.2.4
+version: 5.2.5
 dependencies:
   - skill: using-agile
     reason: 提供 DOD.md 模板
@@ -46,7 +46,7 @@ dependencies:
 - **技术任务（T-NNN）需关联 ADR 章节编号**；若关联缺失，按 `using-agile/references/gate-protocol.md §二 ①` 拦截，先回 agile-strategic 阶段 B 补 ADR
 - **容量参数必问**：团队人数 / Sprint 工作日 / 团队成熟度（决定专注系数）——三者任一未知就问（可先读 `agile-docs/DOD.md` 头部项目画像取团队人数），**禁止静默按 0.6 默认**；专注系数给选项 + 推荐（A 0.5 新团队 / B 0.6 成熟 / C 0.7-0.75 全职专注），确认后使用并在 Sprint 文件中标注"agent 推荐"
 - **容量检查**：点数直接读条目的 `points`（priority 与 points 同源），计算承诺点是否 ≤ 可用点。可用点计算见 `references/sprint-rules.md §一`
-- 确认本 Sprint 序号：扫描 `sprints/` 目录下已有 `sprint-NNN-*.md`，取最大序号 +1；目录为空则从 001 起（用于命名 `sprint-{序号:03d}-{日期}.md`）
+- 确认本 Sprint 序号：扫描 `sprints/` **与 `sprints/archive/`（归档历史）**下已有 `sprint-NNN-*.md`，取两处最大序号 +1——归档后 `sprints/` 顶层可能为空，只扫活目录会让序号从 001 重来、与归档撞号；两处全空才从 001 起（用于命名 `sprint-{序号:03d}-{日期}.md`）
 - 确认起始日期（用于命名）
 - **交接点识别**：多仓库项目读条目的 `repo` 取仓库归属；识别跨仓库依赖组（不同仓库 + 先后开发关系，如 `api-server` 后端接口 → `web-app` 前端页面）→ 规划时生成「交接契约」段；无跨仓库依赖 → 跳过（判定与契约段模板见 `references/sprint-template.md` §交接契约，交接文档模板见 `references/handoff-template.md`）
 - 确认 DoD（读 `agile-docs/DOD.md`，若缺失回 using-agile 补）
