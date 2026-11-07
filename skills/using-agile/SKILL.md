@@ -3,9 +3,9 @@ name: using-agile
 slug: using-agile
 displayName: 敏捷管理入口
 description: |
-  当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""长期待办""待办复核""架构决策""ADR""C4""需求变了""要改故事""依赖检查"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
+  当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""长期待办""待办复核""架构决策""ADR""C4""需求变了""要改故事""依赖检查""风险""风险登记""发版""版本规划""记录决策"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.7.2
+version: 5.8.2
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -67,8 +67,10 @@ version: 5.7.2
 | 层 | 产出物 | 负责技能 |
 |----|--------|----------|
 | **战略与约束层** | 愿景 VISION、架构图 ARCHITECTURE、决策 ADR | `agile-strategic`（两阶段一体化） |
-| **执行层** | DoD、`backlog.json`（唯一 Backlog 文件）、Sprint（规划/关闭） | `agile-backlog` / `agile-sprint` |
+| **执行层** | DoD、`backlog.json`（唯一待办池）、`risks.json` / `releases.json` / `decisions.json`（可选小文件，缺省 = 该能力未启用）、Sprint（规划/关闭） | `agile-backlog` / `agile-sprint` |
 | **跨层（变更协调）** | 变更传播矩阵评估 + 路由 | `using-agile`（本技能，引用 `references/change-matrix.md`） |
+
+跨技能数据流（风险/发布/决策/缺陷/回流）的全貌见 `references/workflow.md`，各技能正文不重复。三个小文件各管一个聚合，**禁止并进 backlog.json**——后者只装 phases[]。
 
 **Sprint 规划由 `agile-sprint` 承担**：纯规划器（规划→DoD关闭），不含执行态追踪。关闭后保留作历史，闭环即止。
 
@@ -123,6 +125,7 @@ version: 5.7.2
 3. 用户确认后，**路由到对应业务技能就地更新**（本入口不自己改业务正文）：
    - 改 VISION / ARCHITECTURE / ADR → `agile-strategic`
    - 改 Backlog 条目 / 加新任务到 Backlog → `agile-backlog`（即使 Sprint 执行中提出，不路由到 agile-sprint）
+   - 改风险 / 发布 / 决策记录 → `agile-backlog` 对应独立入口（风险管理 / 发布管理 / 决策记录）
    - 改 Sprint 规划 / 关闭 → `agile-sprint`（执行期状态变更由消费 Agent 自行处理，不进规范层）
    - 改 DoD 模板 → 本入口（DoD 模板就是本技能生成的）
    - 同步 Sprint 执行结果到 Backlog → `agile-backlog`（检测 .done.yaml 后默认闭环时触发）

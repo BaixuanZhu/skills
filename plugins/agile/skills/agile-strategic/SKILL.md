@@ -5,7 +5,7 @@ displayName: 敏捷战略层（愿景+架构+ADR）
 description: |
   当用户说"写愿景""产品目标""电梯演讲""定位""使命""红线""价值观""画架构图""C4""技术选型""ADR""架构决策""容器图""技术约束"或 using-agile 路由到此，且项目已有 agile-docs/ 时触发。
 agent_created: true
-version: 5.2.2
+version: 5.2.4
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架
@@ -110,7 +110,7 @@ dependencies:
 4. 用户说"你看着办" → 按推荐项执行，ADR 状态标 Proposed 并注"agent 推荐，待用户确认"（`using-agile/references/probing-protocol.md §二` 规则 2）；
 5. 用户裁决后，该项选型才进入 §3.2 写入 ADR。
 
-**架构预判瓶颈** → 仅在 ARCHITECTURE.md 末尾标注；后续由 `agile-backlog` 转为 T-NNN（**本层不创建任务条目**）。
+**架构预判瓶颈** → 仅在 ARCHITECTURE.md 末尾标注；后续由 `agile-backlog` 判定转 R-NNN（风险，`risk-rules.md`）还是 T-NNN（确定要做的工作，**本层不创建条目**）。
 
 ### 3.2 产出（两个独立文件）
 
@@ -125,7 +125,7 @@ dependencies:
 - 结构：顶部索引表 + 每个 ADR 一章节（4 行强制结构）
 - 模板见 `references/c4-adr.md §二`
 - **更新策略**：章节式不可篡改（详见 §6 门禁 ②）
-- **严谨性要求（决策来源标注）**：每条 ADR 的「决策」行末尾标注来源与依据——`依据：{来源 + 关键理由}`。裁决是「用户拍板」还是「agent 推荐待确认」必须写明，禁止把 agent 推荐混成用户已确认。
+- **决策来源标注**：每条 ADR 的「决策」行末尾标注来源与依据——`依据：{来源 + 关键理由}`。裁决是「用户拍板」还是「agent 推荐待确认」必须写明，禁止把 agent 推荐混成用户已确认。
 
 ### 3.3 阶段 B 写完即停（结构化审阅）
 

@@ -5,7 +5,7 @@ displayName: 敏捷产品待办
 description: |
   当用户说"写待办""拆任务""Backlog""Product Backlog""使能项""优先级排序""排迭代""长期待办""待办复核""梳理积压"或 using-agile 路由到此，且战略层（VISION + ARCHITECTURE/ADR）已确认时触发。
 agent_created: true
-version: 5.4.2
+version: 5.5.2
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架与路由
@@ -40,9 +40,9 @@ dependencies:
 | 阶段 3 | 下游影响评估（§3 阶段 3，仅更新已有 Backlog 时） | 阶段 2 确认 |
 | 阶段 4 | 接受 .done 同步（§3 阶段 4，仅 .done.yaml 回传时） | `.done.yaml` 存在（入口闭环路由；Sprint 未关闭时先经 agile-sprint 关闭） |
 
-「长期待办复核」是独立入口，不是阶段 5：hook 报告待复核条目，或用户主动说「梳理长期待办」时，直接走 §3 的对应小节，不重访创建流程。
+「长期待办复核」「风险管理」「发布管理」「决策记录」都是**独立入口**，不是阶段 5/6/7：hook 提示或用户主动提起时直接走 §3 的对应小节，不重访创建流程。
 
-**决策用选择题问**（问询纪律见 `using-agile/references/probing-protocol.md`）：只把真决策（范围/优先级/估点/验收）喂给用户，事实先读 VISION/ADR。变更时先分级（`using-agile/references/change-matrix.md §二`），禁止整层重访。
+**决策用选择题问**（问询纪律见 `using-agile/references/probing-protocol.md`）：只把真决策（范围/优先级/估点/验收）喂给用户，事实先读 VISION/ADR。变更时先分级（`using-agile/references/change-matrix.md §二`），禁止整层重访。跨技能数据流全貌见 `using-agile/references/workflow.md`。
 
 ## 2. 写前对齐（先问询，再产出）
 
@@ -70,6 +70,7 @@ dependencies:
    | 4 | 边界与不做：显式排除范围 | 从目标反推候选 → 确认；不明确 → 问 |
    | 5 | 优先级信号：Must 依据 | 给 Must/Should 建议 + 依据（业务价值/依赖/风险）→ 确认 |
    | 6 | 关联约束：依赖其他条目/外部系统 | grep 现有 Backlog + ADR → 列候选确认 |
+   | 7 | 风险信号：这事最可能出什么岔子 | 仅涉及外部系统/新技术/数据迁移时问一句；有担忧 → 经确认登记 R-NNN（`references/risk-rules.md`），无 → 跳过不凑数 |
 
    探索确认 → 进入决策问询。
 
@@ -162,8 +163,8 @@ dependencies:
    - 两组条目都在 `planned_sprints` 追加本 Sprint 序号——「曾纳入」戳记：Sprint 文件归档后扫描看不见任务清单，长期待办复核靠它区分「从未纳入 / 曾纳入」（见 `references/backlog-rules.md §二`）
 2. **处理 feedback**（`.done.yaml` 的 feedback 列表）：
    - `reason`（未完成原因）→ 已由 agile-sprint 在关闭环节展示，此处无需处理
-   - `issue`（执行中发现的新问题）→ 转为 Backlog **新条目候选**：列出建议条目（标题 / 类型 / 优先级建议 / 来源标注"消费 Agent 反馈"），请用户确认后新增进 `backlog.json`
-   - `decision`（需产品层裁决）→ 停下请用户裁决；裁决结果落盘为条目或明确忽略
+   - `issue`（执行中发现的新问题）→ 转为 Backlog **新条目候选**：列出建议条目（标题 / 类型 / 优先级建议 / 来源标注"消费 Agent 反馈"），缺陷类建议 `type=缺陷`、前缀 B-NNN（`references/backlog-rules.md §一`），请用户确认后新增进 `backlog.json`
+   - `decision`（需产品层裁决）→ 停下请用户裁决；裁决结果**记入 `decisions.json`**（做/不做都留痕，见 `references/decision-rules.md`），outcome=做 再建条目
 3. 将 `.done.yaml` 文件后缀改为 `.done.processed.yaml`（留痕，不删除）。**必须排在第 1 步同步之后**——后缀一改，回填检测即视为已闭环；若中断在同步之前，会留下「留痕在、状态没同步」的假闭环，且没有任何机制会再触发补同步
 4. **归档**：把留痕文件与对应 Sprint 文件一并移入 Sprint 所在目录的 `archive/` 子目录（如 `sprints/archive/`，目录不存在则创建）——`sprints/` 只留未闭环文件，状态检测与每轮扫描不进 `archive/`
 5. 完成后停下，报告同步结果 + 反馈处理结果
@@ -183,6 +184,28 @@ dependencies:
 4. 创建时间未知的存量条目单独列出；能从 Git 历史确认才回填，不能确认则保留未知，不用迁移当天冒充
 5. 写完即停，报告本次保留 / 调整 / 拆分 / 撤回结果；不顺势开 Sprint
 
+### 风险管理（独立入口）
+
+用户说"风险""风险登记"，或识别入口命中（需求探索信号 / strategic 瓶颈预判 / 条目反复顺延 / 同类 reason 重复）时进入，字段与生命周期见 `references/risk-rules.md`：
+
+1. 识别入口命中的，用选择题确认"要不要登记为风险"；**用户确认才写 `risks.json`，不静默建**
+2. 处置（用户按 ID 裁决）：已发生 → 按 `risk-rules.md §三` 转条目 + hit_ref；已解除 / 已接受 → 只改 status
+3. **不打分、不自动升级、不按年龄处置**；Sprint 规划过一遍活跃风险是唯一例行复核
+4. 写完即停，报告登记/处置结果
+
+### 发布管理（独立入口）
+
+用户说"发版""版本规划"，或 agile-sprint 关闭环节提示"完成条目并入哪个 release"时进入，字段与检查单见 `references/release-rules.md`：
+
+1. 组版本：确认版本号（id）+ 构成条目（从已完成/计划条目选，须存在于 `backlog.json`）
+2. checks 三项逐项确认（rollback / migration / notice，不适用的项确认后置 true）
+3. 发布/取消由**用户裁决**后改 status + released_at；已发布的 items 不改写
+4. 写完即停，报告组版本/发布结果
+
+### 决策记录（独立入口）
+
+用户说"记录决策"，或 feedback.decision / L3 变更裁决完成时进入，口径见 `references/decision-rules.md`：裁决结果写 `decisions.json`（做/不做都留痕，「明确忽略」= outcome 不做），outcome=做 的再转条目。只记结果不记讨论过程；推翻旧决策新记一条并注明替代。
+
 ## 4. 写完即停（结构化审阅，每阶段都走）
 
 每个产出阶段写完即停：按 `using-agile/references/probing-protocol.md §四` 结构化审阅（重点列：排序依据 / 优先级判断 / agent 自估点数及理由 × 来源，阶段 3 追加「下游影响评估」结论；去向问下一阶段 / agile-sprint 还是更新本层）。
@@ -200,8 +223,9 @@ dependencies:
 - ✅ **统计不手算**：条目数 / 点数 / 分组统计交给 `agile.py stats`（§2a），禁止在旧数字上加减。
 - ✅ **未确认条目 Sprint 取用前必须显式 confirm**：`confirmed: false` 的「待办」条目，`agile-sprint` 取用时跳过并告警；不私自默认成 `true`（agent 推荐 ≠ 用户确认）。
 - ✅ **长期待办只提示、不自动处置**：复核口径见 `references/backlog-rules.md §五.长期待办复核`；只有用户明确保留 / 调整后才写 `last_reviewed_at`，禁止按年龄自动改优先级、开 Sprint 或撤回。
+- ✅ **`risks.json` / `releases.json` / `decisions.json` 归本技能写**（字段见 `references/` 下对应 rules），其他技能只读或提示路由。风险不打分、不自动升级；发布不自动标已发布；决策不记讨论过程、不改写已记条目。三文件缺省 = 能力未启用，不建空文件。
 
 ## 6. 门禁
 - **T-NNN 无 ADR**：停下，回 agile-strategic 阶段 B 补章节后再填关联；「待 ADR-NNN 确认」这类占位关联不算数。判定细则（什么算架构决策、F-NNN 何时该改判 T-NNN）见 `using-agile/references/gate-protocol.md §二 ①`。
-- **条目过大无法估点**：用拆分法降为多个 T-/F- 条目再估点（边界异常 ⑤）。
+- **条目过大无法估点**：用拆分法降为多个条目再估点（边界异常 ⑤）。
 - 冲突 / 歧义即停（见 `using-agile/references/gate-protocol.md`）。

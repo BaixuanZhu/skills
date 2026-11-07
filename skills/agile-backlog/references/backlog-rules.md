@@ -6,8 +6,9 @@
 |---------|------|------|
 | `T-NNN` | 技术任务（Technical） | T-001 工程初始化 |
 | `F-NNN` | 功能需求（Feature） | F-001 运营登录 |
+| `B-NNN` | 缺陷修复（Bug） | B-001 支付重复回调重复发货 |
 
-**不再使用** US（用户故事）/ EN（使能项）/ EPIC 命名——避免概念混淆。技术任务与功能需求**平级**进入待办池。
+**不再使用** US（用户故事）/ EN（使能项）/ EPIC 命名——避免概念混淆。技术任务、功能需求与缺陷**平级**进入待办池。风险（R-NNN）/ 发布 / 决策（D-NNN）**不是条目**，各有真源文件，见 `risk-rules.md` / `release-rules.md` / `decision-rules.md`。
 
 ## 二、字段定义
 
@@ -15,9 +16,9 @@
 
 | 字段 | 必填 | 说明 |
 |------|------|------|
-| id | ✅ | T-NNN 或 F-NNN，零填充 3 位，全局唯一 |
+| id | ✅ | T-NNN / F-NNN / B-NNN，零填充 3 位，全局唯一 |
 | title | ✅ | 一句话概括（动词 + 名词） |
-| type | ✅ | 技术 / 功能 |
+| type | ✅ | 技术 / 功能 / 缺陷 |
 | repo | — | 条目归属仓库（多仓库项目标注，如 `api-server`；单仓库项目省略） |
 | points | ✅ | 整数。斐波那契（1/2/3/5/8/13，默认）；纯研究型 Sprint 可用线性（1/2/3/4/5），在 Sprint 文件头标注；过大无法估点 → 触发边界异常 ⑤（拆分） |
 | priority | ✅ | Must / Should / Could / Won't |
@@ -50,7 +51,7 @@
 
 判定"显然"（无需展开）：标题 + 点数 + 关联字段已完整表达意图。
 
-**展开格式**：写进该条目的 `detail` 数组，3-5 条，覆盖验收 / 约束 / 关联即可。**禁止**写成完整用户故事格式（INVEST / Given-When-Then 仪式不要）。
+**展开格式**：写进该条目的 `detail` 数组，3-5 条，覆盖验收 / 约束 / 关联即可。**禁止**写成完整用户故事格式（INVEST / Given-When-Then 仪式不要）。缺陷（B-NNN）展开「复现：{最短复现路径}」+「验收：修复后可观察行为」两行起。
 
 ### 范围 vs 实现（写入边界）
 
@@ -154,7 +155,9 @@ Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改�
 ```bash
 python <插件根>/scripts/agile.py stats   [项目根]   # 全量重算并打印，附长期未完成 / 待复核汇总
 python <插件根>/scripts/agile.py review  [项目根]   # 只读列出长期未完成、Sprint 历史与复核状态
-python <插件根>/scripts/agile.py check   [项目根]   # 结构校验 + 日期合法性 + Sprint 点数对账 + 回填内容校验 + Sprint 头状态词校验，有问题返回 1
+python <插件根>/scripts/agile.py check   [项目根]   # 结构校验 + 日期合法性 + Sprint 点数对账 + 回填内容校验 + Sprint 头状态词校验 + risks/releases/decisions 校验，有问题返回 1
+python <插件根>/scripts/agile.py trend   [项目根]   # 已关闭 Sprint 趋势：承诺/完成点、完成率、顺延与反复顺延条目
+python <插件根>/scripts/agile.py report  [项目根]   # 一页纸状态：战略/Backlog/风险/发布/决策/趋势
 python <插件根>/scripts/agile.py brief   [项目根]   # 打印当前阶段与每轮基础注入原文（当日 review 展开提醒以 hook-prompt 为准）
 ```
 

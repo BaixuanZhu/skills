@@ -69,7 +69,8 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
 ```
 
 - **约束**：只能回填本文件「任务清单」中出现的 ID；清单内未出现在 completed/moved_next 的条目视为未执行，DoD 关闭时归入 moved_next；**含「交接契约」的任务**，进 completed 前须已产出对应交接文档
-- **feedback 可选但鼓励**：执行中发现的问题、未完成原因、需产品层裁决的事项写在这里，闭环时由规范层处理（issue 转 Backlog 新条目、decision 请用户裁决）——不写则视为无反馈
+- **feedback 可选但鼓励**：执行中发现的问题、未完成原因、需产品层裁决的事项写在这里，闭环时由规范层处理（issue 转 Backlog 新条目、decision 请用户裁决并记 `decisions.json`）——不写则视为无反馈
+- **执行中随时回流**：发现风险、缺陷或需产品裁决的事项**不必等回填**——随时路由 agile-backlog 对应入口（风险管理 / 发布管理 / 决策记录，见 `using-agile/references/workflow.md`）；与 feedback 重复的不重复建条目
 - **回填即触发闭环**：回填文件放入 `sprints/` 后，用户调用入口 → 入口检测到 `.done.yaml` **默认执行闭环**：DoD 检查 → 关闭 Sprint → 同步 Backlog → 处理 feedback
 
 ## 闭环检查（关闭前逐项核对，全部通过方可关闭）

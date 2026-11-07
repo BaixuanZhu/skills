@@ -6,10 +6,12 @@
 
 设计取舍
 --------
-* **backlog.json 是唯一的 Backlog 文件。** 历史上的 PRODUCT-BACKLOG.md 渲染产物
-  已随 5.6.0 退役（人读视图 = 问 agent 或 `agile.py stats`），为它维护的重渲染 /
-  回滚 / 同步比对整套防漂移机制一并删除。脚本因此从不需要解析 Markdown，
-  也不必写正则去容错列数漂移、全角空格、`\\|` 转义这些迟早会出问题的地方。
+* **backlog.json 只装待办池。** 风险 / 发布 / 决策是三个可选小文件
+  （risks.json / releases.json / decisions.json），各管一个聚合、缺省 = 能力
+  未启用——不并进 backlog.json，避免一个上帝文件。历史上的 PRODUCT-BACKLOG.md
+  渲染产物已随 5.6.0 退役（人读视图 = 问 agent 或 `agile.py stats / report`），
+  脚本因此从不需要解析 Markdown，也不必写正则去容错列数漂移、全角空格、
+  `\\|` 转义这些迟早会出问题的地方。
 * **标准库 only，零正则。** 结构化数据用 json 模块，行级判断用 startswith / split。
 * **hook stdout 只说 JSON。** CC 与 ZCode 都从 stdout 解析 hook 结果，但 ZCode 对
   不以 `{` 开头的输出**静默忽略**（= 永不注入），所以 hook 入口的 stdout 不许混任何
@@ -50,7 +52,7 @@ SPRINT_DIRS = ("sprints", f"{DOCS_DIR}/sprints")
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 BRIEF_REL = "skills/using-agile/references/turn-brief.md"
 
-TYPES = ("技术", "功能")
+TYPES = ("技术", "功能", "缺陷")
 PRIORITIES = ("Must", "Should", "Could", "Won't")
 STATUSES = ("待办", "已完成", "已撤回")
 FIB = (1, 2, 3, 5, 8, 13)
@@ -64,7 +66,7 @@ SPRINT_CLOSED = "已关闭"
 SPRINT_STATUS_UNKNOWN = "状态未识别"
 # 三态 → 状态行显示词。unknown 显式显示，不照抄原值、更不静默当成进行中。
 SPRINT_LABELS = {"closed": SPRINT_CLOSED, "planned": SPRINT_STATUSES[0], "unknown": SPRINT_STATUS_UNKNOWN}
-ID_PREFIXES = ("T-", "F-")
+ID_PREFIXES = ("T-", "F-", "B-")
 QUOTES = "\"'“”‘’"
 POINT_BRACKETS = (("(", ")"), ("（", "）"))
 FEEDBACK_TYPES = ("reason", "issue", "decision")
@@ -72,6 +74,20 @@ REVIEW_AGE_DAYS = 30
 DATE_FIELDS = ("created_at", "last_reviewed_at")
 # 年龄快照缓存的结构版本：快照字段语义变化时递增，旧缓存整体作废重算。
 AGE_CACHE_VERSION = 1
+
+# 执行层三个可选小文件：各管一个聚合（不并进 backlog.json，那只是待办池），
+# 缺省 = 该能力未启用。字段定义见 agile-backlog/references/ 下
+# risk-rules / release-rules / decision-rules，流程全貌见 using-agile/references/workflow.md。
+RISKS_JSON = "risks.json"
+RELEASES_JSON = "releases.json"
+DECISIONS_JSON = "decisions.json"
+SIDE_FILES = (RISKS_JSON, RELEASES_JSON, DECISIONS_JSON)
+RISK_STATUSES = ("活跃", "已发生", "已解除", "已接受")
+RISK_HIT = "已发生"
+RELEASE_STATUSES = ("规划中", "已发布", "已取消")
+RELEASE_PUBLISHED = "已发布"
+RELEASE_CHECKS = ("rollback", "migration", "notice")
+DECISION_OUTCOMES = ("做", "不做")
 
 
 # ── 输入输出（Windows 控制台默认 GBK，显式切 utf-8） ────────────────────────
@@ -138,6 +154,14 @@ def is_item_id(value: str) -> bool:
     if not isinstance(value, str) or not value.startswith(ID_PREFIXES):
         return False
     tail = value[2:]
+    return 3 <= len(tail) <= 4 and tail.isdigit()
+
+
+def is_seq_id(value, prefix: str) -> bool:
+    """R-/D- 这类带前缀序号 ID 的通用判定，与 is_item_id 同口径。"""
+    if not isinstance(value, str) or not value.startswith(prefix):
+        return False
+    tail = value[len(prefix):]
     return 3 <= len(tail) <= 4 and tail.isdigit()
 
 
@@ -231,6 +255,185 @@ def validate(data: dict, today: date | None = None) -> tuple[list[str], list[str
                 warnings.append(f"{ident} 的 detail 必须是字符串数组")
 
     return errors, warnings
+
+
+# ── 执行层小文件（risks / releases / decisions）校验 ─────────────────────────
+def validate_risks(data: dict, today: date) -> tuple[list[str], list[str]]:
+    """risks.json 结构校验。语义规则（不打分、不自动升级）归 risk-rules.md，脚本只查结构。"""
+    errors: list[str] = []
+    warnings: list[str] = []
+    risks = data.get("risks")
+    if not isinstance(risks, list):
+        return ['缺少 risks 数组——顶层必须是 {"schema": 1, "risks": [{...}]}'], []
+    seen: set[str] = set()
+    for index, risk in enumerate(risks, start=1):
+        if not isinstance(risk, dict):
+            errors.append(f"risks[{index}] 不是对象")
+            continue
+        ident = risk.get("id")
+        if not is_seq_id(ident, "R-"):
+            errors.append(f"risks[{index}] 的 id「{ident}」不合规（R- + 3~4 位数字）")
+            continue
+        if ident in seen:
+            errors.append(f"{ident} 重复出现")
+        seen.add(ident)
+        for field in ("title", "status", "impact", "created_at"):
+            if not risk.get(field):
+                errors.append(f"{ident} 缺少必填字段 {field}")
+        status = risk.get("status")
+        if status and status not in RISK_STATUSES:
+            errors.append(f"{ident} 状态「{status}」不在 {'/'.join(RISK_STATUSES)}")
+        raw = risk.get("created_at")
+        if raw is not None:
+            parsed = parse_iso_date(raw)
+            if parsed is None:
+                errors.append(f"{ident} 的 created_at 必须是 YYYY-MM-DD，当前是 {raw!r}")
+            elif parsed > today:
+                errors.append(f"{ident} 的 created_at 不能晚于今天（{today.isoformat()}）")
+        if status == RISK_HIT and not risk.get("hit_ref"):
+            # 允许「先标已发生、下一拍补 hit_ref」的分步写，所以提示不阻断。
+            warnings.append(f"{ident} 已发生但还没填 hit_ref（转出的条目 ID）")
+        hit = risk.get("hit_ref")
+        if hit is not None and not is_item_id(hit):
+            errors.append(f"{ident} 的 hit_ref「{hit}」不是条目 ID（T-/F-/B-）")
+    return errors, warnings
+
+
+def validate_releases(data: dict, today: date) -> tuple[list[str], list[str]]:
+    """releases.json 结构校验。检查单防漏事不做门禁，checks 未全过只提示。"""
+    errors: list[str] = []
+    warnings: list[str] = []
+    releases = data.get("releases")
+    if not isinstance(releases, list):
+        return ['缺少 releases 数组——顶层必须是 {"schema": 1, "releases": [{...}]}'], []
+    seen: set[str] = set()
+    for index, rel in enumerate(releases, start=1):
+        if not isinstance(rel, dict):
+            errors.append(f"releases[{index}] 不是对象")
+            continue
+        ident = rel.get("id")
+        if not isinstance(ident, str) or not ident.strip():
+            errors.append(f"releases[{index}] 缺少 id（版本号即 ID）")
+            continue
+        if ident in seen:
+            errors.append(f"release {ident} 重复出现")
+        seen.add(ident)
+        if not rel.get("title"):
+            errors.append(f"release {ident} 缺少 title")
+        status = rel.get("status")
+        if status and status not in RELEASE_STATUSES:
+            errors.append(f"release {ident} 状态「{status}」不在 {'/'.join(RELEASE_STATUSES)}")
+        items = rel.get("items")
+        if not isinstance(items, list) or not items:
+            errors.append(f"release {ident} 的 items 必须是非空数组（条目 ID）")
+        else:
+            for entry in items:
+                if not is_item_id(entry):
+                    errors.append(f"release {ident} 的 items 含非法 ID「{entry}」（T-/F-/B-）")
+        checks = rel.get("checks")
+        if not isinstance(checks, dict):
+            errors.append(f"release {ident} 缺少 checks（固定三键布尔 {'/'.join(RELEASE_CHECKS)}）")
+        else:
+            for key in RELEASE_CHECKS:
+                if not isinstance(checks.get(key), bool):
+                    errors.append(f"release {ident} 的 checks.{key} 必须是 true/false")
+            extra = [key for key in checks if key not in RELEASE_CHECKS]
+            if extra:
+                warnings.append(f"release {ident} 的 checks 有多余键 {extra}（只认 {'/'.join(RELEASE_CHECKS)}）")
+        raw = rel.get("released_at")
+        if raw is not None:
+            parsed = parse_iso_date(raw)
+            if parsed is None:
+                errors.append(f"release {ident} 的 released_at 必须是 YYYY-MM-DD，当前是 {raw!r}")
+            elif parsed > today and status == RELEASE_PUBLISHED:
+                # 规划中的 released_at 是计划发布日、允许未来；已发布才是实际日期。
+                errors.append(f"release {ident} 已发布，released_at 不能晚于今天（{today.isoformat()}）")
+        if status == RELEASE_PUBLISHED:
+            if raw is None:
+                warnings.append(f"release {ident} 已发布但没有 released_at")
+            if isinstance(checks, dict) and any(checks.get(key) is not True for key in RELEASE_CHECKS):
+                warnings.append(f"release {ident} 已发布但 checks 有未确认项（提示不阻断）")
+    return errors, warnings
+
+
+def validate_decisions(data: dict, today: date) -> tuple[list[str], list[str]]:
+    """decisions.json 结构校验。只记结果不记过程归 decision-rules.md。"""
+    errors: list[str] = []
+    warnings: list[str] = []
+    decisions = data.get("decisions")
+    if not isinstance(decisions, list):
+        return ['缺少 decisions 数组——顶层必须是 {"schema": 1, "decisions": [{...}]}'], []
+    seen: set[str] = set()
+    for index, dec in enumerate(decisions, start=1):
+        if not isinstance(dec, dict):
+            errors.append(f"decisions[{index}] 不是对象")
+            continue
+        ident = dec.get("id")
+        if not is_seq_id(ident, "D-"):
+            errors.append(f"decisions[{index}] 的 id「{ident}」不合规（D- + 3~4 位数字）")
+            continue
+        if ident in seen:
+            errors.append(f"{ident} 重复出现")
+        seen.add(ident)
+        for field in ("decision", "outcome", "basis", "date"):
+            if not dec.get(field):
+                errors.append(f"{ident} 缺少必填字段 {field}")
+        outcome = dec.get("outcome")
+        if outcome and outcome not in DECISION_OUTCOMES:
+            errors.append(f"{ident} 的 outcome「{outcome}」不在 {'/'.join(DECISION_OUTCOMES)}")
+        raw = dec.get("date")
+        if raw is not None:
+            parsed = parse_iso_date(raw)
+            if parsed is None:
+                errors.append(f"{ident} 的 date 必须是 YYYY-MM-DD，当前是 {raw!r}")
+            elif parsed > today:
+                errors.append(f"{ident} 的 date 不能晚于今天（{today.isoformat()}）")
+        refs = dec.get("refs")
+        if refs is not None and not isinstance(refs, list):
+            errors.append(f"{ident} 的 refs 必须是数组")
+    return errors, warnings
+
+
+SIDE_VALIDATORS = {
+    RISKS_JSON: validate_risks,
+    RELEASES_JSON: validate_releases,
+    DECISIONS_JSON: validate_decisions,
+}
+
+
+def check_side_refs(root: Path, data: dict, name: str) -> list[str]:
+    """单个小文件对 backlog 条目的引用对账（跨文件）。
+
+    只查指定文件：写 risks.json 时把 releases 的陈年引用也报出来是噪音。
+    引用允许多步补（先登记风险后建条目），所以这条是提示级，不进结构错误。
+    """
+    known = {item["id"] for _phase, item in iter_items(data) if item.get("id")}
+    payload = load_json(root / DOCS_DIR / name)
+    if not isinstance(payload, dict):
+        return []
+    problems: list[str] = []
+    if name == RISKS_JSON:
+        for risk in payload.get("risks") or []:
+            if not isinstance(risk, dict):
+                continue
+            hit = risk.get("hit_ref")
+            if hit and hit not in known:
+                problems.append(f"{risk.get('id', '?')} 的 hit_ref 引用 {hit}，backlog.json 里没有这个条目")
+    elif name == RELEASES_JSON:
+        for rel in payload.get("releases") or []:
+            if not isinstance(rel, dict):
+                continue
+            for entry in rel.get("items") or []:
+                if is_item_id(entry) and entry not in known:
+                    problems.append(f"release {rel.get('id', '?')} 的 items 引用 {entry}，backlog.json 里没有这个条目")
+    elif name == DECISIONS_JSON:
+        for dec in payload.get("decisions") or []:
+            if not isinstance(dec, dict):
+                continue
+            for entry in dec.get("refs") or []:
+                if is_item_id(entry) and entry not in known:
+                    problems.append(f"{dec.get('id', '?')} 的 refs 引用 {entry}，backlog.json 里没有这个条目")
+    return problems
 
 
 def compute_stats(data: dict) -> dict:
@@ -380,6 +583,29 @@ def render_stats_lines(stats: dict) -> list[str]:
     lines.append(f"- 已确认：{stats['confirmed']} 条 ✓ / {stats['total'] - stats['confirmed']} 条待确认")
     if stats["withdrawn"]:
         lines.append(f"- 已撤回：{stats['withdrawn']} 条（不计入以上统计）")
+    return lines
+
+
+def render_side_lines(root: Path) -> list[str]:
+    """三个小文件的统计行；文件不存在 = 能力未启用，不输出占位行。"""
+    docs = root / DOCS_DIR
+    lines: list[str] = []
+    specs = (
+        (RISKS_JSON, "risks", "风险"),
+        (RELEASES_JSON, "releases", "发布"),
+        (DECISIONS_JSON, "decisions", "决策"),
+    )
+    for name, key, label in specs:
+        payload = load_json(docs / name) if (docs / name).exists() else None
+        if not isinstance(payload, dict):
+            continue
+        rows = [row for row in (payload.get(key) or []) if isinstance(row, dict)]
+        buckets: dict = {}
+        for row in rows:
+            bucket = str(row.get("status") or row.get("outcome") or "未标")
+            buckets[bucket] = buckets.get(bucket, 0) + 1
+        joined = "；".join(f"{bucket} = {count}" for bucket, count in sorted(buckets.items()))
+        lines.append(f"- {label}：{len(rows)} 条" + (f"（{joined}）" if joined else ""))
     return lines
 
 
@@ -734,6 +960,8 @@ def hook_post_write() -> None:
         # 失效先于校验：写盘那一刻快照就旧了，校验是否通过不影响这个事实。
         invalidate_age_cache(root_of(path))
         handle_json_write(path)
+    elif path.name in SIDE_FILES:
+        handle_side_write(path)
     elif path.name.endswith(".done.yaml"):
         handle_done_write(path, root)
     elif path.suffix == ".md" and path.name.startswith("sprint-") and path.parent.name == "sprints":
@@ -764,7 +992,6 @@ def handle_json_write(json_path: Path) -> None:
         emit_block(
             f"[agile] backlog.json 结构不合规（{len(errors)} 处）：\n{listed}\n"
             "  字段说明见 agile-backlog/references/backlog-rules.md §七。"
-            "改对之后会自动重新渲染 Markdown。"
         )
         return
 
@@ -775,6 +1002,48 @@ def handle_json_write(json_path: Path) -> None:
         emit_context(
             "PostToolUse",
             f"[agile] backlog.json 已通过结构校验，另有 {len(notes)} 处待处理：\n{listed}",
+        )
+
+
+def handle_side_write(side_path: Path) -> None:
+    """risks / releases / decisions 写后校验：结构错 block，引用问题提示。
+
+    与 backlog.json 同口径——机器契约、整文件写入，结构错误当场拦；
+    跨文件引用允许多步补（先登记后建条目），提示不阻断。
+    """
+    label = side_path.name
+    text = read_text(side_path)
+    if text is None:
+        return
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        emit_block(
+            f"[agile] {label} 不是合法 JSON，本文件必须机器可读。\n"
+            f"  第 {exc.lineno} 行第 {exc.colno} 列：{exc.msg}\n"
+            "  常见原因：写了注释、结尾多了逗号、用了中文引号、字符串里没转义换行。"
+        )
+        return
+    if not isinstance(data, dict):
+        emit_block(f"[agile] {label} 顶层必须是对象。")
+        return
+    errors, warnings = SIDE_VALIDATORS[label](data, date.today())
+    if errors:
+        listed = "\n".join("  · " + line for line in errors)
+        emit_block(
+            f"[agile] {label} 结构不合规（{len(errors)} 处）：\n{listed}\n"
+            "  字段说明见 agile-backlog/references/ 下对应 rules 文件。"
+        )
+        return
+    notes = list(warnings)
+    backlog = load_json(root_of(side_path) / DOCS_DIR / BACKLOG_JSON)
+    if isinstance(backlog, dict):
+        notes.extend(check_side_refs(root_of(side_path), backlog, label))
+    if notes:
+        listed = "\n".join("  · " + line for line in notes)
+        emit_context(
+            "PostToolUse",
+            f"[agile] {label} 已通过结构校验，另有 {len(notes)} 处待处理：\n{listed}",
         )
 
 
@@ -1081,6 +1350,20 @@ def describe_state(root: Path, snapshot: dict | None = None) -> list[str]:
         if total:
             parts.append(f"ADR {total} 条（{proposed} 条 Proposed 待拍板）" if proposed else f"ADR {total} 条")
 
+    risks = load_json(docs / RISKS_JSON) if (docs / RISKS_JSON).exists() else None
+    if isinstance(risks, dict):
+        rows = [row for row in (risks.get("risks") or []) if isinstance(row, dict)]
+        active = sum(1 for row in rows if row.get("status") == "活跃")
+        parts.append(f"风险 {active} 活跃 / 共 {len(rows)}")
+    releases = load_json(docs / RELEASES_JSON) if (docs / RELEASES_JSON).exists() else None
+    if isinstance(releases, dict):
+        rows = [row for row in (releases.get("releases") or []) if isinstance(row, dict)]
+        planned = sum(1 for row in rows if row.get("status") == "规划中")
+        parts.append(f"发布 {planned} 规划中 / 共 {len(rows)}")
+    decisions = load_json(docs / DECISIONS_JSON) if (docs / DECISIONS_JSON).exists() else None
+    if isinstance(decisions, dict):
+        parts.append(f"决策 {len(decisions.get('decisions') or [])} 条")
+
     return parts
 
 
@@ -1193,12 +1476,184 @@ def hook_prompt() -> None:
     )
 
 
+# ── Sprint 历史与趋势（trend / report 的数据层） ─────────────────────────────
+def iter_history_sprint_files(root: Path):
+    """flat + archive/ 两层的 sprint-*.md，只给 trend / report 用。
+
+    scan_sprints 的平铺契约是**状态检测口径**——archive 必须对检测与对账不可见；
+    趋势恰恰消费归档历史，所以单独一条遍历，不共用平铺契约。
+    """
+    for rel in SPRINT_DIRS:
+        for directory in (root / rel, root / rel / "archive"):
+            if not directory.is_dir():
+                continue
+            try:
+                entries = sorted(directory.iterdir())
+            except Exception:
+                continue
+            for path in entries:
+                if path.name.startswith("sprint-") and path.name.endswith(".md"):
+                    yield path
+
+
+def parse_status_suggestions(text: str) -> tuple[list[str], list[str]]:
+    """条目状态建议行：`- T-001：已完成（…）` / `- T-003：移至下个Sprint（…）`。
+
+    行级扫描，只认「- ID：」开头且 ID 合规的行——任务清单行没有冒号，天然不
+    匹配。这是人工确认关闭的 Sprint 在没有 .done 文件时的完成/顺延来源。
+    """
+    completed: list[str] = []
+    moved: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("- "):
+            continue
+        head, sep, tail = split_kv(stripped[2:].strip())
+        if not sep or not is_item_id(head):
+            continue
+        if tail.startswith("已完成"):
+            completed.append(head)
+        elif tail.startswith("移至"):
+            moved.append(head)
+    return completed, moved
+
+
+def find_done_for(sprint_path: Path) -> Path | None:
+    for suffix in (".done.processed.yaml", ".done.yaml"):
+        candidate = sprint_path.with_name(sprint_path.stem + suffix)
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def sprint_history(root: Path) -> list[dict]:
+    """已关闭 Sprint 的承诺/完成/顺延明细，按序号升序。
+
+    完成来源优先 .done(.processed).yaml（结构化回填），人工确认关闭的 Sprint
+    没有 done 文件，退回「条目状态建议」行。只收状态 closed 的 Sprint。
+    """
+    rows: list[dict] = []
+    for path in iter_history_sprint_files(root):
+        text = read_text(path)
+        if text is None:
+            continue
+        if sprint_status(parse_sprint_meta(text)) != "closed":
+            continue
+        done_path = find_done_for(path)
+        if done_path is not None:
+            done = parse_done(read_text(done_path) or "")
+            completed, moved = list(done["completed"]), list(done["moved_next"])
+            source = "done"
+        else:
+            completed, moved = parse_status_suggestions(text)
+            source = "manual"
+        rows.append({
+            "stem": path.stem,
+            "items": parse_sprint_items(text),
+            "completed": completed,
+            "moved_next": moved,
+            "source": source,
+        })
+    rows.sort(key=lambda row: sprint_seq(row["stem"]))
+    return rows
+
+
+def render_trend_lines(root: Path, compact: bool = False) -> list[str]:
+    """Sprint 趋势：承诺/完成点、完成率、顺延与反复顺延。compact 只出汇总行。"""
+    rows = sprint_history(root)
+    if not rows:
+        return ["没有已关闭的 Sprint，暂无趋势。"]
+    lines: list[str] = [] if compact else [f"Sprint 趋势（已关闭 {len(rows)} 个）："]
+    done_points: list[int] = []
+    moved_counts: dict[str, int] = {}
+    for row in rows:
+        committed = {ident: points for ident, points in row["items"]}
+        done_ids = [ident for ident in row["completed"] if ident in committed]
+        moved_ids = [ident for ident in row["moved_next"] if ident in committed]
+        for ident in moved_ids:
+            moved_counts[ident] = moved_counts.get(ident, 0) + 1
+        all_points = sum(points or 0 for points in committed.values())
+        c_points = sum(committed[ident] or 0 for ident in done_ids)
+        if all_points:
+            done_points.append(c_points)
+            rate = f"承诺 {all_points} 点 / 完成 {c_points} 点"
+        else:
+            rate = f"条目 {len(done_ids)}/{len(committed)} 完成"
+        if not compact:
+            lines.append(f"- {row['stem']}：{rate}，{len(moved_ids)} 顺延（{row['source']}）")
+    if done_points:
+        recent = done_points[-3:]
+        avg = sum(recent) / len(recent)
+        lines.append(f"近 {len(recent)} 个 Sprint 平均完成 {avg:.1f} 点（velocity）")
+    repeated = sorted(ident for ident, count in moved_counts.items() if count >= 2)
+    if repeated:
+        lines.append(f"反复顺延（≥2 次，估点/范围信号）：{'、'.join(repeated)}")
+    return lines
+
+
+def render_report_lines(root: Path) -> list[str]:
+    """一页纸状态（stdout，不落文件）：战略/Backlog/风险/发布/决策/趋势。"""
+    docs = root / DOCS_DIR
+    parts: list[str] = ["agile 状态一页纸"]
+
+    bits = [
+        f"VISION {'✅' if (docs / 'VISION.md').exists() else '❌'}",
+        f"ARCHITECTURE {'✅' if (docs / 'ARCHITECTURE.md').exists() else '❌'}",
+    ]
+    adr_text = read_text(docs / ADR_MD)
+    if adr_text:
+        total, proposed = parse_adr(adr_text)
+        bits.append(f"ADR {total} 条" + (f"（{proposed} Proposed 待拍板）" if proposed else ""))
+    else:
+        bits.append("ADR ❌")
+    parts.append("- 战略：" + " / ".join(bits))
+
+    vision_text = read_text(docs / "VISION.md")
+    if vision_text:
+        for line in vision_text.splitlines():
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#"):
+                parts.append("- 定位：" + stripped[:40] + ("…" if len(stripped) > 40 else ""))
+                break
+
+    sprints = scan_sprints(root)
+    if sprints:
+        _path, stem, meta, _items = sprints[-1]
+        parts.append(f"- Sprint：{stem} {SPRINT_LABELS[sprint_status(meta)]}")
+    pending = pending_backfills(root)
+    if pending:
+        parts.append(f"- 待回填：{len(pending)} 个")
+
+    data, problem = read_backlog(docs / BACKLOG_JSON)
+    if data is not None:
+        stats = compute_stats(data)
+        parts.append(f"- Backlog：{stats['total']} 条 / {stats['points']} 点（已确认 {stats['confirmed']}）")
+        for line in backlog_age_summary(collect_backlog_age(data, sprints, date.today())):
+            parts.append("  " + line)
+    else:
+        parts.append(f"- Backlog：{problem}")
+
+    for line in render_side_lines(root):
+        parts.append(line)
+    decisions = load_json(docs / DECISIONS_JSON) if (docs / DECISIONS_JSON).exists() else None
+    if isinstance(decisions, dict):
+        recent = [row for row in (decisions.get("decisions") or []) if isinstance(row, dict)][-3:]
+        for row in recent:
+            parts.append(f"  最近：{row.get('id')} {row.get('decision')}（{row.get('outcome')}）")
+
+    for line in render_trend_lines(root, compact=True):
+        parts.append("- " + line)
+    return parts
+
+
 # ── 命令行 ──────────────────────────────────────────────────────────────────
 USAGE = """agile.py —— Backlog 机械操作（标准库 only，零正则）
 
-  stats   [项目根]   打印统计（每次全量重算，已撤回不计入；backlog.json 是唯一 Backlog 文件）
+  stats   [项目根]   打印统计（每次全量重算，已撤回不计入；backlog.json 只装待办池）
   review  [项目根]   只读列出长期未完成、Sprint 历史与复核状态
-  check   [项目根]   结构校验 + Sprint 点数对账 + 回填内容，有问题返回 1
+  check   [项目根]   结构校验 + Sprint 点数对账 + 回填内容 + risks/releases/decisions，有问题返回 1
+  trend   [项目根]   已关闭 Sprint 趋势：承诺/完成点、顺延与反复顺延条目
+  report  [项目根]   一页纸状态：战略/Backlog/风险/发布/决策/趋势
   brief   [项目根]   打印当前阶段与每轮基础注入原文（排查 hook 用）
 
   hook-post-write    hook 入口：写完文件后校验（decision:block = 需要模型处理）
@@ -1232,6 +1687,8 @@ def cli_stats(root_arg: str | None) -> int:
     report = collect_backlog_age(data, scan_sprints(root), date.today())
     for line in backlog_age_summary(report):
         print("- " + line)
+    for line in render_side_lines(root):
+        print(line)
     return 0
 
 
@@ -1265,18 +1722,51 @@ def cli_check(root_arg: str | None) -> int:
         problems.extend("跨文件：" + line for line in check_sprint_consistency(root, data))
         problems.extend("回填：" + line for line in check_done_files(root, data))
 
+    for name in SIDE_FILES:
+        path = root / DOCS_DIR / name
+        if not path.exists():
+            continue
+        payload = load_json(path)
+        if payload is None:
+            problems.append(f"结构[{name}]：不是合法 JSON")
+            continue
+        errors, warnings = SIDE_VALIDATORS[name](payload, date.today())
+        problems.extend(f"结构[{name}]：" + line for line in errors)
+        problems.extend(f"规范[{name}]：" + line for line in warnings)
+        if data is not None:
+            problems.extend(f"跨文件[{name}]：" + line for line in check_side_refs(root, data, name))
+
     if md_path.exists():
         # PRODUCT-BACKLOG.md 已随 5.6.0 退役：不再生成、不再比对，只提醒清理。
         print(f"提示：{md_path.name} 已不再生成（遗留产物，确认无自定义内容后可删除）")
 
     if not problems:
         stats = compute_stats(data)
-        print(f"通过：{stats['total']} 条 / {stats['points']} 点，结构 / 对账 / 回填 / Sprint 头全过")
+        print(f"通过：{stats['total']} 条 / {stats['points']} 点，结构 / 对账 / 回填 / Sprint 头 / 小文件全过")
+        for line in render_side_lines(root):
+            print(line)
         return 0
     print(f"发现 {len(problems)} 处问题：")
     for line in problems:
         print("  · " + line)
     return 1
+
+
+def cli_trend(root_arg: str | None) -> int:
+    """打印已关闭 Sprint 的趋势；只读。"""
+    root = Path(root_arg) if root_arg else Path.cwd()
+    print("\n".join(render_trend_lines(root)))
+    return 0
+
+
+def cli_report(root_arg: str | None) -> int:
+    """一页纸状态（stdout，不落文件）——给汇报/复盘当素材。"""
+    root = Path(root_arg) if root_arg else Path.cwd()
+    if not (root / DOCS_DIR).is_dir():
+        print("没有 agile-docs/：项目未启用敏捷套件。")
+        return 1
+    print("\n".join(render_report_lines(root)))
+    return 0
 
 
 def cli_brief(root_arg: str | None) -> int:
@@ -1299,6 +1789,8 @@ COMMANDS = {
     "stats": cli_stats,
     "review": cli_review,
     "check": cli_check,
+    "trend": cli_trend,
+    "report": cli_report,
     "brief": cli_brief,
 }
 

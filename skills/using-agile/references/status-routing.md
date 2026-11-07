@@ -17,6 +17,9 @@
 | `agile-docs/ADR.md` | ADR 决策已产出 | agile-strategic（阶段 B） |
 | `agile-docs/STRATEGY_CONFLICT.md` | 战略冲突待裁决 | using-agile（写前门禁生成，裁决后吸收可删） |
 | `agile-docs/backlog.json` | 待办池已产出（唯一真源） | agile-backlog |
+| `agile-docs/risks.json` | 风险台账启用（R-NNN，可选能力） | agile-backlog 风险管理入口 |
+| `agile-docs/releases.json` | 发布记录启用（可选能力） | agile-backlog 发布管理入口 |
+| `agile-docs/decisions.json` | 决策日志启用（可选能力） | agile-backlog 决策记录 |
 | `agile-docs/PRODUCT-BACKLOG.md`（无 `backlog.json` 时） | md 里还是表格 → 旧格式，待 agent 转写 | agile-backlog（旧格式转写，§七.4） |
 | `agile-docs/PRODUCT-BACKLOG.yaml` / `PRODUCT-BACKLOG.json` | **v4.x 旧格式**（注意带名字前缀，与新的 `backlog.json` 不同名） | agile-backlog（旧格式转写，§七.4） |
 | `agile-docs/DOD.md` | 完成定义已就绪 | using-agile（初始化） |
@@ -36,6 +39,7 @@
 | 战略 | 冲突待裁决 | {STRATEGY_CONFLICT.md: 有（待裁决）/无} |
 | 执行 | DoD | {DOD.md: ✅/❌} |
 | 执行 | Backlog | {backlog.json: ✅/❌，N 条} |
+| 执行 | 风险/发布/决策 | {risks/releases/decisions.json 各自 ✅（活跃 N / 规划中 M / 共 K 条）或「未启用」} |
 | 执行 | 长期待办 | {长期未完成 N 条 / 最久 N 天 / 待复核 N 条；创建时间未知 N 条；没有则「无」} |
 | 执行 | 活跃 Sprint | {有/无，文件名} |
 | 执行 | Sprint 回填 | {sprints/*.done.yaml: N 个待闭环处理（闭环后为 .done.processed.yaml）} |

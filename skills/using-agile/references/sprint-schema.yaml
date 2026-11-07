@@ -2,7 +2,7 @@
 # 消费 Agent 读此文件了解 Sprint 规划文件的格式
 # using-agile 初始化时将此文件复制到 agile-docs/interfaces/
 # 本文件须能被 YAML 解析器读取（仓库 CI 校验，与在项目里的副本无关）：含 ": " 的值一律加引号。
-version: "1.6"
+version: "1.7"
 sprint_file:
   naming: "sprint-{序号:03d}-{日期}.md"
   location: "sprints/"
@@ -49,7 +49,7 @@ done_file:
   fields:
     completed: 已完成条目 ID 列表
     moved_next: 未完成移下 Sprint 条目 ID 列表
-    feedback: 消费 Agent 执行反馈（可选）。reason 作 DoD 关闭时 moved_next 依据展示；issue 由 agile-backlog 同步时转为 Backlog 新条目候选；decision 停下请用户裁决
+    feedback: 消费 Agent 执行反馈（可选）。reason 作 DoD 关闭时 moved_next 依据展示；issue 由 agile-backlog 同步时转为 Backlog 新条目候选（缺陷类 type=缺陷 / B-NNN）；decision 停下请用户裁决，裁决结果记 decisions.json（做/不做都留痕）
   note: completed 和 moved_next 至少一个可为空数组；不应包含 Sprint 任务清单之外的 ID；两个列表之外的清单内条目视为未执行，DoD 时归入 moved_next；含交接契约的任务，completed 前须已产出对应交接文档
   validation: "agile.py check 会读本文件内容，报出「引用不存在的条目 ID」「同一 ID 既在 completed 又在 moved_next」「feedback.type 不在枚举内」「两个数组都空」。注意 check 只做这几项——type 与 note 的内容是否说得通仍由人判断。"
   mandatory: true  # 回填是硬性义务：消费 Agent 执行完毕必须生成，否则 Sprint 无法关闭、Backlog 无法同步

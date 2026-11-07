@@ -48,11 +48,11 @@ VISION 已就绪、架构层缺件：走 agile-strategic 阶段 B。每项选型
 [/agile-brief:backlog]
 
 [agile-brief:sprint]
-Backlog 已就绪、无进行中 Sprint：走 agile-sprint。取条前先反问 Sprint 目标能否一句话说清；容量三项（人数 / 工作日 / 专注系数）必问，**禁止静默按 0.6**；`confirmed=false` 条目不许纳入。→ agile-sprint §2
+Backlog 已就绪、无进行中 Sprint：走 agile-sprint。取条前先反问 Sprint 目标能否一句话说清；容量三项（人数 / 工作日 / 专注系数）必问，**禁止静默按 0.6**；`confirmed=false` 条目不许纳入；活跃风险（risks.json）过一遍再定清单。→ agile-sprint §2
 [/agile-brief:sprint]
 
 [agile-brief:active]
-Sprint 进行中：执行归消费 Agent，本套件不追 checkbox。新需求先比对 backlog 已有条目（已覆盖就补记来源，别另立重复条目），**不改进当前 Sprint**；要关 Sprint 先逐条过 DoD。→ agile-sprint §3 环节 B；新需求比对规则 → using-agile/references/gate-protocol.md §三 ④
+Sprint 进行中：执行归消费 Agent，本套件不追 checkbox。新需求先比对 backlog 已有条目（已覆盖就补记来源，别另立重复条目），**不改进当前 Sprint**；风险/缺陷/待裁决随时路由 agile-backlog，不必等回填；要关 Sprint 先逐条过 DoD。→ agile-sprint §3 环节 B；新需求比对 → gate-protocol.md §三 ④；回流 → workflow.md
 [/agile-brief:active]
 
 [agile-brief:review]
