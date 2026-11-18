@@ -17,7 +17,7 @@ POSIX sh + Python（3.9+，标准库 only）。改 `plugins/agile/scripts/agile.
 
 解释器矩阵：`python -B tests/agile/test_launchers.py`，Linux 上隔离 PATH，只放指定的 python/python3 启动器，直接执行 hooks.json 命令串；验证单名称、双名称、都缺失、启动失败回退、业务校验不重复运行。Windows 本地跳过此矩阵，cmd 宿主兼容由 suite.sh 覆盖。
 
-GitHub Actions 的 agile-regression 在 Ubuntu / Python 3.9、3.12 运行上述全部回归，设置 `PYTHONIOENCODING=utf-8`、`PYTHONDONTWRITEBYTECODE=1` 与 `AGILE_REQUIRE_SYMLINK=1`；后者使真实符号链接无法建立时直接失败，不允许跳过。工作流监听 main、`ci/agile-*` 测试分支与相关 PR。
+GitHub Actions 的 agile-regression 在 Ubuntu 24.04 / Python 3.9、3.12 运行上述全部回归，设置 `PYTHONIOENCODING=utf-8`、`PYTHONDONTWRITEBYTECODE=1` 与 `AGILE_REQUIRE_SYMLINK=1`；后者使真实符号链接无法建立时直接失败，不允许跳过。工作流监听 main、`ci/agile-*` 测试分支与相关 PR。
 
 - 阶段判定顺序、判据与 brief 块的对应关系真源在
   `skills/using-agile/references/turn-brief.md` 的阶段表；增删阶段要同步改
