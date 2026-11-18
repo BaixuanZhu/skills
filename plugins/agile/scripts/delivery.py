@@ -342,7 +342,7 @@ def _live(item):
 def _closure_paths(root, stem):
     for folder in ("sprints", "agile-docs/sprints"):
         for archive in ("", "archive"):
-            for suffix in (".done.yaml", ".done.processed.yaml"):
+            for suffix in (".done.json", ".done.processed.json"):
                 path = _inside(root, root / folder / archive / (stem + suffix))
                 if path.exists() or path.is_symlink():
                     yield path
@@ -520,14 +520,12 @@ def _finish(root, args, state, scan, data, items):
 
 
 def _done_text(completed, moved, feedback):
-    lines = []
-    for key, values in (("completed", completed), ("moved_next", moved)):
-        lines.append(key + (":" if values else ": []"))
-        lines.extend("  - " + value for value in values)
-    lines.append("feedback:" if feedback else "feedback: []")
-    for ident, note in feedback:
-        lines.extend(["  - item: " + ident, "    type: reason", "    note: " + json.dumps(note, ensure_ascii=False)])
-    return "\n".join(lines) + "\n"
+    payload = {
+        "completed": list(completed),
+        "moved_next": list(moved),
+        "feedback": [{"item": ident, "type": "reason", "note": note} for ident, note in feedback],
+    }
+    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
 
 
 def _close(root, args, state, scan, items):
@@ -548,9 +546,9 @@ def _close(root, args, state, scan, items):
         receipt = latest.get(pkg["id"])
         if pkg["item"] in moved and receipt and receipt["result"] in ("blocked", "partial"):
             feedback.append((pkg["item"], f"{pkg['id']} {receipt['result']}: {receipt['summary']}"))
-    path = _inside(root, Path(row[0]).parent / (args.sprint + ".done.yaml"))
+    path = _inside(root, Path(row[0]).parent / (args.sprint + ".done.json"))
     directories = {path.parent, root / "sprints", root / "agile-docs" / "sprints"}
-    counterparts = [_inside(root, folder / suffix / (args.sprint + ".done.processed.yaml"))
+    counterparts = [_inside(root, folder / suffix / (args.sprint + ".done.processed.json"))
                     for folder in directories for suffix in ("", "archive")]
     _need(not any(p.exists() or p.is_symlink() for p in counterparts), "processed done counterpart already exists")
     text = _done_text(completed, moved, feedback)
@@ -675,8 +673,12 @@ def check(root, scan_sprints, validate_backlog, parse_done):
                     if items[ident].get("status") == "已完成":
                         _completion(state, entry, items[ident])
             for path in closures:
-                historical = path.name.endswith(".done.processed.yaml") or path.parent.name == "archive"
-                _check_done(state, entry, items, parse_done(path.read_text(encoding="utf-8-sig")), historical)
+                historical = path.name.endswith(".done.processed.json") or path.parent.name == "archive"
+                try:
+                    done = parse_done(path.read_text(encoding="utf-8-sig"))
+                except ValueError as error:
+                    raise DeliveryError(f"{path.name}: {error}") from None
+                _check_done(state, entry, items, done, historical)
         return []
     except Exception as error:
         return [f"delivery: {error}"]

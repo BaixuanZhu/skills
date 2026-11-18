@@ -784,7 +784,7 @@ def iter_sprint_files(root: Path):
 
 
 def iter_done_files(root: Path):
-    """SPRINT_DIRS 下平铺的 *.done.yaml；`.done.processed.yaml` 后缀不同，天然不含。"""
+    """SPRINT_DIRS 下平铺的 *.done.json；`.done.processed.json` 后缀不同，天然不含。"""
     for rel in SPRINT_DIRS:
         directory = root / rel
         if not directory.is_dir():
@@ -794,7 +794,7 @@ def iter_done_files(root: Path):
         except Exception:
             continue
         for path in entries:
-            if path.name.endswith(".done.yaml"):
+            if path.name.endswith(DONE_SUFFIX):
                 yield path
 
 
@@ -847,51 +847,54 @@ def check_sprint_consistency(root: Path, data: dict) -> list[str]:
     return problems
 
 
-# ── 回填文件（.done.yaml）──────────────────────────────────────────────────────
-def parse_done(text: str) -> dict:
-    """只看回填文件固定的三层结构，不引通用 YAML 解析器。
+# ── 回填文件（.done.json）──────────────────────────────────────────────────────
+DONE_SUFFIX = ".done.json"
+DONE_PROCESSED_SUFFIX = ".done.processed.json"
+LEGACY_DONE_SUFFIXES = (".done.yaml", ".done.processed.yaml")
 
-    completed / moved_next 是 ID 列表（逐行 `- ID` 或内联 `[A, B]` 都认）；
-    feedback 是 `- item / type / note` 的对象列表。块标量（`note: |`）不支持，
-    note 是给人读的、脚本不校验其内容，多行会只取到 `|` 本身。
-    """
-    result: dict = {"completed": [], "moved_next": [], "feedback": []}
-    section = ""
-    current: dict | None = None
-    for raw in text.splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        indent = len(raw) - len(raw.lstrip())
-        if indent == 0:
-            head, found, tail = split_kv(line)
-            current = None
-            if not found or head not in result:
-                section = ""
+
+def done_stem(name: str) -> str:
+    """从回填文件名取 Sprint 主名；只认新后缀，旧格式由 legacy_done_files 单独处理。"""
+    return name[: -len(DONE_SUFFIX)] if name.endswith(DONE_SUFFIX) else name
+
+
+def legacy_done_files(root: Path):
+    """旧格式 YAML 回填（含归档）。脚本不再解析 YAML，只检测出来提示 agent 一次性转写。"""
+    for rel in SPRINT_DIRS:
+        for sub in ("", "archive"):
+            directory = root / rel / sub if sub else root / rel
+            if not directory.is_dir():
                 continue
-            section = head
-            if tail.startswith("[") and tail.endswith("]"):
-                for part in tail[1:-1].split(","):
-                    value = unquote(part)
-                    if value:
-                        result[section].append(value)
-            continue
-        if section in ("completed", "moved_next"):
-            if line[0] in "-*":
-                value = unquote(line[1:])
-                if value:
-                    result[section].append(value)
-        elif section == "feedback":
-            if line[0] in "-*":
-                current = {}
-                result["feedback"].append(current)
-                line = line[1:].strip()
-                if not line:
-                    continue
-            if current is not None:
-                head, found, tail = split_kv(line)
-                if found:
-                    current[head] = unquote(tail)
+            try:
+                entries = sorted(directory.iterdir())
+            except Exception:
+                continue
+            for path in entries:
+                if path.name.endswith(LEGACY_DONE_SUFFIXES):
+                    yield path
+
+
+def parse_done(text: str) -> dict:
+    """回填文件是 JSON 对象：completed / moved_next 为 ID 数组，feedback 为对象数组。
+
+    旧手写 YAML 子集解析器已退役（块标量 `note: |`、多行 note 只取到 `|` 等缺陷
+    随 JSON 原生消失）；旧 .done.yaml 由 legacy_done_files 检测、agent 一次性转写，
+    脚本不再解析 YAML。非法 JSON 抛 ValueError，由调用方带文件名报出。
+    """
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"不是合法 JSON（第 {exc.lineno} 行第 {exc.colno} 列：{exc.msg}）") from None
+    if not isinstance(data, dict):
+        raise ValueError("回填必须是 JSON 对象")
+    result: dict = {}
+    for key in ("completed", "moved_next", "feedback"):
+        value = data.get(key, [])
+        if value is None:
+            value = []
+        if not isinstance(value, list):
+            raise ValueError(f"{key} 必须是数组")
+        result[key] = value
     return result
 
 
@@ -900,21 +903,32 @@ def inspect_done(path: Path, known: set[str]) -> list[str]:
     text = read_text(path)
     if text is None:
         return [f"{path.name} 读不出来（编码或权限）"]
-    done = parse_done(text)
+    try:
+        done = parse_done(text)
+    except ValueError as exc:
+        return [f"{path.name} {exc}"]
     problems: list[str] = []
     if not done["completed"] and not done["moved_next"]:
         problems.append(f"{path.name} 的 completed 与 moved_next 都空，回填至少要有一个非空数组")
     for key in ("completed", "moved_next"):
         seen = set()
         for ident in done[key]:
+            if not isinstance(ident, str):
+                problems.append(f"{path.name} 的 {key} 含非字符串 ID")
+                continue
             if ident in seen:
                 problems.append(f"{path.name} 的 {key} 里 {ident} 重复")
             seen.add(ident)
             if ident not in known:
                 problems.append(f"{path.name} 的 {key} 引用 {ident}，backlog.json 里没有这个条目")
-    for ident in sorted(set(done["completed"]) & set(done["moved_next"])):
+    completed_ids = {i for i in done["completed"] if isinstance(i, str)}
+    moved_ids = {i for i in done["moved_next"] if isinstance(i, str)}
+    for ident in sorted(completed_ids & moved_ids):
         problems.append(f"{path.name} 的 {ident} 同时在 completed 与 moved_next（逻辑矛盾）")
     for entry in done["feedback"]:
+        if not isinstance(entry, dict):
+            problems.append(f"{path.name} 的 feedback 含非对象条目")
+            continue
         kind = entry.get("type", "")
         if kind and kind not in FEEDBACK_TYPES:
             problems.append(f"{path.name} 的 feedback type「{kind}」不在 {' / '.join(FEEDBACK_TYPES)} 内")
@@ -936,8 +950,13 @@ def check_done_files(root: Path, data: dict) -> list[str]:
     for path in iter_done_files(root):
         problems.extend(inspect_done(path, known))
         text = read_text(path)
-        if text is not None:
-            problems.extend(delivery.done_problems(root, path.name[:-len('.done.yaml')], parse_done(text)))
+        if text is None:
+            continue
+        try:
+            done = parse_done(text)
+        except ValueError:
+            continue  # inspect_done 已报 JSON 错误
+        problems.extend(delivery.done_problems(root, done_stem(path.name), done))
     return problems
 
 
@@ -971,8 +990,14 @@ def hook_post_write() -> None:
             emit_context("PostToolUse", "[agile] 工作包校验：\n" + "\n".join(problems))
     elif path.name in SIDE_FILES:
         handle_side_write(path)
-    elif path.name.endswith(".done.yaml"):
+    elif path.name.endswith(DONE_SUFFIX):
         handle_done_write(path, root)
+    elif path.name.endswith(LEGACY_DONE_SUFFIXES):
+        emit_context(
+            "PostToolUse",
+            f"[agile] {path.name} 是旧格式 YAML 回填：请转写为 .done.json"
+            "（completed / moved_next / feedback 等价 JSON，含归档；脚本不再解析 YAML）。",
+        )
     elif path.suffix == ".md" and path.name.startswith("sprint-") and path.parent.name == "sprints":
         # 只认 sprints/ 下的 sprint-*.md：项目根放一份 sprint-notes.md 不该被当成
         # Sprint 文件质问，这也是 scan_sprints 的扫描范围。
@@ -1073,7 +1098,12 @@ def handle_done_write(done_path: Path, root: Path) -> None:
     problems = inspect_done(done_path, known)
     text = read_text(done_path)
     if text is not None:
-        problems.extend(delivery.done_problems(root, done_path.name[:-len('.done.yaml')], parse_done(text)))
+        try:
+            done = parse_done(text)
+        except ValueError:
+            done = None  # inspect_done 已报 JSON 错误
+        if done is not None:
+            problems.extend(delivery.done_problems(root, done_stem(done_path.name), done))
     if not problems:
         return
     listed = "\n".join("  · " + line for line in problems)
@@ -1106,8 +1136,8 @@ def handle_sprint_write(sprint_path: Path) -> None:
 
 
 def pending_backfills(root: Path) -> list[str]:
-    """未闭环的回填文件名（`sprints/*.done.yaml`）。"""
-    return [p.name[: -len(".done.yaml")] for p in iter_done_files(root)]
+    """未闭环的回填文件名（`sprints/*.done.json`）。"""
+    return [done_stem(p.name) for p in iter_done_files(root)]
 
 
 def active_sprints(root: Path) -> list[tuple[str, dict]]:
@@ -1349,6 +1379,10 @@ def describe_state(root: Path, snapshot: dict | None = None) -> list[str]:
         shown = "、".join(names[:3]) + (" 等" if len(names) > 3 else "")
         parts.append(f"待回填 {len(pending)} 个（{shown}）")
 
+    legacy = list(legacy_done_files(root))
+    if legacy:
+        parts.append(f"旧格式回填 {len(legacy)} 个待转写 .done.json")
+
     data = load_json(json_path) if json_path.exists() else None
     if data is not None:
         stats = compute_stats(data)
@@ -1532,7 +1566,7 @@ def parse_status_suggestions(text: str) -> tuple[list[str], list[str]]:
 
 
 def find_done_for(sprint_path: Path) -> Path | None:
-    for suffix in (".done.processed.yaml", ".done.yaml"):
+    for suffix in (DONE_PROCESSED_SUFFIX, DONE_SUFFIX):
         candidate = sprint_path.with_name(sprint_path.stem + suffix)
         if candidate.exists():
             return candidate
@@ -1542,7 +1576,7 @@ def find_done_for(sprint_path: Path) -> Path | None:
 def sprint_history(root: Path) -> list[dict]:
     """已关闭 Sprint 的承诺/完成/顺延明细，按序号升序。
 
-    完成来源优先 .done(.processed).yaml（结构化回填），人工确认关闭的 Sprint
+    完成来源优先 .done(.processed).json（结构化回填），人工确认关闭的 Sprint
     没有 done 文件，退回「条目状态建议」行。只收状态 closed 的 Sprint。
     """
     rows: list[dict] = []
@@ -1553,8 +1587,13 @@ def sprint_history(root: Path) -> list[dict]:
         if sprint_status(parse_sprint_meta(text)) != "closed":
             continue
         done_path = find_done_for(path)
+        done = None
         if done_path is not None:
-            done = parse_done(read_text(done_path) or "")
+            try:
+                done = parse_done(read_text(done_path) or "")
+            except ValueError:
+                done = None  # 坏 JSON 回填退回人工建议行，check 会另报格式错
+        if done is not None:
             completed, moved = list(done["completed"]), list(done["moved_next"])
             source = "done"
         else:
@@ -1751,6 +1790,10 @@ def cli_check(root_arg: str | None) -> int:
         if data is not None:
             problems.extend(f"跨文件[{name}]：" + line for line in check_side_refs(root, data, name))
 
+    problems.extend(
+        "回填：" + f"{p.name} 是旧格式 YAML，需转写为 .done.json（agent 一次性，含归档；脚本不提供 migrate）"
+        for p in legacy_done_files(root)
+    )
     problems.extend("工作包：" + line for line in delivery.check(root, scan_sprints, validate, parse_done))
 
     if md_path.exists():

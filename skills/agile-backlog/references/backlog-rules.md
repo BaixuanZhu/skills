@@ -166,7 +166,7 @@ python <插件根>/scripts/agile.py report  [项目根]   # 一页纸状态：�
 python <插件根>/scripts/agile.py brief   [项目根]   # 打印当前阶段与每轮基础注入原文（当日 review 展开提醒以 hook-prompt 为准）
 ```
 
-`check` 的跨文件部分包括 `sprints/*.done.yaml` 的内容：引用了不存在的条目 ID、同一 ID 既在 `completed` 又在 `moved_next`、`feedback.type` 不是 `reason / issue / decision`、两个数组都空——这些在文件名层面看不出来，只能在内容层面报。
+`check` 的跨文件部分包括 `sprints/*.done.json` 的内容：引用了不存在的条目 ID、同一 ID 既在 `completed` 又在 `moved_next`、`feedback.type` 不是 `reason / issue / decision`、两个数组都空——这些在文件名层面看不出来，只能在内容层面报。
 
 脚本在**插件的 `scripts/` 下，不在项目里**。装插件时其中两个动作已挂到 hook 上（写完 json 自动校验并对账、会话开始注入状态），通常不需要手动执行。
 

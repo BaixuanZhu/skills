@@ -105,12 +105,11 @@ check "无冒号行 sep 为空" "说明||" \
   "$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" -c "
 import agile; print('|'.join(agile.split_kv('说明')))")"
 
-# ⑩ split_kv 的另一个调用方：回填文件 feedback.note 值内含全角冒号时，
-#    旧实现把键切成 `note: "…需产品确认`，note 静默丢失且 inspect_done 不查它。
+# ⑩ 回填 feedback.note 值内含全角冒号：JSON 原生保留，不再经 split_kv 切键丢值。
 check "feedback.note 值内全角冒号不丢" "配额不足，需产品确认：降级方案" \
   "$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" -c "
 import agile
-t = 'feedback:\n  - item: T-001\n    type: reason\n    note: \"配额不足，需产品确认：降级方案\"\n'
+t = '{\"feedback\":[{\"item\":\"T-001\",\"type\":\"reason\",\"note\":\"配额不足，需产品确认：降级方案\"}]}'
 print(agile.parse_done(t)['feedback'][0].get('note', ''))")"
 
 # ⑪ 端到端：已闭环 Sprint 必须判「已关闭」——状态词丢掉会让 active 判定失效、
@@ -121,7 +120,7 @@ cat > "$CLOSED/sprints/sprint-071-20261027.md" <<'MD'
 # Sprint: 已闭环
 
 - 文件名: sprint-071-20261027
-- 状态: 已关闭（执行结果来源：sprints/sprint-071-20261027.done.yaml，闭环同步后改名 .done.processed.yaml 留痕）
+- 状态: 已关闭（执行结果来源：sprints/sprint-071-20261027.done.json，闭环同步后改名 .done.processed.json 留痕）
 - 周期: 2026-10-20 ~ 2026-10-27
 MD
 cat > "$CLOSED/sprints/sprint-072-20261028.md" <<'MD'
@@ -261,7 +260,7 @@ check "日期非法报错且不能抑制复核提醒" \
 check "review 完整清单保留复核语义" "render=True" "$(printf '%s\n' "$AGING_RESULT" | grep '^render=')"
 
 # ⑱ Sprint 归档：archive/ 不进任何扫描（状态行/active/指纹全看不见），「曾纳入」
-#     只剩 planned_sprints 戳记兜底；移动改指纹强制重算；迟到的 .done.yaml 对已
+#     只剩 planned_sprints 戳记兜底；移动改指纹强制重算；迟到的 .done.json 对已
 #     归档 Sprint 仍能进 backfill 闭环。固定 today，全部进程内断言 + 两条 CLI 断言。
 ARCH_OUT="$(cd "$PLUGIN/scripts" && PYTHONIOENCODING=utf-8 "$PY" - <<'PY' | tr -d '\r'
 import json, shutil, tempfile
@@ -322,8 +321,8 @@ case("stamp_is_the_source", "从未纳入" in snap4["notice_items"][0] and len(c
 
 state = " | ".join(agile.describe_state(root))
 case("desc_no_sprint", "Sprint" not in state and "Backlog 2 条" in state)
-(live / "sprint-005-20260901.done.yaml").write_text(
-    "completed:\n- T-101\nmoved_next: []\n", encoding="utf-8")   # 迟到的回填
+(live / "sprint-005-20260901.done.json").write_text(
+    '{"completed":["T-101"],"moved_next":[]}\n', encoding="utf-8")   # 迟到的回填
 state2 = " | ".join(agile.describe_state(root))
 case("late_backfill", agile.detect_stage(root) == "backfill"
      and "待回填 1 个" in state2 and "Sprint" not in state2)
@@ -344,6 +343,22 @@ check "归档后迟到回填仍判 backfill" "1" \
 out=$(printf '{"tool_input":{"file_path":"%s/sprints/archive/sprint-005-20260901.md"}}' "$ARCH_ROOT" \
       | "$PY" "$PLUGIN/scripts/agile.py" hook-post-write)
 check "写 archive 路径 hook 无输出" "" "$out"
+
+# ⑲ 旧格式 .done.yaml 迁移检测：脚本不再解析 YAML，但必须看见旧文件（含归档）并报
+#     转写，不能静默忽略——否则升级后旧回填与归档历史凭空消失。新格式照常进闭环。
+LEGACY="$WORK/legacy"
+mkdir -p "$LEGACY/sprints/archive" "$LEGACY/agile-docs"
+cp "$WORK/agile-docs/backlog.json" "$LEGACY/agile-docs/backlog.json"
+printf 'completed:\n- T-001\nmoved_next: []\n' > "$LEGACY/sprints/sprint-001-20261118.done.yaml"
+printf 'completed: []\nmoved_next: []\n' > "$LEGACY/sprints/archive/sprint-000-20261101.done.processed.yaml"
+check "旧格式 check 报转写（活跃+归档）" "2" \
+  "$(cd "$LEGACY" && PYTHONIOENCODING=utf-8 "$PY" "$PLUGIN/scripts/agile.py" check . 2>&1 | grep -c '需转写为 .done.json')"
+out=$(cd "$LEGACY" && printf '{"tool_input":{"file_path":"sprints/sprint-001-20261118.done.yaml"}}' \
+  | PYTHONIOENCODING=utf-8 "$PY" "$PLUGIN/scripts/agile.py" hook-post-write)
+check "写旧格式 hook 提示转写" "1" "$(printf '%s' "$out" | grep -c '请转写为 .done.json')"
+printf '{"completed":["T-001"],"moved_next":[]}\n' > "$LEGACY/sprints/sprint-002-20261119.done.json"
+check "新格式回填进 backfill 检测" "1" \
+  "$(cd "$LEGACY" && PYTHONIOENCODING=utf-8 "$PY" "$PLUGIN/scripts/agile.py" brief . 2>&1 | grep -c '^阶段：backfill')"
 
 printf '\nPASS=%d FAIL=%d\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

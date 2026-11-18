@@ -5,7 +5,6 @@ from datetime import date
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 import tempfile
@@ -53,7 +52,7 @@ class DeliveryTests(unittest.TestCase):
         self.state_path = self.docs / "delivery.json"
         self.lock_path = self.docs / ".delivery.lock"
         self.sprint_path = self.sprints / f"{SPRINT}.md"
-        self.done_path = self.sprints / f"{SPRINT}.done.yaml"
+        self.done_path = self.sprints / f"{SPRINT}.done.json"
         self.backlog = {
             "schema": 1,
             "phases": [{"id": 1, "title": "基础", "items": [{
@@ -217,16 +216,8 @@ class DeliveryTests(unittest.TestCase):
         return backend
 
     def done_ids(self, key):
-        """Read only the flat ID lists in the existing done-file contract, not general YAML."""
-        text = self.done_path.read_text(encoding="utf-8")
-        if text.lstrip().startswith("{"):
-            return json.loads(text)[key]
-        match = re.search(
-            rf"(?m)^{re.escape(key)}:[ \t]*(.*(?:\n(?:[ \t]+[^\n]*|-[^\n]*|[ \t]*))*)",
-            text,
-        )
-        self.assertIsNotNone(match, f"missing {key}: {text}")
-        return re.findall(r"\b(?:F|T|B|WP)-\d+\b", match.group(1))
+        """回填文件是 JSON 对象，直接读对应 ID 数组。"""
+        return json.loads(self.done_path.read_text(encoding="utf-8"))[key]
 
     def test_cross_repo_golden_path(self):
         self.check()
@@ -557,7 +548,7 @@ class DeliveryTests(unittest.TestCase):
 
     def test_direct_done_file_cannot_bypass_overall_acceptance(self):
         self.accept_both()
-        self.done_path.write_text("completed:\n- F-001\nmoved_next: []\n", encoding="utf-8")
+        self.done_path.write_text('{"completed":["F-001"],"moved_next":[]}\n', encoding="utf-8")
         self.check(ok=False)
         # Even a manually forged completed backlog status is not overall acceptance.
         self.backlog["phases"][0]["items"][0]["status"] = "已完成"
@@ -723,18 +714,18 @@ class DeliveryTests(unittest.TestCase):
         archive.mkdir(exist_ok=True)
         self.sprint_path.write_text(self.sprint_text.replace("规划完成", "已关闭"), encoding="utf-8")
         self.sprint_path.rename(archive / self.sprint_path.name)
-        self.done_path.rename(archive / f"{SPRINT}.done.processed.yaml")
+        self.done_path.rename(archive / f"{SPRINT}.done.processed.json")
 
     def test_archived_forged_completion_is_rejected(self):
         self.install_plan()
         self.backlog["phases"][0]["items"][0]["status"] = "已完成"
         self.write_json(self.backlog_path, self.backlog)
-        self.done_path.write_text("completed:\n  - F-001\nmoved_next: []\nfeedback: []\n", encoding="utf-8")
+        self.done_path.write_text('{"completed":["F-001"],"moved_next":[],"feedback":[]}\n', encoding="utf-8")
         self.sprint_path.write_text(self.sprint_text.replace("规划完成", "已关闭"), encoding="utf-8")
         self.check(ok=False)
         self.archive_sprint()
         self.check(ok=False)
-        (self.sprints / "archive" / f"{SPRINT}.done.processed.yaml").unlink()
+        (self.sprints / "archive" / f"{SPRINT}.done.processed.json").unlink()
         self.check(ok=False)
 
     def test_archived_carryover_can_finish_in_later_sprint(self):

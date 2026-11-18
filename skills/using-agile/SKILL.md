@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""长期待办""待办复核""架构决策""ADR""C4""需求变了""要改故事""依赖检查""风险""风险登记""发版""版本规划""记录决策""工作包""跨仓库交付""前后端交接""提交回执"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.9.0
+version: 5.10.0
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -44,7 +44,7 @@ version: 5.9.0
 
 本技能是敏捷套件的**默认入口**——不知道现在该走哪一步、或要改已有规划时的落点。承担三件事：
 - **初始化**：项目无 `agile-docs/` 且用户明示或拍板同意（§0 门槛）时，建空骨架 + `DOD.md` 模板 + `interfaces/sprint-schema.yaml`。
-- **检测路由**：项目有 `agile-docs/` 时，先做 .done.yaml 回填检测（存在即默认执行闭环），再扫描三层状态 → 输出状态表 → 逐层询问"更新 or 继续" → 路由到对应业务技能。
+- **检测路由**：项目有 `agile-docs/` 时，先做 .done.json 回填检测（存在即默认执行闭环），再扫描三层状态 → 输出状态表 → 逐层询问"更新 or 继续" → 路由到对应业务技能。
 - **变更协调**：当用户说"需求变了"时，引用 `references/change-matrix.md` 做变更分级 + 影响面评估 → 路由到对应业务技能就地更新。
 
 **本技能绝不自己 Write 任何业务文档**（VISION / ARCHITECTURE / ADR / Sprint 等，含 `backlog.json`）。所有业务文档由对应业务技能在用户确认后产出。
@@ -79,14 +79,15 @@ version: 5.9.0
 
 ## 3. 激活流程（有 agile-docs/ 时）
 
-1. **.done.yaml 回填检测（必做，第 1 步）**：扫描 `sprints/*.done.yaml`。存在即视为用户意图"处理回填闭环"，**默认执行，不问"是否先关 Sprint"**（注入里已报出回填时，直接从闭环的第一步做起，不必重扫）：
-   - 先跑 `agile.py check <中枢根>`；失败先修正，不推进关闭。工作包模式的 `.done.yaml` 由中枢 `work close` 生成，任何执行者的单包回执都不能替代它
+1. **.done.json 回填检测（必做，第 1 步）**：扫描 `sprints/*.done.json`。存在即视为用户意图"处理回填闭环"，**默认执行，不问"是否先关 Sprint"**（注入里已报出回填时，直接从闭环的第一步做起，不必重扫）：
+   - 先跑 `agile.py check <中枢根>`；失败先修正，不推进关闭。工作包模式的 `.done.json` 由中枢 `work close` 生成，任何执行者的单包回执都不能替代它
+   - check 报「旧格式 YAML 需转写」时，先按 `sprint-schema.yaml` 的 `done_file.legacy_migration` 把旧 `.done.yaml` / `.done.processed.yaml`（含 `archive/`）一次性转写为等价 `.done.json`，再继续闭环；脚本不解析 YAML、不提供 migrate
    - 对应 Sprint 非"已关闭" → 路由 `agile-sprint` 环节 B/C 做 DoD 关闭（含 feedback 读取）
    - Sprint 已关闭 → 跳过关闭，直接进入同步
    - 路由 `agile-backlog` 阶段 4 同步 Backlog（更新状态列；`issue` 转新条目候选、`decision` 停下请用户裁决）
-   - 闭环完成 → `.done.yaml` 改后缀 `.done.processed.yaml` 留痕（不删除），连同 Sprint 文件移入 Sprint 所在目录的 `archive/` 子目录（如 `sprints/archive/`）归档——`sprints/` 只留未闭环文件，状态检测与每轮扫描不进 `archive/`
-   - **机械步骤（DoD 核对 / 关闭 / 同步 / 改名）自动执行，仅裁决点停下确认**；多个 `.done.yaml` 逐个处理；完成输出结果报告，再回到第 2 步
-   - 无 `.done.yaml` → 直接进入第 2 步
+   - 闭环完成 → `.done.json` 改后缀 `.done.processed.json` 留痕（不删除），连同 Sprint 文件移入 Sprint 所在目录的 `archive/` 子目录（如 `sprints/archive/`）归档——`sprints/` 只留未闭环文件，状态检测与每轮扫描不进 `archive/`
+   - **机械步骤（DoD 核对 / 关闭 / 同步 / 改名）自动执行，仅裁决点停下确认**；多个 `.done.json` 逐个处理；完成输出结果报告，再回到第 2 步
+   - 无 `.done.json` → 直接进入第 2 步
 2. 检测 `agile-docs/` 下各文件存在性：
    - `VISION.md` + `ARCHITECTURE.md` + `ADR.md` → 战略层
    - `backlog.json` → 执行层待办池（唯一 Backlog 文件；概况问 agent 或跑 `agile.py stats`）
@@ -134,7 +135,7 @@ version: 5.9.0
    - 改 Sprint 规划 / 关闭、分发工作包 / 回执核验 / 依赖交接 → `agile-sprint`（只管跨执行者协调，仓库内实现细分仍归消费 Agent）
    - 工作包均验收后的父条目整体验收 → `agile-backlog` 调用 `work finish`，不直接手写已完成
    - 改 DoD 模板 → 本入口（DoD 模板就是本技能生成的）
-   - 同步 Sprint 执行结果到 Backlog → `agile-backlog`（检测 .done.yaml 后默认闭环时触发）
+   - 同步 Sprint 执行结果到 Backlog → `agile-backlog`（检测 .done.json 后默认闭环时触发）
 4. **跨层变更按依赖顺序逐层路由**：如改 VISION 原则影响 Backlog 排序 → 先 agile-strategic 改 VISION，再回本入口做状态检测，再路由 agile-backlog 改标注（不要并行触发多个业务技能）
 5. **L2 走增量问询、L3 走完整问询**（`references/change-matrix.md §二/§三`）：L2 只重问受影响维度，已确认维度复用现有文档；L3 走完整问询 + 变更传播评估，跨层按依赖顺序逐层路由。
 6. **底层变更做下游影响评估**（`references/change-matrix.md §四`）：如 Backlog 变更后评估 Sprint 是否需调整，作为审阅清单一项，由用户裁决是否触发下游重规划。
@@ -156,7 +157,7 @@ version: 5.9.0
 |---|---|---|
 | `hook-session` | 会话开始 | 注入状态快照（含长期待办有界汇总）+ 本阶段该做什么 |
 | `hook-prompt` | 每轮用户发言 | 同上（长会话被 compact 后 SessionStart 的内容会丢，这行不会）；有待复核条目时，同项目同日最多展开提醒一次，其余轮次只留汇总。没有 `agile-docs/` 的项目，在提问命中规划类词时提示一次入口，同一会话只提一次；其余静默。prompt 含 `no-agile` 当轮静默 |
-| `hook-post-write` | 写 `backlog.json` / `*.done.yaml` 后 | json：结构校验 → Sprint 点数对账；回填：校验内容（引用不存在的条目 ID、同一 ID 既 completed 又 moved_next、feedback.type 越界、两个数组都空），只提示不阻断——回填允许分次写 |
+| `hook-post-write` | 写 `backlog.json` / `*.done.json` 后 | json：结构校验 → Sprint 点数对账；回填：校验内容（引用不存在的条目 ID、同一 ID 既 completed 又 moved_next、feedback.type 越界、两个数组都空），只提示不阻断——回填允许分次写 |
 
 **「本阶段该做什么」不是脚本里的字符串**，而是 `references/turn-brief.md` 里按阶段分块的文本：脚本只判断阶段，文案在 markdown 里改。七个阶段是 `conflict` / `backfill` / `sprint` / `active` / `init` / `architecture` / `backlog`，判据与每段对应的技能章节都写在该文件里。另有 `review` 辅助块用于长期待办低频提醒，**不是第八个路由阶段**，也不改变回填 / 冲突 / 活跃 Sprint 的优先级。
 
@@ -170,4 +171,4 @@ version: 5.9.0
 
 工作包命令自身校验；`delivery.json` 在中枢被写后也会校验，状态摘要附有界工作包汇总，但不增加路由阶段、不自动验收或启动执行者。完整查看用 `work status`；`check` 同时检查工作包计划、回执与整轮回填的验收来源。
 
-**hook 与 `check` 的分工**：hook 是即时的、不撤销已写入的内容——`backlog.json` 结构错误以 `decision: block` 把问题清单递给模型；回填与 Sprint 文件头只提示（都允许分次写，写一半不该被打断）。`agile.py check` 是全量出口检查，另查 `sprints/*.done.yaml` 的内容与每个 Sprint 文件头的状态词。关闭 Sprint 前、以及 Codex 那边，都以 `check` 为准。
+**hook 与 `check` 的分工**：hook 是即时的、不撤销已写入的内容——`backlog.json` 结构错误以 `decision: block` 把问题清单递给模型；回填与 Sprint 文件头只提示（都允许分次写，写一半不该被打断）。`agile.py check` 是全量出口检查，另查 `sprints/*.done.json` 的内容与每个 Sprint 文件头的状态词。关闭 Sprint 前、以及 Codex 那边，都以 `check` 为准。

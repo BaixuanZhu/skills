@@ -6,7 +6,7 @@
 
 **机械判定以代码为准**：`agile.py` 的 `detect_stage()` 按同一批文件把项目归到七个阶段之一，每轮 hook 注入的就是该阶段的提示（文案见 `turn-brief.md`）。本表是给人看的完整版，两者对不上时以代码为准并回来改这张表——`agile.py brief [项目根]` 可以直接看当前被判成哪个阶段。
 
-**路由注意 — .done.yaml**：扫描 `sprints/*.done.yaml` 是激活流程第 1 步（必做），先跑 `agile.py check <中枢根>`，失败不关闭；工作包单独回执不是此文件，不能触发关轮。合法整轮回填存在即默认执行回填闭环（DoD 关闭 → Backlog 同步 → 反馈处理 → 归档），**不询问"是否先关 Sprint"**——用户把回填文件交给入口本身就是明确指令。闭环完成后（`.done.processed.yaml` 留痕，随 Sprint 文件移入 `archive/`）再输出状态表继续常规路由。
+**路由注意 — .done.json**：扫描 `sprints/*.done.json` 是激活流程第 1 步（必做），先跑 `agile.py check <中枢根>`，失败不关闭；工作包单独回执不是此文件，不能触发关轮。合法整轮回填存在即默认执行回填闭环（DoD 关闭 → Backlog 同步 → 反馈处理 → 归档），**不询问"是否先关 Sprint"**——用户把回填文件交给入口本身就是明确指令。闭环完成后（`.done.processed.json` 留痕，随 Sprint 文件移入 `archive/`）再输出状态表继续常规路由。
 
 检测清单：
 
@@ -24,7 +24,7 @@
 | `agile-docs/PRODUCT-BACKLOG.md`（无 `backlog.json` 时） | md 里还是表格 → 旧格式，待 agent 转写 | agile-backlog（旧格式转写，§七.4） |
 | `agile-docs/PRODUCT-BACKLOG.yaml` / `PRODUCT-BACKLOG.json` | **v4.x 旧格式**（注意带名字前缀，与新的 `backlog.json` 不同名） | agile-backlog（旧格式转写，§七.4） |
 | `agile-docs/DOD.md` | 完成定义已就绪 | using-agile（初始化） |
-| `sprints/*.done.yaml` | Sprint 执行结果已回传 | using-agile（本入口，默认执行回填闭环：agile-sprint 关闭 → agile-backlog 同步 + 反馈处理） |
+| `sprints/*.done.json` | Sprint 执行结果已回传 | using-agile（本入口，默认执行回填闭环：agile-sprint 关闭 → agile-backlog 同步 + 反馈处理） |
 | `sprints/` 下含状态非"已关闭"的 `.md` | 活跃 Sprint | agile-sprint |
 
 ## 二、三层状态表（using-agile 输出模板）
@@ -44,11 +44,11 @@
 | 执行 | 长期待办 | {长期未完成 N 条 / 最久 N 天 / 待复核 N 条；创建时间未知 N 条；没有则「无」} |
 | 执行 | 活跃 Sprint | {有/无，文件名} |
 | 执行 | 工作包 | {未启用，或 work status 的可执行/等待依赖/待验收/已验收/待关轮汇总} |
-| 执行 | Sprint 回填 | {sprints/*.done.yaml: N 个待闭环处理（闭环后为 .done.processed.yaml）} |
-| 执行 | 执行反馈 | {.done.yaml feedback: N 条待处理（issue/decision）} |
+| 执行 | Sprint 回填 | {sprints/*.done.json: N 个待闭环处理（闭环后为 .done.processed.json）} |
+| 执行 | 执行反馈 | {.done.json feedback: N 条待处理（issue/decision）} |
 ```
 
-> 长期待办是附加提醒，不是新路由阶段，也不覆盖 `.done.yaml` 回填 / 冲突 / 活跃 Sprint 的优先级。机械口径见 `agile-backlog/references/backlog-rules.md §五.长期待办复核`；完整清单跑 `agile.py review`，创建时间未知的条目不用文件修改时间猜年龄。
+> 长期待办是附加提醒，不是新路由阶段，也不覆盖 `.done.json` 回填 / 冲突 / 活跃 Sprint 的优先级。机械口径见 `agile-backlog/references/backlog-rules.md §五.长期待办复核`；完整清单跑 `agile.py review`，创建时间未知的条目不用文件修改时间猜年龄。
 
 > ⚠️ 若检测到 >1 个活跃 Sprint（状态非"已关闭"），警告并请用户选择关闭/合并其一后再继续。
 
@@ -67,4 +67,4 @@
 | 想改已有文档（任意类型） | using-agile §6 变更协调（按 change-matrix 路由到对应业务技能） |
 | 分发工作包 / 收到独立回执 / 依赖交接 | agile-sprint 工作包交付；先 work status，不关整轮 |
 | 工作包均验收且要完成业务条目 | agile-backlog 整体验收后调用 work finish；不凭包状态手写完成 |
-| .done.yaml 存在（任意 Sprint 状态） | **默认执行回填闭环**：agile-sprint 环节 B/C 关闭（如未关闭）→ agile-backlog 阶段 4 同步 + 反馈处理 → `.done.processed.yaml` 留痕；机械步骤自动，裁决点停下 |
+| .done.json 存在（任意 Sprint 状态） | **默认执行回填闭环**：agile-sprint 环节 B/C 关闭（如未关闭）→ agile-backlog 阶段 4 同步 + 反馈处理 → `.done.processed.json` 留痕；机械步骤自动，裁决点停下 |

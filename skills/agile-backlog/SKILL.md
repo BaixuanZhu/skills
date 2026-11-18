@@ -5,7 +5,7 @@ displayName: 敏捷产品待办
 description: |
   当用户说"写待办""拆任务""Backlog""Product Backlog""使能项""优先级排序""排迭代""长期待办""待办复核""梳理积压""整体验收"或 using-agile 路由到此，且战略层（VISION + ARCHITECTURE/ADR）已确认时触发。
 agent_created: true
-version: 5.6.0
+version: 5.7.0
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架与路由
@@ -30,7 +30,7 @@ dependencies:
 
 它是全项目的**业务待办池**（to-do list），保留整体 PRD/C4/ADR 作为范围与决策依据。技术任务（T-NNN）和功能需求（F-NNN）**平级**进入待办池。不强制 INVEST/Given-When-Then 仪式；不因前后端仓库或接收方不同拆分产品需求、重复估点。
 
-跨仓/多接收方可在同一个共享 Sprint 显式启用工作包（`using-agile/references/workflow.md §三（工作包交付）`，字段见 `using-agile/references/sprint-schema.yaml` 的 `work_delivery`）。包隔离接收方实现上下文并跟踪具体依赖/回执/验收；本地 checkbox、子任务仍归消费 Agent。默认单执行者 `.done.yaml` 路径保留，不强制迁移。
+跨仓/多接收方可在同一个共享 Sprint 显式启用工作包（`using-agile/references/workflow.md §三（工作包交付）`，字段见 `using-agile/references/sprint-schema.yaml` 的 `work_delivery`）。包隔离接收方实现上下文并跟踪具体依赖/回执/验收；本地 checkbox、子任务仍归消费 Agent。默认单执行者 `.done.json` 路径保留，不强制迁移。
 
 **Backlog 编制分阶段，每阶段写完即停**（工作包已授权机械步骤例外见 §4）：
 
@@ -40,7 +40,7 @@ dependencies:
 | 阶段 1 | 条目 + 估点建议写入 `backlog.json`（§3 阶段 1，**json 是唯一结构**，多阶段分组落 `phases[]`） | 阶段 0 完成 |
 | 阶段 2 | 任务详情展开 + 验收标准（§3 阶段 2） | 阶段 1 确认 |
 | 阶段 3 | 下游影响评估（§3 阶段 3，仅更新已有 Backlog 时） | 阶段 2 确认 |
-| 阶段 4 | 接受 .done 同步（§3 阶段 4，仅 .done.yaml 回传时） | `.done.yaml` 存在（入口闭环路由；Sprint 未关闭时先经 agile-sprint 关闭） |
+| 阶段 4 | 接受 .done 同步（§3 阶段 4，仅 .done.json 回传时） | `.done.json` 存在（入口闭环路由；Sprint 未关闭时先经 agile-sprint 关闭） |
 
 「工作包整体验收」「长期待办复核」「风险管理」「发布管理」「决策记录」都是**独立入口**，不是阶段 5/6/7：hook 提示或用户主动提起时直接走 §3 的对应小节，不重访创建流程。
 
@@ -158,17 +158,17 @@ dependencies:
 
 ### 阶段 4：接受 .done 同步
 
-当 using-agile 检测到 `sprints/*.done.yaml` 并路由到本技能；单执行者无 `.done.yaml` 人工关闭时，仍按 Sprint「条目状态建议」同步与归档。工作包模式必须消费 `work close` 生成并已过 agile-sprint 校验/DoD 的规范 `.done`，不允许人工替代：
+当 using-agile 检测到 `sprints/*.done.json` 并路由到本技能；单执行者无 `.done.json` 人工关闭时，仍按 Sprint「条目状态建议」同步与归档。工作包模式必须消费 `work close` 生成并已过 agile-sprint 校验/DoD 的规范 `.done`，不允许人工替代：
 
-1. 读取 `.done.yaml`，按模式同步 `backlog.json`
+1. 读取 `.done.json`，按模式同步 `backlog.json`
    - 单执行者：completed → `已完成`；moved_next → `待办`
    - 工作包：先跑 `python <plugin>/scripts/agile.py check HUB`；completed 必须已经由 `work finish` 写入整体 `delivery_acceptance` 与 `status=已完成`，本阶段只核对保留，不补造/覆盖/删除验收记录。缺验收或 moved_next 含已整体验收条目 → 停下报冲突，不能降回待办；其余 moved_next 保持 `待办`
    - `priority` 均保持原值，禁止为"保回顶部"调高；两组条目仍在 `planned_sprints` 追加本 Sprint 序号。此字段只在阶段 4 维护，不能在 work finish 时提前盖闭环戳记（见 `references/backlog-rules.md §二`）
-2. **处理 feedback**（`.done.yaml` 的 feedback 列表；执行中 issue/decision 可随时回本技能，不等 `.done`，已处理的不重复建条目；回执汇总不是产品裁决）：
+2. **处理 feedback**（`.done.json` 的 feedback 列表；执行中 issue/decision 可随时回本技能，不等 `.done`，已处理的不重复建条目；回执汇总不是产品裁决）：
    - `reason`（未完成原因）→ 已由 agile-sprint 在关闭环节展示，此处无需处理
    - `issue`（执行中发现的新问题）→ 转为 Backlog **新条目候选**：列出建议条目（标题 / 类型 / 优先级建议 / 来源标注"消费 Agent 反馈"），缺陷类建议 `type=缺陷`、前缀 B-NNN（`references/backlog-rules.md §一`），请用户确认后新增进 `backlog.json`
    - `decision`（需产品层裁决）→ 停下请用户裁决；裁决结果**记入 `decisions.json`**（做/不做都留痕，见 `references/decision-rules.md`），outcome=做 再建条目
-3. 将 `.done.yaml` 文件后缀改为 `.done.processed.yaml`（留痕，不删除）。**必须排在第 1 步同步之后**——后缀一改，回填检测即视为已闭环；若中断在同步之前，会留下「留痕在、状态没同步」的假闭环，且没有任何机制会再触发补同步
+3. 将 `.done.json` 文件后缀改为 `.done.processed.json`（留痕，不删除）。**必须排在第 1 步同步之后**——后缀一改，回填检测即视为已闭环；若中断在同步之前，会留下「留痕在、状态没同步」的假闭环，且没有任何机制会再触发补同步
 4. **归档**：把留痕文件与对应 Sprint 文件一并移入 Sprint 所在目录的 `archive/` 子目录（如 `sprints/archive/`，目录不存在则创建）——`sprints/` 只留未闭环文件，状态检测与每轮扫描不进 `archive/`
 5. 完成后停下，报告同步结果 + 反馈处理结果
 

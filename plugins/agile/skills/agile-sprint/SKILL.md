@@ -5,7 +5,7 @@ displayName: Sprint规划
 description: |
   当用户说"开 Sprint""规划迭代""工作包交付""回执验收""关闭 Sprint"或 using-agile 路由到此，且 backlog.json 已有条目时触发。
 agent_created: true
-version: 5.4.0
+version: 5.5.0
 dependencies:
   - skill: using-agile
     reason: 提供 DOD.md 模板、工作包交付流程与接口契约
@@ -30,7 +30,7 @@ dependencies:
 
 本技能做 **Sprint 规划与关闭**；跨仓库或多接收方可显式启用 **WORK PACKAGE（工作包）模式**，补充包依赖、回执与验收的最小全局协调。消费 Agent 仍自行拆本地子任务、记 checkbox 与实现进度、处理本地阻塞，不把它们写回共享 Sprint。
 
-**共享计划**：`sprints/sprint-{序号:03d}-{日期}.md`。保留全项目 PRD/C4/ADR、业务 Backlog 与同一个 Sprint；不按仓库拆产品需求或重复计点。默认单执行者仍接收 Sprint 文件并回填 `.done.yaml`，不迁移旧流程；工作包模式只分发面向接收方的版本化快照，**不整份分发 Sprint**。
+**共享计划**：`sprints/sprint-{序号:03d}-{日期}.md`。保留全项目 PRD/C4/ADR、业务 Backlog 与同一个 Sprint；不按仓库拆产品需求或重复计点。默认单执行者仍接收 Sprint 文件并回填 `.done.json`，不迁移旧流程；工作包模式只分发面向接收方的版本化快照，**不整份分发 Sprint**。
 
 工作包流程以 `using-agile/references/workflow.md §三（工作包交付）`、字段以 `using-agile/references/sprint-schema.yaml` 的 `work_delivery` 为单一权威。该模式必须有插件脚本；仅 `npx skills` 安装时沿用单执行者路径或先取得脚本，禁止手工仿造工作包协议。
 
@@ -57,7 +57,7 @@ dependencies:
 ### 环节 A：规划
 - 从 `agile-docs/backlog.json` 按 priority 取顶部条目（经 §2 Sprint 目标反问确认），读取 `points` 与可选 `repo`，容量只按业务条目去重计点
 - 在 `sprints/` 下新建 `sprint-{序号:03d}-{日期}.md`，按 `references/sprint-template.md` 填周期/目标/容量/任务清单（纯列表）/交付与回填要求/闭环检查；仅已有单仓归属的条目标注 `[repo: xxx]`
-- **单执行者**：跨仓且有先后依赖时生成模板「交接契约」段；写完按 §4 审阅，确认后问"是否交付消费 Agent 执行？"；执行完回填 `.done.yaml` 后走环节 B
+- **单执行者**：跨仓且有先后依赖时生成模板「交接契约」段；写完按 §4 审阅，确认后问"是否交付消费 Agent 执行？"；执行完回填 `.done.json` 后走环节 B
 - **工作包**：共享计划留中枢，按下列命令登记、导出包。用户已确认范围/目标、接收方与依赖并授权交付后，同次授权内创建计划、导入与导出等机械步骤连续完成，不因每个派生文件重复停问；新增决策、战略冲突与实际验收不得自动通过
 
 #### 工作包交付（仅启用时）
@@ -67,12 +67,12 @@ dependencies:
 1. 用户确认后导入计划，按 `work status` 仅导出依赖就绪的包；分发内容保留共同设计、该包范围与已验收上游产物，不附另一端实现指令。
 2. 收到独立回执后 `submit`；验收者核验已完成回执并 `accept`，才释放下游依赖。提交成功不等于验收通过。
 3. 同一业务条目全部包已验收后，路由 agile-backlog「工作包整体验收」，由 `work finish` 写整体结果，不以包的完成比例代替业务验收。
-4. 仅用户要求关轮时 `work close`，全部未完成条目须逐一显式 `--move ITEM`；它只生成规范 `.done.yaml`，之后走环节 B/C 与 agile-backlog 阶段 4。
+4. 仅用户要求关轮时 `work close`，全部未完成条目须逐一显式 `--move ITEM`；它只生成规范 `.done.json`，之后走环节 B/C 与 agile-backlog 阶段 4。
 
 全局产物只存中枢；接收方只获版本化快照、独立回执。产物来源与实际正文采集一次（复用 `references/handoff-template.md`）；`issue/decision` 随时回 agile-backlog，不等所有包回执或 Sprint 关闭。
 
 ### 环节 B：DoD 关闭
-- 读取 `sprints/{sprint文件}.done.yaml`：
+- 读取 `sprints/{sprint文件}.done.json`：
   - 存在 → 工作包模式**先跑 `python <plugin>/scripts/agile.py check HUB` 再核对 DoD**；任何 completed 业务条目缺整体验收都拒绝继续，不凭包回执补写验收。按 completed / moved_next 读取 feedback：`reason` 展示未完成原因，`issue/decision` 路由 agile-backlog（已即时处理的不重复建条目），本环节不代产品裁决
   - 不存在 → 单执行者可请用户人工确认每条完成情况；工作包模式必须先按环节 A 的 `work close` 生成，不允许人工绕过
 - 逐条过 `agile-docs/DOD.md` 的 Sprint 完成标准；单执行者含交接契约的任务须已产出交接文档，否则归入 moved_next。工作包模式核对已验收产物与整体验收；发现不一致即停，不改写规范 `.done`，不把已整体验收条目降回待办或删验收记录
@@ -80,12 +80,12 @@ dependencies:
 - 写完停，问"是否关闭本 Sprint？"；工作包模式若用户已明确要求关闭且无新增决策，完成上述门禁后接环节 C，不重复询问
 
 ### 环节 C：关闭
-- 改写文件头 `- 执行结果:` 行的值（`.done.yaml` 文件路径 或 "人工确认"）——模板已带此行，不新增行，也不把来源并入状态值
+- 改写文件头 `- 执行结果:` 行的值（`.done.json` 文件路径 或 "人工确认"）——模板已带此行，不新增行，也不把来源并入状态值
 - 将 Sprint 文件头 `- 状态:` 改为 `已关闭`，只写状态词（需要备注用全角括号另附，不夹带其它键值）
 - **统计快照重算**：跑 `agile.py stats`，输出附进本 Sprint 文件「变更记录」段（没有脚本时才自己全量重算，禁止在旧数字上增量加减）
 - **发布提示**：问用户"本 Sprint 完成条目是否并入 release（`releases.json`）或明确不发布"——**只提示路由到 agile-backlog 发布管理入口，不写 releases.json**（写权限归它，见 `agile-backlog/references/release-rules.md`）
-- 提示用户完整闭环：入口下次激活时检测到 `.done.yaml` 即**默认执行闭环**——Sprint 已由本环节关闭，剩下的「同步 backlog → 处理 feedback → 改后缀 `.done.processed.yaml` → 移入 `archive/` 归档」由 agile-backlog 阶段 4 执行，**本技能不碰**。链路见 `using-agile/references/sprint-schema.yaml` 的 `lifecycle`
-- 仅单执行者可无 `.done.yaml` 人工确认关闭：由本环节提示用户路由 agile-backlog 阶段 4，按文件内「条目状态建议」同步（含 `planned_sprints` 戳记）与归档，不由本技能代劳；工作包模式阶段 4 同样维护戳记，但保留 `work finish` 写入的整体验收，不覆盖或降级
+- 提示用户完整闭环：入口下次激活时检测到 `.done.json` 即**默认执行闭环**——Sprint 已由本环节关闭，剩下的「同步 backlog → 处理 feedback → 改后缀 `.done.processed.json` → 移入 `archive/` 归档」由 agile-backlog 阶段 4 执行，**本技能不碰**。链路见 `using-agile/references/sprint-schema.yaml` 的 `lifecycle`
+- 仅单执行者可无 `.done.json` 人工确认关闭：由本环节提示用户路由 agile-backlog 阶段 4，按文件内「条目状态建议」同步（含 `planned_sprints` 戳记）与归档，不由本技能代劳；工作包模式阶段 4 同样维护戳记，但保留 `work finish` 写入的整体验收，不覆盖或降级
 
 ## 4. 写完即停（结构化审阅）
 

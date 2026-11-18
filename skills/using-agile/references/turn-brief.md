@@ -16,7 +16,7 @@
 | 阶段 | 判据 | 对应技能 |
 |---|---|---|
 | `conflict` | `agile-docs/STRATEGY_CONFLICT.md` 存在 | using-agile §5 |
-| `backfill` | `sprints/*.done.yaml` 存在 | using-agile §3 → agile-sprint §3 环节 B/C → agile-backlog §3 阶段 4 |
+| `backfill` | `sprints/*.done.json` 存在 | using-agile §3 → agile-sprint §3 环节 B/C → agile-backlog §3 阶段 4 |
 | `active` | 有状态非「已关闭」的 Sprint（池耗尽仍算：进行中比建池靠后） | agile-sprint §5（不追仓库内执行细节；工作包协调见 workflow.md §三）/ agile-sprint §3 环节 B（关 Sprint）/ gate-protocol §三 ④（新需求比对） |
 | `sprint` | `backlog.json` 有「待办」活条目、无进行中 Sprint | agile-sprint §2 |
 | `init` | 无 `VISION.md` | agile-strategic §2 |
@@ -32,7 +32,7 @@
 [/agile-brief:conflict]
 
 [agile-brief:backfill]
-有未闭环回填：过 DoD 关闭 Sprint → 同步 backlog 状态与 feedback → 文件改后缀 `.done.processed.yaml` 留痕 → Sprint 文件与留痕移入 `archive/` 归档。机械步骤直接做，只在 issue / decision 处停下请用户裁决。→ using-agile §3
+有未闭环回填：过 DoD 关闭 Sprint → 同步 backlog 状态与 feedback → 文件改后缀 `.done.processed.json` 留痕 → Sprint 文件与留痕移入 `archive/` 归档。机械步骤直接做，只在 issue / decision 处停下请用户裁决。→ using-agile §3
 [/agile-brief:backfill]
 
 [agile-brief:init]

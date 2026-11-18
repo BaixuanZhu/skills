@@ -2,11 +2,11 @@
 # 消费 Agent 读此文件了解 Sprint 规划文件的格式
 # using-agile 初始化时将此文件复制到 agile-docs/interfaces/
 # 本文件须能被 YAML 解析器读取（仓库 CI 校验，与在项目里的副本无关）：含 ": " 的值一律加引号。
-version: "1.8"
+version: "1.9"
 sprint_file:
   naming: "sprint-{序号:03d}-{日期}.md"
   location: "sprints/"
-  # 关闭且闭环完成后，本文件随 .done.processed.yaml 一并移入 archive/ 子目录（agile-backlog 阶段 4）。
+  # 关闭且闭环完成后，本文件随 .done.processed.json 一并移入 archive/ 子目录（agile-backlog 阶段 4）。
   # sprints/ 只留未闭环文件；状态检测与每轮扫描不进 archive/。
   sections:
     - header: 文件头信息（状态/周期/目标/容量）
@@ -16,7 +16,7 @@ sprint_file:
     - header: 交接契约（跨仓库依赖任务组存在时生成）
       format: 交接点表格 + 交接文档命名/位置 + 下游任务读取要求；单仓库 Sprint 无此段
     - header: 回填要求（消费 Agent 必读）
-      format: 单执行者须回填 .done.yaml；工作包模式只向执行者交付 export 输出，执行者提交独立 JSON 回执，由中枢 work close 汇总整轮回填
+      format: 单执行者须回填 .done.json；工作包模式只向执行者交付 export 输出，执行者提交独立 JSON 回执，由中枢 work close 汇总整轮回填
     - header: 闭环检查
       format: checklist (`- [ ]`)；关闭前逐项核对，全部通过方可关闭
     - header: 条目状态建议
@@ -31,30 +31,29 @@ sprint_file:
     on_unknown: "缺状态行或不在枚举内：按「进行中」保守处理（不误判为已关闭），但状态行显示「状态未识别」、agile.py check 报出文件名与实际取值"
 
 # 执行结果回传：消费 Agent 执行完 Sprint 任务后写入此文件（回填是硬性义务，见 sprint 文件内「回填要求」段）
-# agile-sprint DoD 关闭时以此为依据；using-agile 检测到 .done.yaml → 默认执行回填闭环（关闭+同步+反馈处理）
-# 同步完成后改后缀 .done.processed.yaml 留痕，不删除；随后与 Sprint 文件一并移入 archive/ 归档
+# agile-sprint DoD 关闭时以此为依据；using-agile 检测到 .done.json → 默认执行回填闭环（关闭+同步+反馈处理）
+# 同步完成后改后缀 .done.processed.json 留痕，不删除；随后与 Sprint 文件一并移入 archive/ 归档
 done_file:
-  filename: "sprint-{序号:03d}-{日期}.done.yaml"
+  filename: "sprint-{序号:03d}-{日期}.done.json"
   location: "sprints/"
   format: |
-    completed:
-      - T-001
-      - F-002
-    moved_next:
-      - T-003
-    feedback:
-      - item: "T-003"          # 关联条目 id；Sprint 级问题可省略 item
-        type: "reason"         # reason=未完成原因 / issue=执行中发现的新问题 / decision=需产品层裁决
-        note: "第三方 API 配额不足，需产品确认降级方案"
+    {
+      "completed": ["T-001", "F-002"],
+      "moved_next": ["T-003"],
+      "feedback": [
+        {"item": "T-003", "type": "reason", "note": "第三方 API 配额不足，需产品确认降级方案"}
+      ]
+    }
   fields:
-    completed: 已完成条目 ID 列表
-    moved_next: 未完成移下 Sprint 条目 ID 列表
-    feedback: 消费 Agent 执行反馈（可选）。reason 作 DoD 关闭时 moved_next 依据展示；issue 由 agile-backlog 同步时转为 Backlog 新条目候选（缺陷类 type=缺陷 / B-NNN）；decision 停下请用户裁决，裁决结果记 decisions.json（做/不做都留痕）
+    completed: 已完成条目 ID 数组
+    moved_next: 未完成移下 Sprint 条目 ID 数组
+    feedback: 消费 Agent 执行反馈（可选，对象数组）。reason 作 DoD 关闭时 moved_next 依据展示；issue 由 agile-backlog 同步时转为 Backlog 新条目候选（缺陷类 type=缺陷 / B-NNN）；decision 停下请用户裁决，裁决结果记 decisions.json（做/不做都留痕）
   note: completed 和 moved_next 至少一个可为空数组；不应包含 Sprint 任务清单之外的 ID；两个列表之外的清单内条目视为未执行，DoD 时归入 moved_next；含交接契约的任务，completed 前须已产出对应交接文档
-  validation: "agile.py check 会读本文件内容，报出「引用不存在的条目 ID」「同一 ID 既在 completed 又在 moved_next」「feedback.type 不在枚举内」「两个数组都空」。注意 check 只做这几项——type 与 note 的内容是否说得通仍由人判断。"
+  validation: "agile.py check 会读本文件内容，报出「不是合法 JSON」「引用不存在的条目 ID」「同一 ID 既在 completed 又在 moved_next」「feedback.type 不在枚举内」「两个数组都空」。注意 check 只做这几项——type 与 note 的内容是否说得通仍由人判断。"
   mandatory: true  # 单执行者回填；工作包模式关轮时由中枢生成，单包回执不能替代。
   timing: 单执行者执行完毕后生成；工作包模式用户要求关轮时由 work close 生成
-  lifecycle: 写入（单执行者或中枢 work close）→ agile.py check → 读取（agile-sprint DoD 检查，含 feedback）→ 检测（using-agile 默认闭环）→ 消费（agile-backlog 同步到 backlog.json + 反馈处理）→ 改后缀 .done.processed.yaml（留痕，不删除）→ 留痕与 Sprint 文件移入 archive/ 归档（agile-backlog 阶段 4）
+  legacy_migration: "旧 .done.yaml / .done.processed.yaml（含 archive/）由 agent 一次性转写为等价 .done.json / .done.processed.json（completed / moved_next / feedback 三键，feedback 条目含 item/type/note），转写后删旧文件。脚本不再解析 YAML，也不提供 migrate 子命令；agile.py check 与写后 hook 会报出旧格式并提示转写，未转写前不静默忽略。"
+  lifecycle: 写入（单执行者或中枢 work close）→ agile.py check → 读取（agile-sprint DoD 检查，含 feedback）→ 检测（using-agile 默认闭环）→ 消费（agile-backlog 同步到 backlog.json + 反馈处理）→ 改后缀 .done.processed.json（留痕，不删除）→ 留痕与 Sprint 文件移入 archive/ 归档（agile-backlog 阶段 4）
 
 work_delivery:
   schema: 1
@@ -143,7 +142,7 @@ work_delivery:
   closure:
     command: work close
     prerequisites: 用户要求关轮；未整体验收条目须通过 --move 逐项明确顺延
-    output: Sprint 同目录的标准 .done.yaml，随后走原有关闭与归档链路
+    output: Sprint 同目录的标准 .done.json，随后走原有关闭与归档链路
     validation: completed 的每个条目须有原计划及全部包验收支撑的 delivery_acceptance；已处理与归档回填同样核验
     lifecycle_barrier: 生成整轮回填后拒绝新的分发与交付变更，相同内容重放不写入
     drift_recovery: 允许在父需求或设计变化后按原快照显式关轮顺延，禁止把变化后的要求当成已验收
