@@ -2,11 +2,11 @@
 
 ## 一、路由决策原则
 
-路由决策以 `agile-docs/` 下文件存在性为准，不依赖中心化状态文件。文件存在即状态，不存在即需生成。
+七阶段路由以中枢 `agile-docs/` 与 Sprint 文件为准；文件存在表示对应规划已产出，不表示内容已验收。工作包另从 `delivery.json` 的计划与回执推导状态，不新增路由阶段。
 
 **机械判定以代码为准**：`agile.py` 的 `detect_stage()` 按同一批文件把项目归到七个阶段之一，每轮 hook 注入的就是该阶段的提示（文案见 `turn-brief.md`）。本表是给人看的完整版，两者对不上时以代码为准并回来改这张表——`agile.py brief [项目根]` 可以直接看当前被判成哪个阶段。
 
-**路由注意 — .done.yaml**：扫描 `sprints/*.done.yaml` 是激活流程第 1 步（必做）。存在即默认执行回填闭环（DoD 关闭 → Backlog 同步 → 反馈处理 → 归档），**不询问"是否先关 Sprint"**——用户把回填文件交给入口本身就是明确指令。闭环完成后（`.done.processed.yaml` 留痕，随 Sprint 文件移入 `archive/`）再输出状态表继续常规路由。
+**路由注意 — .done.yaml**：扫描 `sprints/*.done.yaml` 是激活流程第 1 步（必做），先跑 `agile.py check <中枢根>`，失败不关闭；工作包单独回执不是此文件，不能触发关轮。合法整轮回填存在即默认执行回填闭环（DoD 关闭 → Backlog 同步 → 反馈处理 → 归档），**不询问"是否先关 Sprint"**——用户把回填文件交给入口本身就是明确指令。闭环完成后（`.done.processed.yaml` 留痕，随 Sprint 文件移入 `archive/`）再输出状态表继续常规路由。
 
 检测清单：
 
@@ -17,6 +17,7 @@
 | `agile-docs/ADR.md` | ADR 决策已产出 | agile-strategic（阶段 B） |
 | `agile-docs/STRATEGY_CONFLICT.md` | 战略冲突待裁决 | using-agile（写前门禁生成，裁决后吸收可删） |
 | `agile-docs/backlog.json` | 待办池已产出（唯一真源） | agile-backlog |
+| `agile-docs/delivery.json` | 工作包计划与独立回执；状态从记录推导，不是整轮回填 | agile-sprint（交付/包验收）、agile-backlog（条目整体验收），只通过脚本更新 |
 | `agile-docs/risks.json` | 风险台账启用（R-NNN，可选能力） | agile-backlog 风险管理入口 |
 | `agile-docs/releases.json` | 发布记录启用（可选能力） | agile-backlog 发布管理入口 |
 | `agile-docs/decisions.json` | 决策日志启用（可选能力） | agile-backlog 决策记录 |
@@ -42,6 +43,7 @@
 | 执行 | 风险/发布/决策 | {risks/releases/decisions.json 各自 ✅（活跃 N / 规划中 M / 共 K 条）或「未启用」} |
 | 执行 | 长期待办 | {长期未完成 N 条 / 最久 N 天 / 待复核 N 条；创建时间未知 N 条；没有则「无」} |
 | 执行 | 活跃 Sprint | {有/无，文件名} |
+| 执行 | 工作包 | {未启用，或 work status 的可执行/等待依赖/待验收/已验收/待关轮汇总} |
 | 执行 | Sprint 回填 | {sprints/*.done.yaml: N 个待闭环处理（闭环后为 .done.processed.yaml）} |
 | 执行 | 执行反馈 | {.done.yaml feedback: N 条待处理（issue/decision）} |
 ```
@@ -63,4 +65,6 @@
 | 想梳理长期待办 / hook 报告待复核 | agile-backlog「长期待办复核」独立入口；只报告与按用户裁决更新，不自动撤回或开 Sprint |
 | Backlog 非空 + 想开冲刺 | agile-sprint |
 | 想改已有文档（任意类型） | using-agile §6 变更协调（按 change-matrix 路由到对应业务技能） |
+| 分发工作包 / 收到独立回执 / 依赖交接 | agile-sprint 工作包交付；先 work status，不关整轮 |
+| 工作包均验收且要完成业务条目 | agile-backlog 整体验收后调用 work finish；不凭包状态手写完成 |
 | .done.yaml 存在（任意 Sprint 状态） | **默认执行回填闭环**：agile-sprint 环节 B/C 关闭（如未关闭）→ agile-backlog 阶段 4 同步 + 反馈处理 → `.done.processed.yaml` 留痕；机械步骤自动，裁决点停下 |

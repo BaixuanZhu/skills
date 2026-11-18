@@ -5,7 +5,7 @@ displayName: 敏捷战略层（愿景+架构+ADR）
 description: |
   当用户说"写愿景""产品目标""电梯演讲""定位""使命""红线""价值观""画架构图""C4""技术选型""ADR""架构决策""容器图""技术约束"或 using-agile 路由到此，且项目已有 agile-docs/ 时触发。
 agent_created: true
-version: 5.2.4
+version: 5.2.5
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架
@@ -35,6 +35,8 @@ dependencies:
 **阶段必须分别完成**：决策点问完 → 才产出；阶段 A 写完 VISION 必须停下询问，**禁止跨阶段顺手写架构**。
 
 **决策用选择题问**（问询纪律见 `using-agile/references/probing-protocol.md`）：只把真决策（定位/原则/红线/指标/选型）喂给用户，事实先读项目画像与已有文档。
+
+**全局设计只在产品中枢维护**：已有 PRD 保留并作为需求输入，不用 Backlog 或执行记录替代；C4 与 ADR 仍面向整个产品。前后端工作包引用相关设计的版本快照，不各自改写全局设计；设计变化后评估工作包影响，按 `using-agile/references/workflow.md §三（工作包交付）` 升版。
 
 ## 2. 阶段 A：写 VISION.md
 

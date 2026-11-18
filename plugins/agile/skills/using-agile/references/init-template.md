@@ -17,7 +17,7 @@ project-root/
 
 > 注：以上仅描述 `agile-docs/` 的**最终结构**，初始化时**只建目录 + DOD.md + interfaces/sprint-schema.yaml**，不创建任何业务文档占位文件（VISION/ARCHITECTURE/ADR/backlog.json 由对应业务技能在用户确认后产出）。占位文件会让"文件存在性路由"误判状态已就绪。
 
-路由决策以文件存在性为准，不依赖中心化状态文件。
+多仓库共用一个中枢根目录，执行仓库不重复初始化此骨架；已有 PRD 保留并引用，不替换为仓库内任务说明。工作包首次 `work plan` 时才创建 `agile-docs/delivery.json`，初始化不建空文件；七阶段路由不依赖该文件。
 
 ## 二、DOD.md 模板（完成的定义，占位待确认）
 
@@ -41,7 +41,7 @@ project-root/
 - [ ] 功能通过验收标准（若条目展开了验收）
 - [ ] 无遗留 TODO / FIXME 占位
 - [ ] 本次改动涉及的文档已同步（未涉及则勾选）
-- [ ] 用户（唯一拍板人）已确认验收
+- [ ] 用户或其明确授权的验收者已确认验收；执行者自报 completed 不算验收
 
 ## Sprint 完成标准（关闭 Sprint 前须全部满足）
 - [ ] 所有承诺任务已处置：通过上述「任务完成标准」，或明确退回 Backlog / 延续下 Sprint（moved_next）

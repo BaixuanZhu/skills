@@ -110,8 +110,13 @@ check "换 session_id 再提示一次"      yes "这轮命中"      empty  "$P_S
 out=$( cd active && printf '%s' "$P_ACT" | sh "$PLUGIN/scripts/run-python.sh" hook-prompt )
 case "$out" in *Backlog*) PASS=$((PASS+1)); echo "ok    wrapper 路径透传";; *) echo "FAIL  wrapper 路径透传: $out"; FAIL=$((FAIL+1));; esac
 
-out=$( cd empty && printf '%s' "$P_PLAN" | PATH=/usr/bin sh "$PLUGIN/scripts/run-python.sh" hook-prompt )
+NOPY=$(mktemp -d)
+printf '#!/bin/sh\nvalue=$1\nprintf "%%s\\n" "${value%%/*}"\n' > "$NOPY/dirname"
+chmod +x "$NOPY/dirname"
+SH_BIN=$(command -v sh)
+out=$( cd empty && printf '%s' "$P_PLAN" | PATH="$NOPY" "$SH_BIN" "$PLUGIN/scripts/run-python.sh" hook-prompt )
 code=$?
+rm -rf "$NOPY"
 if [ -z "$out" ] && [ "$code" -eq 0 ]; then PASS=$((PASS+1)); echo "ok    无 python 时静默 exit 0"; else echo "FAIL  无 python 降级: out=$out code=$code"; FAIL=$((FAIL+1)); fi
 
 # ── hooks.json 命令串直跑：宿主展开 ${CLAUDE_PLUGIN_ROOT} 后交给 shell 的就是它 ──

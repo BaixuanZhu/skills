@@ -3,9 +3,9 @@ name: using-agile
 slug: using-agile
 displayName: 敏捷管理入口
 description: |
-  当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""长期待办""待办复核""架构决策""ADR""C4""需求变了""要改故事""依赖检查""风险""风险登记""发版""版本规划""记录决策"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
+  当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""长期待办""待办复核""架构决策""ADR""C4""需求变了""要改故事""依赖检查""风险""风险登记""发版""版本规划""记录决策""工作包""跨仓库交付""前后端交接""提交回执"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.8.2
+version: 5.9.0
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -21,9 +21,12 @@ version: 5.8.2
 |---|---|---|
 | 从零定方向：愿景、MVP 边界、架构、技术选型、里程碑 | 走 | 有 `agile-docs/` → §3 检测路由；没有 → 先过下方初始化门槛 |
 | 改规划：加/改/删 backlog 条目、排 Sprint、关 Sprint | 走 | §6 |
+| 跨仓库分发、工作包回执、依赖交接、整体验收 | 走 | `references/workflow.md §三（工作包交付）`；中枢调用脚本，不把单包完成当关 Sprint |
 | 写代码、修 bug、查日志、跑测试、解释一段代码 | 不走 | 直接做；只有需要回写 backlog 状态时才回来 |
 
-**无 `agile-docs/` 的项目，初始化是推荐制——不默认建**（命中规划词 ≠ 要建套件）：
+**执行仓库已收到工作包时**：按包内项目身份与设计快照执行，把独立回执交回原中枢；本仓无 `agile-docs/` 不表示产品未初始化，不在本仓另建中枢。
+
+**无 `agile-docs/` 且不是既有产品执行仓库的项目，初始化是推荐制——不默认建**（命中规划词 ≠ 要建套件）：
 
 | 用户这一轮 | 动作 |
 |---|---|
@@ -48,7 +51,7 @@ version: 5.8.2
 
 ### 设计哲学
 
-本套件面向**单人 + agent**，保留敏捷的「优先级驱动 + 增量迭代 + 快速响应变化」，抛弃大团队重量级。
+本套件面向**个人与小团队 + agent**，保留敏捷的「优先级驱动 + 增量迭代 + 快速响应变化」，抛弃大团队重量级。一个产品只有一个中枢，服务端与客户端仓库是执行位置，不是两套产品规划；全局愿景、已有 PRD、C4 与 ADR 保留为共同设计。
 
 **反模式（不做）**：
 - ❌ 多角色访谈 / 分权（PO / 技术 / 用户代表）
@@ -67,16 +70,17 @@ version: 5.8.2
 | 层 | 产出物 | 负责技能 |
 |----|--------|----------|
 | **战略与约束层** | 愿景 VISION、架构图 ARCHITECTURE、决策 ADR | `agile-strategic`（两阶段一体化） |
-| **执行层** | DoD、`backlog.json`（唯一待办池）、`risks.json` / `releases.json` / `decisions.json`（可选小文件，缺省 = 该能力未启用）、Sprint（规划/关闭） | `agile-backlog` / `agile-sprint` |
+| **执行层** | DoD、`backlog.json`（唯一待办池）、`risks.json` / `releases.json` / `decisions.json`（可选小文件，缺省 = 该能力未启用）、Sprint（规划/工作包协调/关闭） | `agile-backlog` / `agile-sprint` |
 | **跨层（变更协调）** | 变更传播矩阵评估 + 路由 | `using-agile`（本技能，引用 `references/change-matrix.md`） |
 
 跨技能数据流（风险/发布/决策/缺陷/回流）的全貌见 `references/workflow.md`，各技能正文不重复。三个小文件各管一个聚合，**禁止并进 backlog.json**——后者只装 phases[]。
 
-**Sprint 规划由 `agile-sprint` 承担**：纯规划器（规划→DoD关闭），不含执行态追踪。关闭后保留作历史，闭环即止。
+**Sprint 由 `agile-sprint` 规划与关闭**：单执行者沿用整轮回填；跨仓库或多执行者由中枢管理工作包的依赖、交付与验收，包内实现细节与 checkbox 仍归执行者。工作包状态从 `delivery.json` 派生，完整协议见 `references/workflow.md §三（工作包交付）`；单包完成不关闭 Sprint。
 
 ## 3. 激活流程（有 agile-docs/ 时）
 
 1. **.done.yaml 回填检测（必做，第 1 步）**：扫描 `sprints/*.done.yaml`。存在即视为用户意图"处理回填闭环"，**默认执行，不问"是否先关 Sprint"**（注入里已报出回填时，直接从闭环的第一步做起，不必重扫）：
+   - 先跑 `agile.py check <中枢根>`；失败先修正，不推进关闭。工作包模式的 `.done.yaml` 由中枢 `work close` 生成，任何执行者的单包回执都不能替代它
    - 对应 Sprint 非"已关闭" → 路由 `agile-sprint` 环节 B/C 做 DoD 关闭（含 feedback 读取）
    - Sprint 已关闭 → 跳过关闭，直接进入同步
    - 路由 `agile-backlog` 阶段 4 同步 Backlog（更新状态列；`issue` 转新条目候选、`decision` 停下请用户裁决）
@@ -88,6 +92,7 @@ version: 5.8.2
    - `backlog.json` → 执行层待办池（唯一 Backlog 文件；概况问 agent 或跑 `agile.py stats`）
    - `backlog.json` 不存在但旧 `PRODUCT-BACKLOG.md` 里还是表格 → 旧格式，由 agent 按字段规范一次性转写（见 `agile-backlog/references/backlog-rules.md §七.4`）
    - `DOD.md` → 完成定义
+   - `delivery.json` → 工作包计划与回执；用 `agile.py work status --root <中枢根>` 展示可执行/等待依赖/待验收/已验收/待关轮，继续工作包流程，不为一份回执关闭 Sprint
    - `sprints/` 下未关闭的 `.md` → 活跃 Sprint（若检测到 >1 个活跃 Sprint，警告并请用户选择关闭/合并其一后再继续，见 `references/status-routing.md`）
    - `backlog.json` 的条目日期与 Sprint 任务清单 → 长期未完成 / 待复核汇总（机械口径见 `agile-backlog/references/backlog-rules.md §五.长期待办复核`）；完整清单跑 `agile.py review`，需要处置时路由 agile-backlog 的独立复核入口
 3. 输出三层状态表（见 `references/status-routing.md`）。
@@ -96,7 +101,7 @@ version: 5.8.2
 
 ## 4. 初始化流程（无 agile-docs/，且用户明示或已在 §0 门槛拍板同意）
 
-1. **最小项目画像采集**（下游三个业务技能问询的公共输入，用选择题问，节奏遵循 `references/probing-protocol.md §三`，分两轮）：
+1. **确定中枢位置后采集最小项目画像**（下游三个业务技能的公共输入，用选择题问，节奏遵循 `references/probing-protocol.md §三`，分两轮）：多仓库先复用已有产品中枢，未设中枢时由用户指定管理仓库或工作区父目录；不在每个执行仓库重复初始化。
    - 第一轮：项目名称 / 一句话定位 / 项目类型（Web 应用、API 服务、工具库…）
    - 第二轮：团队人数与主要技能栈 / 全新项目还是存量代码
    - 采集结果写入 `agile-docs/DOD.md` 头部「项目画像」备注区，供下游技能读取；用户明确跳过的项标 `{待确认}`
@@ -126,7 +131,8 @@ version: 5.8.2
    - 改 VISION / ARCHITECTURE / ADR → `agile-strategic`
    - 改 Backlog 条目 / 加新任务到 Backlog → `agile-backlog`（即使 Sprint 执行中提出，不路由到 agile-sprint）
    - 改风险 / 发布 / 决策记录 → `agile-backlog` 对应独立入口（风险管理 / 发布管理 / 决策记录）
-   - 改 Sprint 规划 / 关闭 → `agile-sprint`（执行期状态变更由消费 Agent 自行处理，不进规范层）
+   - 改 Sprint 规划 / 关闭、分发工作包 / 回执核验 / 依赖交接 → `agile-sprint`（只管跨执行者协调，仓库内实现细分仍归消费 Agent）
+   - 工作包均验收后的父条目整体验收 → `agile-backlog` 调用 `work finish`，不直接手写已完成
    - 改 DoD 模板 → 本入口（DoD 模板就是本技能生成的）
    - 同步 Sprint 执行结果到 Backlog → `agile-backlog`（检测 .done.yaml 后默认闭环时触发）
 4. **跨层变更按依赖顺序逐层路由**：如改 VISION 原则影响 Backlog 排序 → 先 agile-strategic 改 VISION，再回本入口做状态检测，再路由 agile-backlog 改标注（不要并行触发多个业务技能）
@@ -139,7 +145,7 @@ version: 5.8.2
 
 - ❌ **绝不自己 Write 业务文档**（VISION / ARCHITECTURE / ADR / Sprint / `backlog.json`）。
 - ✅ 只做：检测状态 → 逐层询问"更新 or 继续"（不替用户决定走向）→ 路由 → 变更协调（引用矩阵，不直接改业务正文）。
-- ✅ 渐进式：业务技能产出即停；下一步须用户再次调用本技能或下个业务技能。
+- ✅ 全局设计和范围决策保持渐进式审阅；已授权工作包流程的导入、分发、回执收取与汇总连续执行，不把技能分工变成用户重复操作。验收与冲突裁决仍须明确授权。
 - ✅ 路由到业务技能时提示其遵循 `references/probing-protocol.md`（问询：选择题 + 追问/跳过 + 审阅）、`references/gate-protocol.md`（门禁）。
 
 ## 8. 配套 hook（插件安装时生效）
@@ -161,5 +167,7 @@ version: 5.8.2
 生效平台：Claude Code、ZCode（都自动加载插件标准位置的 `hooks/hooks.json`）。Codex 的 PostToolUse 只拦 shell 命令、写文件不触发，未适配——那边按 `backlog-rules.md §七` 手动跑 `agile.py check`。
 
 `hook-session` 与 `hook-post-write` 只在存在 `agile-docs/` 的项目上工作——该目录由初始化流程创建，首次使用无需预建；`hook-prompt` 在没有的项目上也只发一次入口提示，不写任何文件。其余情况不注入任何内容。插件内 `scripts/agile.py`（Python 3.9+，标准库 only，零正则）由 hooks.json 的命令串 `python … || python3 …` 兜底探测解释器（Claude Code 与 ZCode 对 command 型 hook 都只执行字符串本体，不认 `args` 字段）；没有 python 时 hook 静默退出，不影响任何操作，`UserPromptSubmit` 永不阻断输入。
+
+工作包命令自身校验；`delivery.json` 在中枢被写后也会校验，状态摘要附有界工作包汇总，但不增加路由阶段、不自动验收或启动执行者。完整查看用 `work status`；`check` 同时检查工作包计划、回执与整轮回填的验收来源。
 
 **hook 与 `check` 的分工**：hook 是即时的、不撤销已写入的内容——`backlog.json` 结构错误以 `decision: block` 把问题清单递给模型；回填与 Sprint 文件头只提示（都允许分次写，写一半不该被打断）。`agile.py check` 是全量出口检查，另查 `sprints/*.done.yaml` 的内容与每个 Sprint 文件头的状态词。关闭 Sprint 前、以及 Codex 那边，都以 `check` 为准。

@@ -10,7 +10,7 @@
 >
 > **三个参数（人数/工作日/系数）均须经用户确认，禁止静默按 0.6 默认**；用户不决时给推荐值 + 理由，确认后使用并在 Sprint 文件中标注"agent 推荐"（见 `using-agile/references/probing-protocol.md §二` 规则 2）。
 >
-> 承诺点 ≤ 可用点；超额部分本次不取用、留待下 Sprint 再取（条目本就在 Backlog 顶部，无需"放回"，Sprint 不修改 backlog.json）。
+> 承诺点 ≤ 可用点；超额部分本次不取用、留待下 Sprint 再取（条目本就在 Backlog 顶部，规划不修改 backlog.json）。同一业务条目即使分给多个工作包也只计一次 points，不按仓库重复计点。
 
 ## 二、估点体系（默认与异常）
 

@@ -17,7 +17,7 @@
 |---|---|---|
 | `conflict` | `agile-docs/STRATEGY_CONFLICT.md` 存在 | using-agile §5 |
 | `backfill` | `sprints/*.done.yaml` 存在 | using-agile §3 → agile-sprint §3 环节 B/C → agile-backlog §3 阶段 4 |
-| `active` | 有状态非「已关闭」的 Sprint（池耗尽仍算：进行中比建池靠后） | agile-sprint §5（不追执行态）/ agile-sprint §3 环节 B（关 Sprint）/ gate-protocol §三 ④（新需求比对） |
+| `active` | 有状态非「已关闭」的 Sprint（池耗尽仍算：进行中比建池靠后） | agile-sprint §5（不追仓库内执行细节；工作包协调见 workflow.md §三）/ agile-sprint §3 环节 B（关 Sprint）/ gate-protocol §三 ④（新需求比对） |
 | `sprint` | `backlog.json` 有「待办」活条目、无进行中 Sprint | agile-sprint §2 |
 | `init` | 无 `VISION.md` | agile-strategic §2 |
 | `architecture` | 有 VISION，缺 ARCHITECTURE 或 ADR | agile-strategic §3 |

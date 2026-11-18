@@ -2,7 +2,7 @@
 # 消费 Agent 读此文件了解 Sprint 规划文件的格式
 # using-agile 初始化时将此文件复制到 agile-docs/interfaces/
 # 本文件须能被 YAML 解析器读取（仓库 CI 校验，与在项目里的副本无关）：含 ": " 的值一律加引号。
-version: "1.7"
+version: "1.8"
 sprint_file:
   naming: "sprint-{序号:03d}-{日期}.md"
   location: "sprints/"
@@ -16,7 +16,7 @@ sprint_file:
     - header: 交接契约（跨仓库依赖任务组存在时生成）
       format: 交接点表格 + 交接文档命名/位置 + 下游任务读取要求；单仓库 Sprint 无此段
     - header: 回填要求（消费 Agent 必读）
-      format: 说明段落 + yaml 示例；明确消费 Agent 执行完毕必须回填 .done.yaml 的硬性义务（免人工提醒）
+      format: 单执行者须回填 .done.yaml；工作包模式只向执行者交付 export 输出，执行者提交独立 JSON 回执，由中枢 work close 汇总整轮回填
     - header: 闭环检查
       format: checklist (`- [ ]`)；关闭前逐项核对，全部通过方可关闭
     - header: 条目状态建议
@@ -52,7 +52,103 @@ done_file:
     feedback: 消费 Agent 执行反馈（可选）。reason 作 DoD 关闭时 moved_next 依据展示；issue 由 agile-backlog 同步时转为 Backlog 新条目候选（缺陷类 type=缺陷 / B-NNN）；decision 停下请用户裁决，裁决结果记 decisions.json（做/不做都留痕）
   note: completed 和 moved_next 至少一个可为空数组；不应包含 Sprint 任务清单之外的 ID；两个列表之外的清单内条目视为未执行，DoD 时归入 moved_next；含交接契约的任务，completed 前须已产出对应交接文档
   validation: "agile.py check 会读本文件内容，报出「引用不存在的条目 ID」「同一 ID 既在 completed 又在 moved_next」「feedback.type 不在枚举内」「两个数组都空」。注意 check 只做这几项——type 与 note 的内容是否说得通仍由人判断。"
-  mandatory: true  # 回填是硬性义务：消费 Agent 执行完毕必须生成，否则 Sprint 无法关闭、Backlog 无法同步
-  timing: 消费 Agent 执行完毕后生成（含部分完成）
-  lifecycle: 写入（消费 Agent）→ 读取（agile-sprint DoD 检查，含 feedback）→ 检测（using-agile 默认闭环）→ 消费（agile-backlog 同步到 backlog.json + 反馈处理）→ 改后缀 .done.processed.yaml（留痕，不删除）→ 留痕与 Sprint 文件移入 archive/ 归档（agile-backlog 阶段 4）
+  mandatory: true  # 单执行者回填；工作包模式关轮时由中枢生成，单包回执不能替代。
+  timing: 单执行者执行完毕后生成；工作包模式用户要求关轮时由 work close 生成
+  lifecycle: 写入（单执行者或中枢 work close）→ agile.py check → 读取（agile-sprint DoD 检查，含 feedback）→ 检测（using-agile 默认闭环）→ 消费（agile-backlog 同步到 backlog.json + 反馈处理）→ 改后缀 .done.processed.yaml（留痕，不删除）→ 留痕与 Sprint 文件移入 archive/ 归档（agile-backlog 阶段 4）
+
+work_delivery:
+  schema: 1
+  state_file: agile-docs/delivery.json
+  ownership: 中枢脚本单写；执行者只提交独立回执，不写全局状态
+  scope: 跨仓库或多执行者；同一业务条目可以有多个工作包，包不是独立 Sprint
+  commands: "agile.py work <子命令> --root <中枢根>；流程与命令见 workflow.md §三（工作包交付）"
+  plan:
+    required: [schema, project_id, sprint, revision, goal, context, packages]
+    fields:
+      schema: 整数 1
+      project_id: 项目稳定标识，与中枢首次导入绑定
+      sprint: 现有活跃 Sprint 文件主名，不带 .md
+      revision: 正整数，同一 Sprint 变更须递增；原样重复导入不变
+      goal: 本轮共同交付目标
+      context: 中枢内相关 Markdown 相对路径数组，可空；拒绝绝对路径与越界符号链接
+      packages: 非空工作包数组，覆盖 Sprint 任务清单中每个业务条目
+    package:
+      required: [id, item, repo, title, instructions, acceptance, depends_on, deliverables]
+      fields:
+        id: Sprint 内唯一工作包标识，如 WP-001
+        item: 父 Backlog 条目 ID，多个包可共用同一条目
+        repo: 该包执行仓库标识，不是要求脚本进入仓库的路径
+        title: 工作包标题
+        instructions: 该执行者的范围与交付要求，非空字符串数组
+        acceptance: 该包可观察的验收条件，非空字符串数组
+        depends_on: 本 Sprint 的工作包 ID 数组，禁止自依赖、循环或悬空
+        context: 仅该包需要的中枢内 Markdown 相对路径数组，可省略
+        deliverables: 必须交付的产物名称数组，可空；完成回执须逐个提供对应 artifact
+    example:
+      schema: 1
+      project_id: demo
+      sprint: sprint-001-20261118
+      revision: 1
+      goal: 用户能够完成登录
+      context: [agile-docs/PRD.md, agile-docs/ARCHITECTURE.md, agile-docs/ADR.md]
+      packages:
+        - id: WP-001
+          item: F-001
+          repo: api-server
+          title: 登录接口
+          instructions: [交付登录接口及真实接口契约]
+          acceptance: [正确与错误凭证的接口验证通过]
+          depends_on: []
+          deliverables: [api-contract]
+        - id: WP-002
+          item: F-001
+          repo: web-app
+          title: 登录页面与联调
+          instructions: [依据已验收接口完成页面与联调]
+          acceptance: [登录成功及失败提示符合产品约定]
+          depends_on: [WP-001]
+          deliverables: []
+  export:
+    format: JSON stdout；由调用方保存或通过已授权渠道交付，不另建真源
+    content: 项目与计划身份、plan_digest、父条目范围、共同目标、指定包、选中的设计快照、已验收直接上游的交付物与证据、回执骨架
+    exclusions: 不包含其他包的实现指令，不分发整份 Sprint，不自动读取或执行外部仓库文件
+    stale_context: 父需求执行相关字段或设计文件变化后拒绝继续分发和新验收；确认后升版，或按原快照显式关轮顺延
+  receipt:
+    required: [schema, id, project_id, sprint, revision, plan_digest, package_id, repo, result, summary, evidence, artifacts]
+    fields:
+      schema: 整数 1
+      id: 独立回执标识；同 ID 同内容为重放，同 ID 不同内容为冲突
+      project_id: 与分发包一致
+      sprint: 与分发包一致
+      revision: 与分发包一致
+      plan_digest: 从 export 复制的计划摘要，不自行计算或猜测
+      package_id: 与分发包一致
+      repo: 与分发包一致
+      result: completed / partial / blocked
+      summary: 实际交付概述；partial 或 blocked 说明未完成原因
+      evidence: 验证结果或提交来源的字符串数组；completed 时非空，脚本不执行这些字符串
+      artifacts: 交付物数组；completed 必须覆盖包的全部 deliverables
+    artifact:
+      required: [name, source, content]
+      name: 对应 deliverables 中的产物名称
+      source: 实际仓库与提交版本及产物来源，或验收者可核对的来源
+      content: 下游需要的实际契约正文，不把规划中的预期当作已实现事实
+    acceptance: submit 只收取；accept 需验收者与核验结论，且只接受依赖已满足的 completed 回执
+  item_acceptance:
+    command: work finish
+    prerequisites: 本业务条目的全部当前版本工作包已验收，且整体验收与 DoD 通过
+    output: backlog.json 对应条目的 status 与 delivery_acceptance 一次原子写入
+    fields: [project_id, sprint, revision, plan_digest, receipts, reviewer, evidence]
+    restrictions: 不关闭 Sprint，不以提交存在或单包完成代替整体验收
+  closure:
+    command: work close
+    prerequisites: 用户要求关轮；未整体验收条目须通过 --move 逐项明确顺延
+    output: Sprint 同目录的标准 .done.yaml，随后走原有关闭与归档链路
+    validation: completed 的每个条目须有原计划及全部包验收支撑的 delivery_acceptance；已处理与归档回填同样核验
+    lifecycle_barrier: 生成整轮回填后拒绝新的分发与交付变更，相同内容重放不写入
+    drift_recovery: 允许在父需求或设计变化后按原快照显式关轮顺延，禁止把变化后的要求当成已验收
+  versioning:
+    changed_plan: 整个 Sprint 递增 revision，旧回执留痕但不计入新版本验收
+    completed_history: 存在已整体验收条目的 Sprint 不再改计划，新增工作放后续 Sprint
+  execution_boundary: 文件协议，不推送、不通知、不后台启动 Agent；中枢单写者，互斥锁只协调同一工作副本
 

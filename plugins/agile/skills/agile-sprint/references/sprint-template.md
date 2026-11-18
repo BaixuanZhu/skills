@@ -1,6 +1,6 @@
 # Sprint 模板（agile-sprint 参考）
 
-Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进度。
+Sprint 是全项目共享计划，不记录消费 Agent 的本地 checkbox/子任务。默认单执行者使用下方原 `.done` 路径；显式工作包模式按 `using-agile/references/workflow.md §三（工作包交付）` 与 `using-agile/references/sprint-schema.yaml` 的 `work_delivery`，计划留中枢，不整份分发。生成时只保留所选模式的交付/回填段。
 
 ## 一、Sprint 文件命名
 
@@ -22,8 +22,8 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
 - 容量: 团队 {N} 人 × {D} 天 × {专注系数} ≈ {可用点} 点
 - 估点体系: 斐波那契（默认）/ 线性（仅纯研究型 Sprint，见 `references/sprint-rules.md §二`）
 - 来源: agile-docs/backlog.json（按 priority 顶部取条目）
-- 消费方: 本文件是单向交付，任务状态由消费 Agent 自行追踪
-- 执行结果: 待回填（消费 Agent 执行后生成 .done.yaml，见下方「回填要求」段）
+- 消费方: {单执行者：交付本文件；工作包：本文件留中枢，仅导出各接收方快照；本地任务由消费 Agent 自行追踪}
+- 执行结果: 待回填（单执行者写 .done.yaml；工作包由中枢 work close 生成，见所选模式回填段）
 
 ## 任务清单
 
@@ -32,11 +32,20 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
 - F-001 {标题} ({点})
 ...
 
-> 多仓库项目：条目标注 `[repo: {仓库名}]`（如 `T-003 后端接口 (3) → ADR-002 [repo: api-server]`），供消费 Agent 识别归属仓库；单仓库项目省略。
+> `backlog.repo` 仅为可选单仓归属；有值才标 `[repo: {仓库名}]`。跨仓业务条目省略 repo，实际接收方仓库在工作包内。任务清单不按仓库拆需求、不重复计点。
 
-## 交接契约（跨仓库依赖任务组存在时生成；单仓库 Sprint 无此段）
+## 工作包交付（仅工作包模式保留）
 
-> 仅当任务清单含**跨仓库且有先后依赖**的任务组（如 repoA 后端 → repoB 前端）时生成。交接文档模板见 `references/handoff-template.md`。
+- 同一业务条目可对应多个包：如 F-001 对应 WP-001 后端与 WP-002 前端；此处不另算点数。接收方、具体包依赖与版本身份见中枢 delivery.json，字段不在本文件另定义。
+- 全项目 PRD/C4/ADR 与本计划留中枢；执行者仅接收该包选定的冻结上下文与已验收上游产物正文，不读其他包实现细节。
+- 产物正文复用 `references/handoff-template.md`，记录来源与实际内容一次；已有版本化契约不额外要求交接文档。
+- 回填独立 JSON 回执，由中枢导入并逐包验收；全部包通过后再整体业务验收，不能凭回执汇总标完成。执行者不直接改全局 Backlog/delivery 或生成 Sprint .done。
+- `feedback.issue/decision` 随时回 agile-backlog，不等待本 Sprint 关闭；回执汇总不替代产品裁决。
+- 用户要求关闭时，中枢逐项显式指定未完成条目，用 work close 生成规范 .done.yaml，再走 DoD 与通常闭环。命令见 `agile-sprint/SKILL.md §3（工作包交付）`，协议见 `using-agile/references/workflow.md §三（工作包交付）` 与 `using-agile/references/sprint-schema.yaml` 的 `work_delivery`。
+
+## 交接契约（仅单执行者路径，存在跨仓先后依赖时生成）
+
+> 仅当已独立成立的业务/技术条目有跨仓先后依赖时生成；不为了套此表把一个业务需求拆成前后端需求。交接文档模板见 `references/handoff-template.md`。
 
 | 交接点 | 上游任务（产出方） | 下游任务（消费方） | 交接文档 |
 |--------|--------------------|--------------------|----------|
@@ -46,11 +55,11 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
 - **下游任务开始条件**：开始前必须读取对应交接文档（消费 Agent 执行义务，写入本 Sprint「回填要求」段同属硬性义务）
 - 交接文档随本 Sprint 归档（`sprints/handoffs/`），不随某个具体仓库提交
 
-## 回填要求（消费 Agent 必读 · 硬性义务）
+## 回填要求（仅单执行者路径，消费 Agent 必读）
 
-> 本段随 Sprint 文件一并交付给消费 Agent，用于**免人工提醒地**完成执行结果回填。
+> 本段仅随单执行者 Sprint 文件交付；工作包模式用上方「工作包交付」段，不要求各执行者回填整个 Sprint。
 
-执行本 Sprint 的消费 Agent 在任务执行完毕后，**必须**生成执行结果回填文件，否则规范层无法关闭本 Sprint、Backlog 状态无法同步：
+单执行者在任务执行完毕后，**必须**生成执行结果回填文件，否则规范层无法关闭本 Sprint、Backlog 状态无法同步：
 
 - **回填文件**：`sprints/sprint-{序号:03d}-{日期}.done.yaml`（与本文件同名、同目录）
 - **时机**：执行完毕后即回填（含部分完成——完成的进 completed，未完成的进 moved_next）
@@ -75,7 +84,8 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
 
 ## 闭环检查（关闭前逐项核对，全部通过方可关闭）
 
-- [ ] 关联的 .done.yaml 已存在并读取（或无 .done 时用户已人工确认完成情况）
+- [ ] 关联的 .done.yaml 已存在并读取（仅单执行者可无 .done 人工确认；工作包须由 work close 生成）
+- [ ] 工作包模式：DoD 前已跑 agile.py check，无 completed 条目缺整体验收；规范 .done 与 delivery_acceptance 一致（单执行者跳过本项）
 - [ ] DoD 全部通过
 - [ ] 统计快照已重算（`agile.py stats` 输出附在「变更记录」段）
 - [ ] `- 执行结果:` 行的值改为 .done 路径或"人工确认"（模板已带此行：改写，不新增行、不并入状态值）
@@ -87,7 +97,7 @@ Sprint 规划文件模板。不含执行态字段，消费 Agent 自行追踪进
 - T-003：移至下个Sprint（未过：{具体 DoD 条目}）
 - F-001：已完成（DoD 全部通过）
 
-> 关闭后本文件为只读历史。状态同步由入口检测 .done.yaml 默认执行闭环（同步到 agile-backlog），闭环完成后本文件连同留痕移入 `sprints/archive/`。
+> 关闭后本文件为只读历史。入口检测 .done.yaml 默认闭环（agile-backlog 阶段 4 同步与维护 planned_sprints；工作包既有 delivery_acceptance 不覆盖、不删除，不把已整体验收条目降回待办），完成后本文件连同留痕移入 `sprints/archive/`。
 
 ## 变更记录（关闭后追加；本 Sprint 期间的所有变更按时间顺序记录）
 
@@ -106,8 +116,7 @@ Sprint 生命周期 3 环节（规划/DoD 关闭/关闭）的定义详见 `SKILL
 
 ## 四、执行结果回传（.done.yaml）
 
-消费 Agent 执行完毕后，须在 `sprints/` 下生成 `.done.yaml` 文件，与 Sprint 文件同名。
-该文件是规范层 DoD 检查和状态同步的依据。
+单执行者执行完毕后在 `sprints/` 下生成同名 `.done.yaml`；工作包模式仅由中枢 `work close` 生成。该文件是 DoD 检查与阶段 4 同步依据，不是工作包回执，也不能替代整体验收。
 
 ### 格式与约束
 
@@ -115,4 +124,4 @@ Sprint 生命周期 3 环节（规划/DoD 关闭/关闭）的定义详见 `SKILL
 
 ### 闭环链路（不在此展开）
 
-`.done.yaml` 的完整生命周期——写入（消费 Agent）→ DoD 检查（agile-sprint 环节 B，含 feedback）→ 入口默认闭环（Sprint 关闭 → agile-backlog 同步 + 反馈处理）→ 改后缀 `.done.processed.yaml` 留痕——定义在 `using-agile/references/sprint-schema.yaml` 的 `lifecycle` 字段与 `SKILL.md §3 环节 C`。**行为细则归技能正文，模板只承载文件结构**，本段为指针非内容。
+`.done.yaml` 的生命周期见 `using-agile/references/sprint-schema.yaml` 的 `lifecycle`（工作包另见 `work_delivery`）与 `SKILL.md §3 环节 B/C`：写入后经过校验、DoD、关闭、Backlog 同步与反馈处理，再改 `.done.processed.yaml` 留痕归档。

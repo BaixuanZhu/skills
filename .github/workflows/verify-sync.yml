@@ -6,10 +6,12 @@ name: verify-sync
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'ci/agile-*']
     paths:
       - 'skills/**'
       - 'plugins/**'
+      - 'tests/agile/**'
+      - '.github/workflows/verify-sync.yml'
       - '.claude-plugin/marketplace.json'
       - '.agents/plugins/marketplace.json'
       - 'scripts/sync-plugins.mjs'
@@ -20,6 +22,8 @@ on:
     paths:
       - 'skills/**'
       - 'plugins/**'
+      - 'tests/agile/**'
+      - '.github/workflows/verify-sync.yml'
       - '.claude-plugin/marketplace.json'
       - '.agents/plugins/marketplace.json'
       - 'scripts/sync-plugins.mjs'
@@ -60,3 +64,34 @@ jobs:
 
       - name: Validate skill content
         run: node scripts/validate.mjs
+
+  agile-regression:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.12']
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONDONTWRITEBYTECODE: '1'
+      AGILE_REQUIRE_SYMLINK: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run existing agile regressions
+        shell: bash
+        run: |
+          bash tests/agile/stage.sh
+          bash tests/agile/suite.sh
+          bash tests/agile/regress.sh
+          bash tests/agile/cache.sh
+
+      - name: Verify python and python3 launchers
+        run: python -B tests/agile/test_launchers.py
+
+      - name: Verify delivery and require symlink coverage
+        run: python -B tests/agile/test_delivery.py

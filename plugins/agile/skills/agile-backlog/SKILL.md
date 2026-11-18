@@ -3,9 +3,9 @@ name: agile-backlog
 slug: agile-backlog
 displayName: 敏捷产品待办
 description: |
-  当用户说"写待办""拆任务""Backlog""Product Backlog""使能项""优先级排序""排迭代""长期待办""待办复核""梳理积压"或 using-agile 路由到此，且战略层（VISION + ARCHITECTURE/ADR）已确认时触发。
+  当用户说"写待办""拆任务""Backlog""Product Backlog""使能项""优先级排序""排迭代""长期待办""待办复核""梳理积压""整体验收"或 using-agile 路由到此，且战略层（VISION + ARCHITECTURE/ADR）已确认时触发。
 agent_created: true
-version: 5.5.2
+version: 5.6.0
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架与路由
@@ -28,9 +28,11 @@ dependencies:
 ## 1. 定位
 本技能是执行层中枢，产出 `agile-docs/backlog.json`——**唯一的 Backlog 文件**，字段定义见 `references/backlog-rules.md §二`。人读概况 = 问 agent 或跑 `agile.py stats`（5.6.0 起 PRODUCT-BACKLOG.md 渲染产物退役，遗留文件不再维护，确认无自定义内容后可删）。
 
-它是**待办池**（to-do list）。技术任务（T-NNN）和功能需求（F-NNN）**平级**进入待办池。不强制 INVEST/Given-When-Then 仪式。
+它是全项目的**业务待办池**（to-do list），保留整体 PRD/C4/ADR 作为范围与决策依据。技术任务（T-NNN）和功能需求（F-NNN）**平级**进入待办池。不强制 INVEST/Given-When-Then 仪式；不因前后端仓库或接收方不同拆分产品需求、重复估点。
 
-**产出分阶段，每阶段写完即停**（不再一次性出全部）：
+跨仓/多接收方可在同一个共享 Sprint 显式启用工作包（`using-agile/references/workflow.md §三（工作包交付）`，字段见 `using-agile/references/sprint-schema.yaml` 的 `work_delivery`）。包隔离接收方实现上下文并跟踪具体依赖/回执/验收；本地 checkbox、子任务仍归消费 Agent。默认单执行者 `.done.yaml` 路径保留，不强制迁移。
+
+**Backlog 编制分阶段，每阶段写完即停**（工作包已授权机械步骤例外见 §4）：
 
 | 阶段 | 产出 | 前置 |
 |------|------|------|
@@ -40,7 +42,7 @@ dependencies:
 | 阶段 3 | 下游影响评估（§3 阶段 3，仅更新已有 Backlog 时） | 阶段 2 确认 |
 | 阶段 4 | 接受 .done 同步（§3 阶段 4，仅 .done.yaml 回传时） | `.done.yaml` 存在（入口闭环路由；Sprint 未关闭时先经 agile-sprint 关闭） |
 
-「长期待办复核」「风险管理」「发布管理」「决策记录」都是**独立入口**，不是阶段 5/6/7：hook 提示或用户主动提起时直接走 §3 的对应小节，不重访创建流程。
+「工作包整体验收」「长期待办复核」「风险管理」「发布管理」「决策记录」都是**独立入口**，不是阶段 5/6/7：hook 提示或用户主动提起时直接走 §3 的对应小节，不重访创建流程。
 
 **决策用选择题问**（问询纪律见 `using-agile/references/probing-protocol.md`）：只把真决策（范围/优先级/估点/验收）喂给用户，事实先读 VISION/ADR。变更时先分级（`using-agile/references/change-matrix.md §二`），禁止整层重访。跨技能数据流全貌见 `using-agile/references/workflow.md`。
 
@@ -123,7 +125,7 @@ dependencies:
 ```
 
 - `basis` 承载两个标注：点的来源（`agent 推荐` / `用户确认`）+ 优先级依据（开发顺序 / MoSCoW / 依赖 / ADR 优先级，见 `references/backlog-rules.md §三`）。
-- `repo` 仅多仓库项目填（供 Sprint 识别跨仓库交接点），单仓库省略。
+- `repo` 是可选单仓归属字符串；单仓库项目可省略，跨仓业务条目必须省略，不写数组/逗号串。同一 `F-001` 可分配后端 `WP-001` 与前端 `WP-002`，实际接收方仓库在包中，不为仓库边界另建 F 条目或重复计点。
 - `confirmed`：`true` 已与用户确认，`false` agent 推荐待确认；Sprint 取用前必须显式转 `true`（否则 `agile-sprint` 跳过并告警）。
 - `created_at`：新条目写真实立项日期（`YYYY-MM-DD`）；更新旧条目时不得把当天倒填成立项日期。`last_reviewed_at` 只在长期待办复核后写，创建时不预填。
 - **统计不用自己算**：`agile.py stats` 全量重算，hook 注入的状态行也带统计。写完停，结构化审阅后再进阶段 2。
@@ -152,22 +154,27 @@ dependencies:
   - 是 → 评估承诺点是否仍 ≤ 可用点、任务清单是否需换入/换出；给调整建议，由用户裁决是否触发 `agile-sprint` 重规划。
   - 否 → 审阅清单记「下游无影响」。
 - 增删条目 → 检查活跃 Sprint 任务清单是否受影响。
+- 工作包模式的范围/验收/依赖变更还须检查冻结计划；经用户确认重规划后，同 Sprint 全部旧包回执失效、保留历史，不承诺未改包版本不变。已有任一条目整体完成则拒绝重规划，新工作进入新 Sprint；战略冲突仍先走门禁，不能用包修订绕过。
 
 ### 阶段 4：接受 .done 同步
 
-当 using-agile 检测到 `sprints/*.done.yaml`（默认执行回填闭环）并路由到本技能；人工确认关闭的 Sprint（无 `.done.yaml`）由 agile-sprint 环节 C 路由到本阶段，按 Sprint 文件内「条目状态建议」走同样的同步与归档：
+当 using-agile 检测到 `sprints/*.done.yaml` 并路由到本技能；单执行者无 `.done.yaml` 人工关闭时，仍按 Sprint「条目状态建议」同步与归档。工作包模式必须消费 `work close` 生成并已过 agile-sprint 校验/DoD 的规范 `.done`，不允许人工替代：
 
-1. 读取 `.done.yaml`，按 completed / moved_next 批量更新 `backlog.json` 里对应条目的 `status`
-   - completed 条目 → `已完成`
-   - moved_next 条目 → `待办`，**仅改状态，`priority` 保持原值不动**（原属顶部条目，状态复位后自然回到取用顺序前列；禁止为"保回顶部"擅自调高优先级）
-   - 两组条目都在 `planned_sprints` 追加本 Sprint 序号——「曾纳入」戳记：Sprint 文件归档后扫描看不见任务清单，长期待办复核靠它区分「从未纳入 / 曾纳入」（见 `references/backlog-rules.md §二`）
-2. **处理 feedback**（`.done.yaml` 的 feedback 列表）：
+1. 读取 `.done.yaml`，按模式同步 `backlog.json`
+   - 单执行者：completed → `已完成`；moved_next → `待办`
+   - 工作包：先跑 `python <plugin>/scripts/agile.py check HUB`；completed 必须已经由 `work finish` 写入整体 `delivery_acceptance` 与 `status=已完成`，本阶段只核对保留，不补造/覆盖/删除验收记录。缺验收或 moved_next 含已整体验收条目 → 停下报冲突，不能降回待办；其余 moved_next 保持 `待办`
+   - `priority` 均保持原值，禁止为"保回顶部"调高；两组条目仍在 `planned_sprints` 追加本 Sprint 序号。此字段只在阶段 4 维护，不能在 work finish 时提前盖闭环戳记（见 `references/backlog-rules.md §二`）
+2. **处理 feedback**（`.done.yaml` 的 feedback 列表；执行中 issue/decision 可随时回本技能，不等 `.done`，已处理的不重复建条目；回执汇总不是产品裁决）：
    - `reason`（未完成原因）→ 已由 agile-sprint 在关闭环节展示，此处无需处理
    - `issue`（执行中发现的新问题）→ 转为 Backlog **新条目候选**：列出建议条目（标题 / 类型 / 优先级建议 / 来源标注"消费 Agent 反馈"），缺陷类建议 `type=缺陷`、前缀 B-NNN（`references/backlog-rules.md §一`），请用户确认后新增进 `backlog.json`
    - `decision`（需产品层裁决）→ 停下请用户裁决；裁决结果**记入 `decisions.json`**（做/不做都留痕，见 `references/decision-rules.md`），outcome=做 再建条目
 3. 将 `.done.yaml` 文件后缀改为 `.done.processed.yaml`（留痕，不删除）。**必须排在第 1 步同步之后**——后缀一改，回填检测即视为已闭环；若中断在同步之前，会留下「留痕在、状态没同步」的假闭环，且没有任何机制会再触发补同步
 4. **归档**：把留痕文件与对应 Sprint 文件一并移入 Sprint 所在目录的 `archive/` 子目录（如 `sprints/archive/`，目录不存在则创建）——`sprints/` 只留未闭环文件，状态检测与每轮扫描不进 `archive/`
 5. 完成后停下，报告同步结果 + 反馈处理结果
+
+### 工作包整体验收（独立入口）
+
+工作包模式下，同一条目的所有包都验收后，按父条目验收行为和项目 DoD 核验整体交付；用户或其明确授权的验收者确认后调用 `work finish`，记录验收者与真实验证证据，不关闭 Sprint。包验收仅证明局部交付，不能省略前后端整体验收；未通过则报告差距，不手改完成状态。命令与修订限制见 `using-agile/references/workflow.md §三（工作包交付）`。
 
 ### 长期待办复核（独立入口）
 
@@ -208,18 +215,19 @@ dependencies:
 
 ## 4. 写完即停（结构化审阅，每阶段都走）
 
-每个产出阶段写完即停：按 `using-agile/references/probing-protocol.md §四` 结构化审阅（重点列：排序依据 / 优先级判断 / agent 自估点数及理由 × 来源，阶段 3 追加「下游影响评估」结论；去向问下一阶段 / agile-sprint 还是更新本层）。
+每个产出阶段按 `using-agile/references/probing-protocol.md §四` 结构化审阅（重点列：排序依据 / 优先级判断 / agent 自估点数及理由 × 来源，阶段 3 追加「下游影响评估」）。真决策未确认即停；已授权工作包创建/导入/导出等机械派生步骤不逐文件重复问询（`using-agile/references/workflow.md §三（工作包交付）`），不因此自动通过验收或战略冲突门禁。
 
 ## 5. 硬约束
 - ✅ 产出 `agile-docs/backlog.json`（唯一 Backlog 文件）；❌ **不顺手写** VISION / ARCHITECTURE / ADR / Sprint / PRODUCT-BACKLOG.md。
 - ✅ **决策问询是产出前环节**（§2b，口径见 `using-agile/references/probing-protocol.md`），决策点未确认不落盘。
-- ✅ **产出分阶段**（排序+估点 → 详情+验收，§3），每阶段写完即停；❌ 禁止一次性出全部。
+- **Backlog 决策分阶段**（排序+估点 → 详情+验收，§3），未确认不一次性推进；工作包同次授权的机械派生步骤按 §4，不按文件数重复设停点。
 - ✅ **`phases[]` 即唯一结构**（§3 阶段 1），**禁止**单独维护"优先级排序表 / 待办池"等平级结构；字段名与取值严格按 `references/backlog-rules.md §二`，不自由增删。
 - ✅ 技术任务（T-NNN）和功能需求（F-NNN）平级；仅"非显然"条目展开（§3 阶段2）。
 - ❌ 不使用 INVEST / Given-When-Then 仪式，不拆 epics/enablers 子目录，不用 US/EN/EPIC 命名。
 - ✅ 涉及架构决策的 T-NNN 必须关联 ADR（门禁 ①，判定细则见 `using-agile/references/gate-protocol.md §二 ①`）。
 - ✅ **关键决策落盘带来源标注**（用户给出 / agent 推断 / agent 推荐待确认）。
-- ✅ **Backlog 条目只写范围**（可观察验收行为 / 业务与非功能约束 / 边界 / 依赖关联），❌ **不写实现**（技术方案 / 框架选型 / 代码结构 / SQL / 伪代码）——技术决策由 ADR 承载，实现归消费 Agent 判断（细则见 `references/backlog-rules.md §四`）。
+- **Backlog 条目只写整体范围**（可观察验收行为 / 业务与非功能约束 / 边界 / 依赖关联），不把前后端实现详情塞进条目；技术决策由全局 ADR 承载，接收方实现上下文与具体依赖由工作包隔离，本地实现归消费 Agent（`references/backlog-rules.md §四`）。
+- 全局 Backlog/delivery 只存中枢，执行者不得直接编辑；`delivery.json` 归脚本，`delivery_acceptance` 只由 `work finish` 写，阶段 4 保留该记录与已整体验收状态。字段见 `references/backlog-rules.md §二`；工作包模式无插件脚本则不启用。
 - ✅ **统计不手算**：条目数 / 点数 / 分组统计交给 `agile.py stats`（§2a），禁止在旧数字上加减。
 - ✅ **未确认条目 Sprint 取用前必须显式 confirm**：`confirmed: false` 的「待办」条目，`agile-sprint` 取用时跳过并告警；不私自默认成 `true`（agent 推荐 ≠ 用户确认）。
 - ✅ **长期待办只提示、不自动处置**：复核口径见 `references/backlog-rules.md §五.长期待办复核`；只有用户明确保留 / 调整后才写 `last_reviewed_at`，禁止按年龄自动改优先级、开 Sprint 或撤回。

@@ -19,7 +19,7 @@
 | id | ✅ | T-NNN / F-NNN / B-NNN，零填充 3 位，全局唯一 |
 | title | ✅ | 一句话概括（动词 + 名词） |
 | type | ✅ | 技术 / 功能 / 缺陷 |
-| repo | — | 条目归属仓库（多仓库项目标注，如 `api-server`；单仓库项目省略） |
+| repo | — | 可选的单仓归属字符串（如 `api-server`）；跨仓业务条目省略，不能写数组/逗号串。实际接收方 repo 在工作包中 |
 | points | ✅ | 整数。斐波那契（1/2/3/5/8/13，默认）；纯研究型 Sprint 可用线性（1/2/3/4/5），在 Sprint 文件头标注；过大无法估点 → 触发边界异常 ⑤（拆分） |
 | priority | ✅ | Must / Should / Could / Won't |
 | status | ✅ | 待办 / 已完成 / 已撤回 |
@@ -30,12 +30,17 @@
 | last_reviewed_at | — | 最近一次长期待办复核日期，ISO `YYYY-MM-DD`；仅在用户明确保留 / 调整后填写，不得早于 `created_at` |
 | planned_sprints | — | 曾纳入的 Sprint 序号列表（如 `["001","003"]`），阶段 4 闭环同步时对 completed 与 moved_next 条目追加；Sprint 文件归档后「曾纳入」判定只剩这条戳记 |
 | detail | — | 字符串数组，收 §四 判定「非显然」的展开内容；渲染成 bullets |
+| delivery_acceptance | — | 工作包模式整体验收对象；仅脚本 `work finish` 写，阶段 4 保留，不由 agent 伪造或覆盖 |
+
+`delivery_acceptance` 含 `project_id`、`sprint`、`revision`、`plan_digest`、`receipts`（回执 ID 数组）、`reviewer`、`evidence`（字符串数组）。它记录全部包验收后的整体业务验收，不是单包回执；协议以 `using-agile/references/sprint-schema.yaml` 的 `work_delivery` 为准。
+
+一个业务需求可跨前后端，如 `F-001` 对应后端 `WP-001` 与前端 `WP-002`；不因仓库边界拆产品需求，`points` 仍属于整个条目，Sprint 只计一次，包不重复估点。
 
 ## 三、优先级排序逻辑
 
 1. **开发顺序（用户指定）**：按用户口述的先后顺序（先做 A、再做 B）
 2. **业务优先级（MoSCoW）**：Must > Should > Could > Won't
-3. **依赖关系**：被依赖项优先于依赖项（如 T-001 工程初始化必须先于 T-002 引入 ArchUnit）。**跨仓库依赖**（不同仓库条目有先后开发关系，如后端接口 → 前端页面）在 Sprint 规划时声明「交接契约」（见 `agile-sprint/references/sprint-template.md` §交接契约），Backlog 层只体现排序
+3. **依赖关系**：被依赖条目优先（如 T-001 工程初始化先于 T-002 引入 ArchUnit）。同一业务条目内部的跨仓实现依赖不拆成排序条目，工作包以 `depends_on` 指定具体交付包（`using-agile/references/workflow.md §三（工作包交付）`）；单执行者路径的跨仓交接仍用 `agile-sprint/references/sprint-template.md`「交接契约」段
 4. **架构约束**：关联 ADR 的 T-NNN 按 ADR 优先级排
 
 ## 四、展开规则
@@ -55,7 +60,7 @@
 
 ### 范围 vs 实现（写入边界）
 
-Backlog 是给消费 Agent 定**范围**（做什么），不是定**实现**（怎么做）——实现规划由消费 Agent 在代码上下文中判断。
+Backlog 定整个业务需求的**范围**（做什么），不是前后端各自的实现说明书。保留全项目 PRD/C4/ADR；工作包按接收方隔离实现上下文与具体交接依赖，消费 Agent 在本地代码上下文中拆子任务、记 checkbox，不写回全局 Backlog。
 
 | 写 ✅（范围） | 不写 ❌（实现） |
 |---------------|----------------|
@@ -70,22 +75,22 @@ Backlog 是给消费 Agent 定**范围**（做什么），不是定**实现**（
 ## 五、状态流转与「可注记不可改写」
 
 ```
-待办 ─────────────→ 已完成（通过 DoD）
+待办 ─────────────→ 已完成（整体条目验收；工作包须先全部包验收）
   │
   └─→ 已撤回（不参与排序 / 统计，留痕追溯）
 ```
 
 **三态枚举**（`status` 字段）：`待办 / 已完成 / 已撤回`
 
-- **待办**：默认状态（含已纳入 Sprint 但未完成——执行态追踪由消费 Agent 负责，不在规范层体现）
-- **已完成**：通过 DoD 验收
+- **待办**：默认状态，含已纳入 Sprint、工作包推进中或各包已验收但尚未整体业务验收。全局包协调状态在 delivery.json，本地子任务/checkbox 由消费 Agent 追踪，不扩充 Backlog 状态枚举
+- **已完成**：整体条目验收通过。单执行者仍通过 DoD 后由阶段 4 同步；工作包须全部包验收后，再显式整体业务验收，由 `work finish` 原子写此状态与 `delivery_acceptance`，不等于 Sprint 已关闭
 - **已撤回**：本阶段/本 Sprint 不再需要的条目，从池中摘出不参与排序与统计（全量统计时自动排除），仍留痕可追溯。撤回时追加「撤回时间 / 撤回原因 / 决策来源」，不改写条目原内容
 
 **确认状态**（独立于 `status`，对应 `confirmed` 字段）：
 - 「已确认」：优先级 / 点数 / 验收已与用户确认 → `true`
 - 「agent 推荐待确认」：未与用户确认 → `false`，Sprint 取用前必须显式转 `true`（agile-sprint 跳过并告警）
 
-Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改优先级，自然回到取用顺序前列），**不设「移至下个Sprint」状态**——该表述只出现在 Sprint 文件的「条目状态建议」里，不进 Backlog。
+Sprint 未完成条目在 `.done` 同步时 `moved_next → 待办`（不改优先级），**不设「移至下个Sprint」状态**。工作包模式必须消费 `work close` 生成的规范 `.done`；若 completed 缺整体验收，或 moved_next 含已整体验收条目，停止同步报冲突，禁止补造 `delivery_acceptance` 或把已整体验收状态降回待办。阶段 4 仍维护 `planned_sprints`、反馈与归档，不覆盖/删除验收记录。
 
 ### 长期待办复核（派生信号，不是第四态）
 
@@ -114,7 +119,7 @@ Sprint 未完成的条目在 `.done` 同步时 `moved_next → 待办`（不改�
 
 ## 七、文件形态与命令（消费 Agent 读此文件）
 
-一个文件：`agile-docs/backlog.json` 是**唯一 Backlog 文件**（字段定义见 §二），人或 agent 直接编辑。人读概况 = 问 agent 或跑 `stats`。
+`agile-docs/backlog.json` 是**唯一 Backlog 文件**（字段定义见 §二），由中枢 agile-backlog 维护；执行者不得直接写全局 Backlog/delivery。`delivery.json` 仅由插件脚本按需创建与维护，`delivery_acceptance` 只经 `work finish` 写入。人读概况 = 问 agent 或跑 `stats`；包协调状态用 `work status`。
 
 > 5.6.0 起 PRODUCT-BACKLOG.md 渲染产物退役：不再生成、不再比对。遗留的 md 不再被维护或覆盖，确认无自定义内容后可删。
 
@@ -165,7 +170,9 @@ python <插件根>/scripts/agile.py brief   [项目根]   # 打印当前阶段�
 
 脚本在**插件的 `scripts/` 下，不在项目里**。装插件时其中两个动作已挂到 hook 上（写完 json 自动校验并对账、会话开始注入状态），通常不需要手动执行。
 
-用 `npx skills` 只装技能文件时没有脚本也没有 hook：按 §七.1 手写 json、按 §七.3 自己全量算即可。
+用 `npx skills` 只装技能文件时没有脚本也没有 hook：单执行者仍可按 §七.1 手写 Backlog、按 §七.3 全量算并沿用 `.done`；工作包模式必须先取得插件脚本，不手写 delivery 协议冒充同等自动化。
+
+工作包命令与授权边界见 `using-agile/references/workflow.md §三（工作包交付）`、`agile-sprint/SKILL.md §3（工作包交付）`。`.done` 到达后，工作包模式须先跑 `python <plugin>/scripts/agile.py check HUB` 再过 DoD；completed 缺整体验收即拒绝闭环。`feedback.issue/decision` 随时回本技能，回执导入/汇总不能替代用户的产品裁决。
 
 ### 7.3 统计
 

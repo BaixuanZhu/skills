@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""agile 套件的机械部分：Backlog 结构校验、统计、渲染、旧格式迁移、hook 入口。
+"""agile 套件的机械部分：Backlog 校验、统计、工作包交付与 hook 入口。
 
 为什么存在：点数和条目统计原先靠 agent 每次现场写脚本兑现，每次都不一样。
 计算这件事不该交给模型。
@@ -38,6 +38,8 @@ import time
 import traceback
 from datetime import date
 from pathlib import Path
+
+import delivery
 
 # ── 约定 ────────────────────────────────────────────────────────────────────
 DOCS_DIR = "agile-docs"
@@ -933,6 +935,9 @@ def check_done_files(root: Path, data: dict) -> list[str]:
     problems: list[str] = []
     for path in iter_done_files(root):
         problems.extend(inspect_done(path, known))
+        text = read_text(path)
+        if text is not None:
+            problems.extend(delivery.done_problems(root, path.name[:-len('.done.yaml')], parse_done(text)))
     return problems
 
 
@@ -960,6 +965,10 @@ def hook_post_write() -> None:
         # 失效先于校验：写盘那一刻快照就旧了，校验是否通过不影响这个事实。
         invalidate_age_cache(root_of(path))
         handle_json_write(path)
+    elif path.name == "delivery.json" and path.parent == root / DOCS_DIR:
+        problems = delivery.check(root, scan_sprints, validate, parse_done)
+        if problems:
+            emit_context("PostToolUse", "[agile] 工作包校验：\n" + "\n".join(problems))
     elif path.name in SIDE_FILES:
         handle_side_write(path)
     elif path.name.endswith(".done.yaml"):
@@ -1062,6 +1071,9 @@ def handle_done_write(done_path: Path, root: Path) -> None:
         return
     known = {item["id"] for _phase, item in iter_items(data) if item.get("id")}
     problems = inspect_done(done_path, known)
+    text = read_text(done_path)
+    if text is not None:
+        problems.extend(delivery.done_problems(root, done_path.name[:-len('.done.yaml')], parse_done(text)))
     if not problems:
         return
     listed = "\n".join("  · " + line for line in problems)
@@ -1364,6 +1376,7 @@ def describe_state(root: Path, snapshot: dict | None = None) -> list[str]:
     if isinstance(decisions, dict):
         parts.append(f"决策 {len(decisions.get('decisions') or [])} 条")
 
+    parts.extend(delivery.summary(root, scan_sprints))
     return parts
 
 
@@ -1635,6 +1648,7 @@ def render_report_lines(root: Path) -> list[str]:
 
     for line in render_side_lines(root):
         parts.append(line)
+    parts.extend("- " + line for line in delivery.summary(root, scan_sprints))
     decisions = load_json(docs / DECISIONS_JSON) if (docs / DECISIONS_JSON).exists() else None
     if isinstance(decisions, dict):
         recent = [row for row in (decisions.get("decisions") or []) if isinstance(row, dict)][-3:]
@@ -1647,14 +1661,15 @@ def render_report_lines(root: Path) -> list[str]:
 
 
 # ── 命令行 ──────────────────────────────────────────────────────────────────
-USAGE = """agile.py —— Backlog 机械操作（标准库 only，零正则）
+USAGE = """agile.py —— Backlog 与工作包交付（标准库 only，零正则）
 
   stats   [项目根]   打印统计（每次全量重算，已撤回不计入；backlog.json 只装待办池）
   review  [项目根]   只读列出长期未完成、Sprint 历史与复核状态
-  check   [项目根]   结构校验 + Sprint 点数对账 + 回填内容 + risks/releases/decisions，有问题返回 1
+  check   [项目根]   结构校验 + Sprint 对账 + 回填与工作包验收来源 + risks/releases/decisions，有问题返回 1
   trend   [项目根]   已关闭 Sprint 趋势：承诺/完成点、顺延与反复顺延条目
   report  [项目根]   一页纸状态：战略/Backlog/风险/发布/决策/趋势
   brief   [项目根]   打印当前阶段与每轮基础注入原文（排查 hook 用）
+  work    <子命令> --root <中枢根>   工作包 plan/status/export/submit/accept/finish/close（work --help）
 
   hook-post-write    hook 入口：写完文件后校验（decision:block = 需要模型处理）
   hook-session       hook 入口：会话开始注入敏捷状态
@@ -1735,6 +1750,8 @@ def cli_check(root_arg: str | None) -> int:
         problems.extend(f"规范[{name}]：" + line for line in warnings)
         if data is not None:
             problems.extend(f"跨文件[{name}]：" + line for line in check_side_refs(root, data, name))
+
+    problems.extend("工作包：" + line for line in delivery.check(root, scan_sprints, validate, parse_done))
 
     if md_path.exists():
         # PRODUCT-BACKLOG.md 已随 5.6.0 退役：不再生成、不再比对，只提醒清理。
@@ -1828,6 +1845,8 @@ def main(argv: list[str]) -> int:
     if command == "hook-prompt":
         hook_prompt()
         return 0
+    if command == "work":
+        return delivery.cli(argv[2:], scan_sprints, validate)
     handler = COMMANDS.get(command)
     if handler is None:
         print(USAGE)
