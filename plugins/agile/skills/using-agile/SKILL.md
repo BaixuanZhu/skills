@@ -5,7 +5,7 @@ displayName: 敏捷管理入口
 description: |
   当用户要从零规划一个项目、或改动已有规划时触发：说"开始项目""新项目""规划""路线图""MVP""优先级""拆解""里程碑""Backlog""Sprint""迭代""用户故事""待办""长期待办""待办复核""架构决策""ADR""C4""需求变了""要改故事""依赖检查""风险""风险登记""发版""版本规划""记录决策""工作包""跨仓库交付""前后端交接""提交回执"，或项目里已有 agile-docs/ 目录。判据是产出会不会落进 agile-docs/——写代码、修 bug、查日志、纯提问不走本套件。不适用于：纯运维部署、需要与 Jira/Trello 深度集成。
 agent_created: true
-version: 5.10.0
+version: 6.0.0
 ---
 
 # 敏捷管理入口 (Using Agile)
@@ -104,7 +104,7 @@ version: 5.10.0
 
 1. **确定中枢位置后采集最小项目画像**（下游三个业务技能的公共输入，用选择题问，节奏遵循 `references/probing-protocol.md §三`，分两轮）：多仓库先复用已有产品中枢，未设中枢时由用户指定管理仓库或工作区父目录；不在每个执行仓库重复初始化。
    - 第一轮：项目名称 / 一句话定位 / 项目类型（Web 应用、API 服务、工具库…）
-   - 第二轮：团队人数与主要技能栈 / 全新项目还是存量代码
+   - 第二轮：团队人数与主要技能栈 / 全新项目还是存量代码 / 已有 PRD 或需求文档（有则记中枢内路径，无则记「无」）
    - 采集结果写入 `agile-docs/DOD.md` 头部「项目画像」备注区，供下游技能读取；用户明确跳过的项标 `{待确认}`
 2. 建 `agile-docs/` 目录骨架（仅目录 + `DOD.md` 模板 + `interfaces/sprint-schema.yaml`）+ 项目根建 `sprints/` 空目录。**不创建业务文档占位文件**（VISION/ARCHITECTURE/ADR/backlog.json 由对应技能在用户确认后产出）——路由以文件存在性为准，占位文件会误判状态已就绪。
 3. 生成 `agile-docs/DOD.md` 模板（按 `references/init-template.md §二`）+ `agile-docs/interfaces/sprint-schema.yaml`（按 `references/sprint-schema.yaml`）。
@@ -116,7 +116,7 @@ version: 5.10.0
 在路由到任何业务技能产出前，若检测到以下情况**立即停下**，按 `references/strategy-conflict-template.md` 生成 `STRATEGY_CONFLICT.md`，用表格列冲突/歧义清单请用户裁决：
 - 多份输入文档战略方向矛盾；
 - 需求存在未界定的关键规则（MVP 边界、核心流程等）；
-- 待写内容与现有 Vision / ADR 冲突。
+- 待写内容与现有 Vision / PRD / ADR 冲突。
 
 **缺失即问**：若目标层的必答话题存在未覆盖项（用户没提 ≠ 不需要），同样属于门禁触发，但动作是**停下问询**而非停下裁决——按 `references/probing-protocol.md §一/§二` 用选择题问并追问。
 

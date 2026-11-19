@@ -8,7 +8,7 @@
 | 改 ARCHITECTURE | 关联 ADR、Sprint 技术任务、架构瓶颈条目 |
 | 改 ADR（技术选型） | 关联 Backlog 技术条目、Sprint 技术任务、ARCHITECTURE 图 |
 | 改 Backlog 条目（backlog.json） | 所在 Sprint 规划 |
-| 加新任务到 Backlog（Sprint 执行中） | 对当前 Sprint 无直接影响（进 Backlog 池等待下个 Sprint 取用），需校验与 VISION/ADR 的对齐 |
+| 加新任务到 Backlog（Sprint 执行中） | 对当前 Sprint 无直接影响（进 Backlog 池等待下个 Sprint 取用），需校验与 VISION/PRD/ADR 的对齐 |
 | 登记/处置风险（risks.json） | 活跃 Sprint 规划是否纳入应对条目；已发生时 hit_ref 关联条目 |
 | 组版本/发布（releases.json） | items 引用条目须存在；已发布后 items 不改写 |
 | 记决策（decisions.json） | refs 关联条目；outcome=做 需转条目 |

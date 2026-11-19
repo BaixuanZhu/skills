@@ -5,7 +5,7 @@ displayName: 敏捷产品待办
 description: |
   当用户说"写待办""拆任务""Backlog""Product Backlog""使能项""优先级排序""排迭代""长期待办""待办复核""梳理积压""整体验收"或 using-agile 路由到此，且战略层（VISION + ARCHITECTURE/ADR）已确认时触发。
 agent_created: true
-version: 5.7.0
+version: 6.0.0
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架与路由
@@ -36,7 +36,7 @@ dependencies:
 
 | 阶段 | 产出 | 前置 |
 |------|------|------|
-| 阶段 0 | （无文件）决策问询 | 读 VISION/ADR + 项目画像 |
+| 阶段 0 | （无文件）决策问询 | 读 VISION/PRD/ADR + 项目画像 |
 | 阶段 1 | 条目 + 估点建议写入 `backlog.json`（§3 阶段 1，**json 是唯一结构**，多阶段分组落 `phases[]`） | 阶段 0 完成 |
 | 阶段 2 | 任务详情展开 + 验收标准（§3 阶段 2） | 阶段 1 确认 |
 | 阶段 3 | 下游影响评估（§3 阶段 3，仅更新已有 Backlog 时） | 阶段 2 确认 |
@@ -44,7 +44,7 @@ dependencies:
 
 「工作包整体验收」「长期待办复核」「风险管理」「发布管理」「决策记录」都是**独立入口**，不是阶段 5/6/7：hook 提示或用户主动提起时直接走 §3 的对应小节，不重访创建流程。
 
-**决策用选择题问**（问询纪律见 `using-agile/references/probing-protocol.md`）：只把真决策（范围/优先级/估点/验收）喂给用户，事实先读 VISION/ADR。变更时先分级（`using-agile/references/change-matrix.md §二`），禁止整层重访。跨技能数据流全貌见 `using-agile/references/workflow.md`。
+**决策用选择题问**（问询纪律见 `using-agile/references/probing-protocol.md`）：只把真决策（范围/优先级/估点/验收）喂给用户，事实先读 VISION/PRD/ADR。变更时先分级（`using-agile/references/change-matrix.md §二`），禁止整层重访。跨技能数据流全貌见 `using-agile/references/workflow.md`。
 
 ## 2. 写前对齐（先问询，再产出）
 
@@ -62,7 +62,7 @@ dependencies:
 
 0. **需求探索（新增需求场景必跑；更新已有 Backlog 按 `change-matrix.md` 分级，L2 只重问受影响项）**
 
-   先读 VISION/ADR/项目画像补事实（文档优先），**自检六项 checklist**（机械项不需用户参与）——每项能查则查、查不到用选择题问，缺项标 `{待确认}` 不许脑补：
+   先读 VISION/PRD（若存在）/ADR/项目画像补事实（文档优先），**自检六项 checklist**（机械项不需用户参与）——每项能查则查、查不到用选择题问，缺项标 `{待确认}` 不许脑补：
 
    | # | 探索项 | 查 / 问 |
    |---|--------|---------|
@@ -76,7 +76,7 @@ dependencies:
 
    探索确认 → 进入决策问询。
 
-1. **文档优先**：读 `agile-docs/VISION.md`（原则/红线）、`ADR.md`、`DOD.md` 头部项目画像；VISION 已确认的定位/原则不重问，只问待办层缺口。
+1. **文档优先**：读 `agile-docs/VISION.md`（原则/红线）、`ADR.md`、`ARCHITECTURE.md`（容器边界）、已有 PRD（若存在，路径见 DOD 画像）、`DOD.md` 头部项目画像；VISION/PRD 已确认的定位/原则/范围不重问，只问待办层缺口；与 PRD 矛盾走写前战略门禁。
 2. **一次一问 + 给推荐**：三个决策点逐个问（候选 + 推荐 + 自定义兜底），答完再问下一个：
 
 | # | 决策点 | 候选选项方向（结合实际填，给推荐 + 理由） | 追问触发 | 兜底 |

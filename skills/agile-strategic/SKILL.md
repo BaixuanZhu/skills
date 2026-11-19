@@ -5,7 +5,7 @@ displayName: 敏捷战略层（愿景+架构+ADR）
 description: |
   当用户说"写愿景""产品目标""电梯演讲""定位""使命""红线""价值观""画架构图""C4""技术选型""ADR""架构决策""容器图""技术约束"或 using-agile 路由到此，且项目已有 agile-docs/ 时触发。
 agent_created: true
-version: 5.2.5
+version: 6.0.0
 dependencies:
   - skill: using-agile
     reason: 提供初始化骨架
@@ -42,9 +42,9 @@ dependencies:
 
 ### 2.0 决策问询（写前必跑）
 
-> ⚠️ **启动问询前先过 §6 写前战略门禁**：若检测到多份矛盾输入或与现有 VISION/ADR 冲突，立即停下生成 `STRATEGY_CONFLICT.md`（模板见 `using-agile/references/strategy-conflict-template.md`），不进入问询。若该文件已存在（如 using-agile 已生成）→ **跳过不重复生成，仅引用**。
+> ⚠️ **启动问询前先过 §6 写前战略门禁**：若检测到多份矛盾输入或与现有 VISION/PRD/ADR 冲突，立即停下生成 `STRATEGY_CONFLICT.md`（模板见 `using-agile/references/strategy-conflict-template.md`），不进入问询。若该文件已存在（如 using-agile 已生成）→ **跳过不重复生成，仅引用**。
 
-问询纪律（选择题、一次一问给推荐、文档优先、共识后落盘、追问/跳过）按 `using-agile/references/probing-protocol.md`。本技能的事实源：先读 `agile-docs/DOD.md` 头部「项目画像」+ 已存在的 VISION/ADR/Backlog，再按 §2.1 决策点清单逐项问。
+问询纪律（选择题、一次一问给推荐、文档优先、共识后落盘、追问/跳过）按 `using-agile/references/probing-protocol.md`。本技能的事实源：先读 `agile-docs/DOD.md` 头部「项目画像」+ 已有 PRD（若存在，路径见画像登记）+ 已存在的 VISION/ADR/Backlog，再按 §2.1 决策点清单逐项问。PRD 已界定的范围/规则不重问，只问缺口；待写内容与 PRD 矛盾走 §6 写前战略门禁。
 
 **变更快速响应**：若是「需求变了」触发的更新而非首次产出，先按 `using-agile/references/change-matrix.md §二` 分级——L1 措辞就地改、L2 只重问受影响维度、L3 才走完整问询。**禁止每次更新都整层重问。**
 
@@ -84,12 +84,12 @@ dependencies:
 姿态同 §2.1（`using-agile/references/probing-protocol.md §一`）：以架构师身份主持选型讨论，而非把用户口述直接写成 ADR。选型问题同样用选择题问（口径见 §2.0）。
 
 **步骤 1 — 约束采集**（驱动选型的输入，缺什么问什么）：
-- 先读 `agile-docs/DOD.md` 头部「项目画像」（using-agile 初始化采集：项目类型/团队技能栈/代码基础），已有的不重复问；
+- 先读 `agile-docs/DOD.md` 头部「项目画像」（using-agile 初始化采集：项目类型/团队技能栈/代码基础）+ 已有 PRD（若存在）中的范围与非功能约束，已有的不重复问；
 - 补问缺失项：运维能力（谁运维、能否维护中间件）/ 数据规模预估 / 预算（云服务还是自建）/ 已有基础设施。
 
-**步骤 2 — 系统边界与容器划分**：
-- "画 Level 1 系统上下文图前，先列：用户角色、外部系统、待建系统各有哪些？"
-- 容器划分：Web / API / 数据 / 缓存 / 搜索等。
+**步骤 2 — 系统边界与容器划分（agent 拟草图，用户确认/调整）**：
+- 据 VISION 核心用户 + 已有 PRD + 步骤 1 约束，agent 先拟 Level 1 系统上下文（用户角色 / 外部系统 / 待建系统边界）与 Level 2 容器划分（Web / API / 数据 / 缓存 / 搜索等）草图，用选择题供用户确认或调整；
+- 只把真歧义喂给用户（如"待建系统是否含独立管理后台？"），已能从 VISION/PRD/选型推导的事实不开放枚举重问（文档优先，`using-agile/references/probing-protocol.md §一`）。
 
 **步骤 3 — 必答话题清单**（缺失探测，对接门禁预检第 4 条）：逐项检查，用户未提及的主动问"本项目需要吗？"，**不许静默默认，也不许推断为不需要**：
 

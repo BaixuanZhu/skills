@@ -36,7 +36,7 @@
 [/agile-brief:backfill]
 
 [agile-brief:init]
-战略层未起步：先走 agile-strategic 阶段 A（先读 DOD.md 头部项目画像补事实，缺失才问，再按决策点一次一问），只写 VISION.md，写完即停。决策点未确认不落盘。→ agile-strategic §2
+战略层未起步：先走 agile-strategic 阶段 A（先读 DOD.md 头部项目画像 + 已有 PRD 补事实，缺失才问，再按决策点一次一问），只写 VISION.md，写完即停。决策点未确认不落盘。→ agile-strategic §2
 [/agile-brief:init]
 
 [agile-brief:architecture]
@@ -44,7 +44,7 @@ VISION 已就绪、架构层缺件：走 agile-strategic 阶段 B。每项选型
 [/agile-brief:architecture]
 
 [agile-brief:backlog]
-待办池没有「待办」条目（未建 / 为空 / 已耗尽）：走 agile-backlog。先用 VISION/ADR 自检，再按三决策点（MVP 范围 / 估点 / 验收）一次一问；**三点没确认完不写 backlog.json**。md 由脚本渲染，不手写。→ agile-backlog §2b
+待办池没有「待办」条目（未建 / 为空 / 已耗尽）：走 agile-backlog。先用 VISION/PRD/ADR 自检，再按三决策点（MVP 范围 / 估点 / 验收）一次一问；**三点没确认完不写 backlog.json**。backlog.json 是唯一结构，统计跑 stats，不渲染 md。→ agile-backlog §2b
 [/agile-brief:backlog]
 
 [agile-brief:sprint]
