@@ -21,7 +21,7 @@ description: >-
   启动日志有 WARN/ERROR 但测试全绿、本机没有 Docker 或 CI 没有 DinD。
   边界：纯单测（开发期默认层，零外部基础设施）→ java-unit-test；
   前端 E2E（Selenium / Playwright）/ 性能 / 安全 → 不适用。
-version: "2.3.0"
+version: "2.4.0"
 last_verified: "2026-10-24"
 ---
 
@@ -159,19 +159,22 @@ last_verified: "2026-10-24"
 
 ## 交付前自检
 
+以下不是读完代码后的主观勾选：必须实际跑过相应命令；无法执行时写明哪项没跑及原因。
+
 - [ ] 已过决策 ①（值守 + 时机）；没通过时没有新增集成用例
 - [ ] 回复里写明了决策 ③ 走的是哪条路径；用替身时标了盲区并列出移交真库的清单
 - [ ] 每条用例过准入判据，每特性 ≤3 条，分支矩阵不在这一层
-- [ ] 类名 `*IT` 且真的会被执行：Maven 用 failsafe 绑 `verify`，Gradle 用独立 `integrationTest` sourceSet 绑 `check`，都没混进 `mvn test` / `test` task
+- [ ] 实际执行 `mvn verify` / `./gradlew check`（或项目既有集成任务），从输出或报告确认本次 `*IT` 被执行；Maven 用 failsafe 绑 `verify`，Gradle 用独立 `integrationTest` sourceSet 绑 `check`，都没混进 `mvn test` / `test` task
 - [ ] 每个测试有结构化断言（status + 响应体字段），没有 curl / 肉眼判断
 - [ ] 每条断言能答出"如果这行代码坏了，哪条会红"
 - [ ] 验证回滚的用例**没有**用测试级 `@Transactional`；`RANDOM_PORT` 场景已改为显式清理
 - [ ] 启动日志里的 WARN / ERROR 已排查
 - [ ] 外部依赖走 WireMock，没有真调
+- [ ] 至少选一条关键断言做反证：临时改坏被测代码，目标用例必须变红；恢复后重跑为绿。项目已配变异测试门禁时，同时以其结果为准
 
 ## 版本与范围
 
-- Spring Boot 2.7 / 3.x / 4.x 均适用。Boot 4 的测试工具链有破坏性变化（`TestRestTemplate` 废弃、`@MockBean` 移除、Testcontainers 模块改名），这些都是**编译错误**，升级时会立刻暴露，按编译提示改即可。
+- 版本与 API 以项目依赖及对应官方迁移指南为准；升级造成的编译 / 依赖错误按报错改，不在技能里维护版本事实清单。
 - 镜像 tag 一律对齐生产版本，不硬编码某个 patch 号——具体数值写在项目配置里，不在技能里。
-- **注解分界**：无 Context 的 `@Mock`、只装 mock 的 `@TestConfiguration` → java-unit-test；`@SpringBootTest` / `@MockitoBean` / 切片注解 → 本技能。过了决策 ① 才动手。
+- 分层与注解边界见 java-unit-test 的「与 java-integration-test 的边界」；过了决策 ① 才动手。
 - **不适用**：前端 E2E（Selenium / Playwright / Cypress）、性能测试、安全测试。

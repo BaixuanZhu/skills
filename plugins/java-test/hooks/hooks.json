@@ -1,0 +1,21 @@
+{
+  "description": "测试判据门控：仅当 agent 写入/编辑测试类时，按文件名分流注入短判据——单测和集成测试各自指向对应 SKILL.md，并要求加载完整技能、设计清单先行（四维/决策表列数/最小充分集/代表值复核）、副作用必须 verify、测试确定可重复（注入 Clock/种子，禁 sleep 与顺序依赖）、实际执行、关键断言反证及无法验证时披露；区分性用例不冒充反证，真实依赖行为不等于用户明示补集成测试，应用层 exists 不替代 DB 约束。matcher 粗筛到 Write|Edit|apply_patch（Claude Code 用 Write/Edit；Codex 的规范工具名是 apply_patch，Edit/Write 是其匹配别名），文件名细筛在 Python 脚本内完成：Claude Code 读 tool_input.file_path，Codex 从 tool_input.command 的 patch 声明行取路径；其余文件一律静默，不解析测试代码、不阻断任何操作、不写项目。启动器依次探测 python/python3/py（缺失或脚本出错时静默退出，功能不受影响）。",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/run-python.sh",
+              "test-criteria-watch.py"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

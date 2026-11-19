@@ -1,5 +1,5 @@
 {
-  "description": "构建失败症状索引：Maven/Gradle 命令跑完后读日志，命中 MyBatis-Plus 已知失败特征时注入一行排查指针。只在真的引入 MP 的项目上激活，不阻断任何操作。需要本机有 node（没有则 hook 报非阻塞错误，功能不受影响）。",
+  "description": "构建失败症状索引：Maven/Gradle 命令跑完后读日志，命中 MyBatis-Plus 已知失败特征时注入一行排查指针。只在真的引入 MP 的项目上激活，不阻断任何操作。Python 启动器依次探测 python/python3/py；解释器缺失或脚本出错时静默退出，功能不受影响。",
   "hooks": {
     "PostToolUse": [
       {
@@ -7,8 +7,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/symptom-watch.mjs"],
+            "command": "sh",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/run-python.sh",
+              "symptom-watch.py"
+            ],
             "timeout": 10
           }
         ]

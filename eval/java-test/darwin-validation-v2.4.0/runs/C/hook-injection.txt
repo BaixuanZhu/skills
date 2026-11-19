@@ -1,0 +1,5 @@
+[java-test:unit] 刚写入/改动单测文件；本摘要不是完整规范。
+① 加载：若当前上下文没有技能正文，先读取「I:\GitDownload\skills\plugins\java-test\skills\java-unit-test\SKILL.md」；命中假绿症状再读同目录 references/01-pitfalls.md。涉及真实依赖、@SpringBootTest 或切片注解时改用 java-integration-test。
+② 生成：mock 必须是被测代码真正使用的实例；断言必须可能失败（具体异常、金额比较口径、无恒真/空断言）；正向/反向/边界/异常四维逐项核对。
+③ 执行：实际运行 mvn test / ./gradlew test（或项目既有单测任务），从输出/报告确认本次用例被执行；BUILD SUCCESS 不是执行证据。
+④ 反证：至少一条核心断言做「改坏实现 → 目标测试变红 → 恢复后重跑变绿」；无法执行或反证必须明确披露。

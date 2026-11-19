@@ -1,0 +1,130 @@
+[
+  {
+    "group": "A",
+    "baseline": {
+      "exit_code": 0,
+      "passed": true,
+      "tail": "Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build what is described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#0.3\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\nWARNING: A Java agent has been loaded dynamically (G:\\Scoop\\apps\\maven\\3.9.16\\repository\\net\\bytebuddy\\byte-buddy-agent\\1.15.4\\byte-buddy-agent-1.15.4.jar)\nWARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning\nWARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information\nWARNING: Dynamic loading of agents will be disallowed by default in a future release\n"
+    },
+    "mutants": {
+      "M1-discount-off": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": " 107.95\n but was: 119.94\n[ERROR]   PricingServiceTest$QuotePricing.thresholdUsesCompareToNotEquals:131 \nexpected: 90.00\n but was: 100.00\n[ERROR] Tests run: 33, Failures: 4, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-A-2w1kix9l\\M1-discount-off\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      },
+      "M2-invalid-quantity-returns-zero": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": "gServiceTest$QuoteValidation.nonPositiveQuantityThrowsIllegalArgumentException:66 \nExpecting code to raise a throwable.\n[ERROR] Tests run: 33, Failures: 3, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-A-2w1kix9l\\M2-invalid-quantity-returns-zero\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      },
+      "M3-scale-zero": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": "76 \nexpected: 0.01\n but was: 0\n[ERROR]   PricingServiceTest$QuotePricing.thresholdUsesCompareToNotEquals:131 \nexpected: 90.00\n but was: 90\n[ERROR] Tests run: 33, Failures: 9, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-A-2w1kix9l\\M3-scale-zero\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      },
+      "M4-round-down": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": " 0.03\n but was: 0.02\n[ERROR]   PricingServiceTest$AllocateRounding.negativeHalfCentRoundsAwayFromZero:302 \nexpected: -0.03\n but was: -0.02\n[ERROR] Tests run: 33, Failures: 2, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-A-2w1kix9l\\M4-round-down\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      }
+    },
+    "killed_count": 4,
+    "mutation_score": 1.0
+  },
+  {
+    "group": "B",
+    "baseline": {
+      "exit_code": 0,
+      "passed": true,
+      "tail": "Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build what is described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#0.3\nWARNING: A Java agent has been loaded dynamically (G:\\Scoop\\apps\\maven\\3.9.16\\repository\\net\\bytebuddy\\byte-buddy-agent\\1.15.4\\byte-buddy-agent-1.15.4.jar)\nWARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning\nWARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information\nWARNING: Dynamic loading of agents will be disallowed by default in a future release\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n"
+    },
+    "mutants": {
+      "M1-discount-off": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": ":88 \nexpected: 90.00\n but was: 100.00\n[ERROR]   PricingServiceTest.quote_roundsHalfUpToTwoDecimals:110 \nexpected: 90.32\n but was: 100.35\n[ERROR] Tests run: 27, Failures: 3, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-B-ykkayndr\\M1-discount-off\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      },
+      "M2-invalid-quantity-returns-zero": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": "e a throwable.\n[ERROR]   PricingServiceTest.quote_throwsOnNonPositiveQuantity:153 \nExpecting code to raise a throwable.\n[ERROR] Tests run: 27, Failures: 3, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-B-ykkayndr\\M2-invalid-quantity-returns-zero\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      },
+      "M3-scale-zero": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": "Threshold:99 \nexpected: 99.99\n but was: 100\n[ERROR]   PricingServiceTest.quote_roundsHalfUpToTwoDecimals:110 \nexpected: 90.32\n but was: 90\n[ERROR] Tests run: 27, Failures: 6, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-B-ykkayndr\\M3-scale-zero\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      },
+      "M4-round-down": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": "ate_roundsHalfUpOnTie:204 \nexpected: 0.01\n but was: 0.00\n[ERROR]   PricingServiceTest.allocate_roundsUp:195 \nexpected: 0.67\n but was: 0.66\n[ERROR] Tests run: 27, Failures: 2, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-B-ykkayndr\\M4-round-down\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      }
+    },
+    "killed_count": 4,
+    "mutation_score": 1.0
+  },
+  {
+    "group": "C",
+    "baseline": {
+      "exit_code": 0,
+      "passed": true,
+      "tail": "Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build what is described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#0.3\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\nWARNING: A Java agent has been loaded dynamically (G:\\Scoop\\apps\\maven\\3.9.16\\repository\\net\\bytebuddy\\byte-buddy-agent\\1.15.4\\byte-buddy-agent-1.15.4.jar)\nWARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning\nWARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information\nWARNING: Dynamic loading of agents will be disallowed by default in a future release\n"
+    },
+    "mutants": {
+      "M1-discount-off": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": " 100.00\n[ERROR]   PricingServiceTest.quote_roundsHalfUpToTwoDecimalsAfterDiscount:120->assertAmount:47 \nexpected: 90.02\n but was: 100.02\n[ERROR] Tests run: 27, Failures: 3, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-C-212ufmd1\\M1-discount-off\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      },
+      "M2-invalid-quantity-returns-zero": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": "throwable.\n[ERROR]   PricingServiceTest.quote_throwsWhenQuantityIsNotPositive:148 \nExpecting code to raise a throwable.\n[ERROR] Tests run: 27, Failures: 3, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-C-212ufmd1\\M2-invalid-quantity-returns-zero\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      },
+      "M3-scale-zero": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": "\n but was: 90\n[ERROR]   PricingServiceTest.quote_roundsHalfUpToTwoDecimalsWithoutDiscount:130->assertAmount:47 \nexpected: 0.13\n but was: 0\n[ERROR] Tests run: 27, Failures: 8, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-C-212ufmd1\\M3-scale-zero\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      },
+      "M4-round-down": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": "1604)\n\n[ERROR] Failures: \n[ERROR]   PricingServiceTest.allocate_roundsHalfUpAtMidpoint:188->assertAmount:47 \nexpected: 0.03\n but was: 0.02\n[ERROR] Tests run: 27, Failures: 1, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-C-212ufmd1\\M4-round-down\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      }
+    },
+    "killed_count": 4,
+    "mutation_score": 1.0
+  },
+  {
+    "group": "D",
+    "baseline": {
+      "exit_code": 0,
+      "passed": true,
+      "tail": "Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build what is described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#0.3\nWARNING: A Java agent has been loaded dynamically (G:\\Scoop\\apps\\maven\\3.9.16\\repository\\net\\bytebuddy\\byte-buddy-agent\\1.15.4\\byte-buddy-agent-1.15.4.jar)\nWARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning\nWARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information\nWARNING: Dynamic loading of agents will be disallowed by default in a future release\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n"
+    },
+    "mutants": {
+      "M1-discount-off": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": " but was: 166.65\n[ERROR]   PricingServiceTest$QuoteTest.exactlyAtDiscountThreshold_appliesDiscount:117 \nexpected: 90.00\n but was: 100.00\n[ERROR] Tests run: 24, Failures: 3, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-D-u2rei372\\M1-discount-off\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      },
+      "M2-invalid-quantity-returns-zero": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": "OR]   PricingServiceTest$QuoteTest.zeroQuantity_throwsIllegalArgumentException:73 \nExpecting code to raise a throwable.\n[ERROR] Tests run: 24, Failures: 2, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-D-u2rei372\\M2-invalid-quantity-returns-zero\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      },
+      "M3-scale-zero": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": "lfUp:159 \nexpected: 0.01\n but was: 0\n[ERROR]   PricingServiceTest$QuoteTest.quantityOne_returnsUnitPrice:170 \nexpected: 12.34\n but was: 12\n[ERROR] Tests run: 24, Failures: 6, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-D-u2rei372\\M3-scale-zero\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      },
+      "M4-round-down": {
+        "exit_code": 1,
+        "killed": true,
+        "tail": "ayList.java:1604)\n\n[ERROR] Failures: \n[ERROR]   PricingServiceTest$AllocateTest.rounding_halfUpRoundsUp:236 \nexpected: 0.03\n but was: 0.02\n[ERROR] Tests run: 24, Failures: 1, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project java-test-eval-fixture: There are test failures.\n[ERROR] \n[ERROR] See C:\\Users\\ZBXCOM~1\\AppData\\Local\\Temp\\java-test-mutant-D-u2rei372\\M4-round-down\\target\\surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n"
+      }
+    },
+    "killed_count": 4,
+    "mutation_score": 1.0
+  }
+]

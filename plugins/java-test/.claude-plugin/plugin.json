@@ -1,6 +1,6 @@
 {
   "name": "java-test",
-  "version": "2.3.0",
+  "version": "2.5.1",
   "description": "Java 测试套件（2 技能）：不教测试代码怎么写，教什么时候绿灯是假的。开发期纯单测（AssertJ 取值、mock 边界、三条假绿检查点）+ 集成测试（回归谁值守 / 放哪层 / 环境用什么跑 三决策，路径不对 / 时间点不对 / 失败不算失败 三机制）。",
   "author": {
     "name": "BaixuanZhu",
