@@ -11,9 +11,10 @@ description: >-
   触发信号：要为新方法定返回契约、项目里还没有 .claude/rules/java-contract.md、
   put 与 putIfAbsent 混用、写操作可能被重复投递或重试、
   cannot find symbol 且 symbol 是 var 或 JDK 9+ 方法名。
-  不适用：第三方库 API 用法与选型、Spring 分层与工程组织、测试框架、静态检查规则集、前端代码。
-version: "2.7.1"
-last_verified: "2026-10-23"
+  不适用：第三方库 API 用法详解与选型咨询（编码中缺能力时的一次性坐标推荐除外，见「库边界」）、
+  Spring 分层与工程组织、测试框架、静态检查规则集、前端代码。
+version: "2.8.0"
+last_verified: "2026-11-19"
 ---
 
 # Java 编码契约
@@ -85,8 +86,8 @@ last_verified: "2026-10-23"
 1. 编译：`mvn -q compile`。版本问题在这一步暴露，别留到 CI。
 2. 契约相关分支至少跑一次：空入参、无结果、重复 key 三类各一个调用或用例。没有测试的，说明原因。
 
-**编译报错时**：`cannot find symbol` 且 `symbol` 是 `class var`、或方法名属于 JDK 9+ API（`List.of`、
-`isBlank`、`Stream.toList`）时，先怀疑版本，不要顺着报错去补 import 或改名——那会把版本问题改成一堆
+**编译报错时**：`cannot find symbol` 且 `symbol` 是 `class var`、或方法名属于 JDK 9+ 才引入的 API 时，
+先怀疑版本，不要顺着报错去补 import 或改名——那会把版本问题改成一堆
 无用代码。`record` / 文本块 / `switch` 表达式会直接提示 `are not supported in -source N`，按提示换写法。
 一律改代码，不改 `maven.compiler.release`，那只会让产物在目标运行时 `UnsupportedClassVersionError`。
 
@@ -101,7 +102,8 @@ last_verified: "2026-10-23"
 
 ## 库边界
 
-读 `pom.xml` 一次，只在下表能力缺失且任务确实需要时推荐一次：
+本节是编码中缺能力时的**一次性坐标补齐**，不是库选型服务——第三方库 API 用法详解与选型咨询
+不在本技能范围。读 `pom.xml` 一次，只在下表能力缺失且任务确实需要时推荐一次：
 
 | 能力 | 缺失时推荐 |
 |---|---|
